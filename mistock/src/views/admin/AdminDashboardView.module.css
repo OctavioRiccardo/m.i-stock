@@ -1,0 +1,25 @@
+.card {
+  background-color: #dddcbaac;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  box-shadow: none;
+  border-radius: 12px;
+}
+
+.title {
+  color: #000000;
+  font-weight: 800;
+}
+
+.textDark {
+  color: #000000;
+}
+
+.actionButton {
+  background-color: #318482 !important;
+  color: #ffffff !important;
+  font-weight: 600;
+}
+
+.actionButton:hover {
+  background-color: #276b69 !important;
+}
