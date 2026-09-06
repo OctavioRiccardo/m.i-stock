@@ -1,0 +1,81 @@
+/* Hoja de estilos separada para la vista de Login */
+
+.container {
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+}
+
+.glowWrapper {
+  position: relative;
+}
+
+.glowEffect {
+  display: none;
+}
+
+.card {
+  background-color: #dddcbaac;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  box-shadow: none;
+  position: relative;
+}
+
+.logoIcon {
+  background-color: #318482;
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.title {
+  color: #000000;
+  letter-spacing: -0.5px;
+  font-weight: 800;
+}
+
+.subtitleText {
+  color: #000000;
+  font-weight: 500;
+}
+
+.darkText {
+  color: #000000;
+}
+
+.blackLink {
+  color: #000000;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+/* Estilos de los Campos de Texto e Inputs */
+.customInput {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid rgba(0, 0, 0, 0.3) !important;
+}
+
+.customInput::placeholder {
+  color: #6b7280 !important;
+  opacity: 1 !important;
+}
+
+.customInput:focus,
+.customInput:focus-within {
+  border-color: #318482 !important;
+}
+
+.submitButton {
+  background-color: #318482 !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  border: none;
+  box-shadow: none;
+  transition: background-color 0.2s ease;
+}
+
+.submitButton:hover {
+  background-color: #276b69 !important;
+}
