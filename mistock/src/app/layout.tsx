@@ -15,7 +15,7 @@ const theme = createTheme({
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="es" data-mantine-color-scheme="dark">
+    <html lang="es" data-mantine-color-scheme="dark" suppressHydrationWarning>
       <head>
         <ColorSchemeScript defaultColorScheme="dark" />
       </head>
