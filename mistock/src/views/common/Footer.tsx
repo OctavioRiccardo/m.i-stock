@@ -24,26 +24,6 @@ export function Footer() {
               v1.0.0
             </Badge>
           </Group>
-
-          {/* Status & Security */}
-          <Group gap="md">
-            <Group gap={6}>
-              <Box className={classes.statusDot} />
-              <Text size="xs" c="black" fw={500}>
-                Servicio activo
-              </Text>
-            </Group>
-
-            <Divider orientation="vertical" h={12} color="dark.3" />
-
-            <Group gap={4}>
-              <IconLockCheck size={14} color="#318482" />
-              <Text size="xs" c="black" fw={500}>
-                Conexión segura Supabase
-              </Text>
-            </Group>
-          </Group>
-
           {/* Links & Copyright */}
           <Group gap="lg" wrap="wrap">
             <Text size="xs" c="black">
