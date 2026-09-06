@@ -1,0 +1,34 @@
+.header {
+  height: 60px;
+  background-color: #dddcbaac;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.logoBox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background-color: #318482;
+  color: #ffffff;
+}
+
+.brandTitle {
+  color: #000000;
+  font-weight: 800;
+}
+
+.logoutBtn {
+  background-color: #318482 !important;
+  color: #ffffff !important;
+  font-weight: 600;
+}
+
+.logoutBtn:hover {
+  background-color: #276b69 !important;
+}
