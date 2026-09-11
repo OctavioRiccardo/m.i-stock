@@ -19,6 +19,10 @@ import { LoginFormValues } from '@/models/authModel';
  * 4. Controla la NAVEGACIÓN (Next.js Router).
  */
 
+
+/**
+ * CONTROLADOR DE LOGIN (Inicio de Sesion)
+ */
 export function useLoginController() {
   const router = useRouter();
 
@@ -30,16 +34,11 @@ export function useLoginController() {
 
   // Formulario reactivo con Mantine Form y validaciones explícitas
   const form = useForm<LoginFormValues>({
-    initialValues: {
-      email: '',
-      password: '',
-      rememberMe: false,
-    },
-    validate: {
-      email: (value) =>
-        /^\S+@\S+$/.test(value) ? null : 'Correo electrónico no válido',
-      password: (value) =>
-        value.length >= 6 ? null : 'La contraseña debe tener al menos 6 caracteres',
+    initialValues: { email: '', password: '', rememberMe: false, },
+    validate:
+    {
+      email: (value) => /^\S+@\S+$/.test(value) ? null : 'Correo electrónico no válido',
+      password: (value) => value.length >= 6 ? null : 'La contraseña debe tener al menos 6 caracteres',
     },
   });
 
@@ -64,10 +63,7 @@ export function useLoginController() {
       const supabase = createClient();
 
       // Enviar solicitud de login
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email: values.email,
-        password: values.password,
-      });
+      const { data, error: authError } = await supabase.auth.signInWithPassword({ email: values.email, password: values.password, });
 
       // C. Manejo de errores devueltos por Supabase
       if (authError) {
@@ -100,13 +96,7 @@ export function useLoginController() {
   // --------------------------------------------------------------------------
   // 3. EXPOSICIÓN DE LA INTERFAZ AL COMPONENTE VISTA (Return Contract)
   // --------------------------------------------------------------------------
-  return {
-    form,
-    loading,
-    error,
-    handleSubmit: form.onSubmit(handleSubmit),
-    clearError,
-  };
+  return { form, loading, error, handleSubmit: form.onSubmit(handleSubmit), clearError, };
 }
 
 /**
@@ -139,11 +129,7 @@ export function useLogoutController(autoExecute: boolean = true) {
     }
   }, [autoExecute]);
 
-  return {
-    loading,
-    loggedOut,
-    handleLogout,
-  };
+  return { loading, loggedOut, handleLogout, };
 }
 
 // Alias para retrocompatibilidad

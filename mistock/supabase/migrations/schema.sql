@@ -157,6 +157,20 @@ CREATE TRIGGER tr_actualizar_stock
   AFTER INSERT ON public.movimientos_stock
   FOR EACH ROW EXECUTE FUNCTION public.actualizar_stock_producto();
 
+-- Verificar si el usuario autenticado tiene rol de admin sin disparar recursión en RLS
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.usuario
+    WHERE id_usuario = auth.uid() AND rol = 'admin'
+  );
+$$;
+
 -- ----------------------------------------------------------------------------
 -- 7. ACTIVACIÓN DE ROW LEVEL SECURITY (RLS)
 -- ----------------------------------------------------------------------------
@@ -178,22 +192,33 @@ CREATE POLICY "Staff ve categorías" ON public.categorias
 
 CREATE POLICY "Solo admin gestiona categorías" ON public.categorias 
   FOR ALL TO authenticated 
-  USING (EXISTS (SELECT 1 FROM public.usuario WHERE id_usuario = auth.uid() AND rol = 'admin'));
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
 
 CREATE POLICY "Staff ve productos" ON public.productos 
   FOR SELECT TO authenticated USING (true);
 
 CREATE POLICY "Solo admin gestiona productos" ON public.productos 
   FOR ALL TO authenticated 
-  USING (EXISTS (SELECT 1 FROM public.usuario WHERE id_usuario = auth.uid() AND rol = 'admin'));
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
 
--- 8.2. Usuarios
+-- 8.2. Usuarios (Sin recursión infinita)
 CREATE POLICY "Staff ve otros empleados" ON public.usuario 
   FOR SELECT TO authenticated USING (true);
 
-CREATE POLICY "Solo admin gestiona usuarios" ON public.usuario 
-  FOR ALL TO authenticated 
-  USING (EXISTS (SELECT 1 FROM public.usuario WHERE id_usuario = auth.uid() AND rol = 'admin'));
+CREATE POLICY "Solo admin inserta usuarios" ON public.usuario 
+  FOR INSERT TO authenticated 
+  WITH CHECK (public.is_admin());
+
+CREATE POLICY "Solo admin modifica usuarios" ON public.usuario 
+  FOR UPDATE TO authenticated 
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
+
+CREATE POLICY "Solo admin elimina usuarios" ON public.usuario 
+  FOR DELETE TO authenticated 
+  USING (public.is_admin());
 
 -- 8.3. Ventas, Detalles y Pagos
 CREATE POLICY "Staff ve ventas" ON public.ventas 
