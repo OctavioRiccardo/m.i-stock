@@ -53,10 +53,5 @@ export function useAdminDashboardController() {
     setTimeout(() => setAlertResolvedMsg(null), 3000);
   };
 
-  return {
-    data,
-    loading,
-    alertResolvedMsg,
-    handleRestockAlert,
-  };
+  return { data, loading, alertResolvedMsg, handleRestockAlert, };
 }

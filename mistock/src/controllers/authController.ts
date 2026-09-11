@@ -43,7 +43,7 @@ export function useLoginController() {
       }
 
       if (data.session) {
-        router.push('/');
+        router.push('/admin');
         router.refresh();
       }
     } catch (err: unknown) {
@@ -57,7 +57,7 @@ export function useLoginController() {
   /*
    * Limpia el mensaje de error activo.
    */
-  const clearError = () => setError(null); s
+  const clearError = () => setError(null);
   return { form, loading, error, handleSubmit: form.onSubmit(handleSubmit), clearError, };
 }
 

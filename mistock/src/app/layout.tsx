@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ColorSchemeScript, MantineProvider, createTheme } from "@mantine/core";
+import { MantineProvider, createTheme } from "@mantine/core";
 import "@mantine/core/styles.css";
 import "./globals.css";
 
@@ -13,12 +13,10 @@ const theme = createTheme({
   fontFamily: "var(--font-geist-sans), sans-serif",
 });
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" data-mantine-color-scheme="dark" suppressHydrationWarning>
-      <head>
-        <ColorSchemeScript defaultColorScheme="dark" />
-      </head>
+      <head />
       <body className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased">
         <MantineProvider theme={theme} defaultColorScheme="dark">
           {children}

@@ -22,7 +22,6 @@ import {
   IconCheck,
   IconRefresh,
   IconShieldCheck,
-  IconBox,
 } from '@tabler/icons-react';
 import { useAdminDashboardController } from '@/controllers/adminDashboardController';
 import classes from './AdminDashboardView.module.css';
@@ -112,50 +111,52 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                 </Group>
               </Group>
 
-              <Table verticalSpacing="sm" highlightOnHover>
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th style={{ color: '#000' }}>Producto</Table.Th>
-                    <Table.Th style={{ color: '#000' }}>Categoría</Table.Th>
-                    <Table.Th style={{ color: '#000' }}>Stock Actual</Table.Th>
-                    <Table.Th style={{ color: '#000' }}>Mínimo Deseado</Table.Th>
-                    <Table.Th style={{ color: '#000' }}>Acción</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {data.stockAlerts.map((alert) => (
-                    <Table.Tr key={alert.id}>
-                      <Table.Td fw={700} style={{ color: '#000' }}>
-                        {alert.productName}
-                      </Table.Td>
-                      <Table.Td style={{ color: '#000' }}>
-                        <Badge variant="outline" color="dark">
-                          {alert.category}
-                        </Badge>
-                      </Table.Td>
-                      <Table.Td>
-                        <Badge color="red" variant="filled">
-                          {alert.currentStock} un.
-                        </Badge>
-                      </Table.Td>
-                      <Table.Td fw={600} style={{ color: '#000' }}>
-                        {alert.minThreshold} un.
-                      </Table.Td>
-                      <Table.Td>
-                        <Button
-                          size="xs"
-                          radius="md"
-                          className={classes.actionButton}
-                          onClick={() => handleRestockAlert(alert.id)}
-                          leftSection={<IconRefresh size={12} />}
-                        >
-                          Reponer Stock
-                        </Button>
-                      </Table.Td>
+              <Table.ScrollContainer minWidth={500}>
+                <Table verticalSpacing="sm" highlightOnHover>
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th style={{ color: '#000' }}>Producto</Table.Th>
+                      <Table.Th style={{ color: '#000' }}>Categoría</Table.Th>
+                      <Table.Th style={{ color: '#000' }}>Stock Actual</Table.Th>
+                      <Table.Th style={{ color: '#000' }}>Mínimo Deseado</Table.Th>
+                      <Table.Th style={{ color: '#000' }}>Acción</Table.Th>
                     </Table.Tr>
-                  ))}
-                </Table.Tbody>
-              </Table>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {data.stockAlerts.map((alert) => (
+                      <Table.Tr key={alert.id}>
+                        <Table.Td fw={700} style={{ color: '#000' }}>
+                          {alert.productName}
+                        </Table.Td>
+                        <Table.Td style={{ color: '#000' }}>
+                          <Badge variant="outline" color="dark">
+                            {alert.category}
+                          </Badge>
+                        </Table.Td>
+                        <Table.Td>
+                          <Badge color="red" variant="filled">
+                            {alert.currentStock} un.
+                          </Badge>
+                        </Table.Td>
+                        <Table.Td fw={600} style={{ color: '#000' }}>
+                          {alert.minThreshold} un.
+                        </Table.Td>
+                        <Table.Td>
+                          <Button
+                            size="xs"
+                            radius="md"
+                            className={classes.actionButton}
+                            onClick={() => handleRestockAlert(alert.id)}
+                            leftSection={<IconRefresh size={12} />}
+                          >
+                            Reponer Stock
+                          </Button>
+                        </Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+              </Table.ScrollContainer>
             </Card>
           </Grid.Col>
 

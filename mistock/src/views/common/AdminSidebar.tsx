@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Box, Title, Code, Text } from '@mantine/core';
+import { Title, Code, Text } from '@mantine/core';
 import {
   IconBox,
   IconChartBar,
@@ -22,8 +22,17 @@ const adminNavData = [
   { link: '/admin#ajustes', label: 'Configuración', icon: IconSettings },
 ];
 
-export function AdminSidebar() {
+interface AdminSidebarProps {
+  onNavigate?: () => void;
+}
+
+export function AdminSidebar({ onNavigate }: AdminSidebarProps = {}) {
   const [active, setActive] = useState('Métricas & KPIs');
+
+  const handleLinkClick = (label: string) => {
+    setActive(label);
+    onNavigate?.();
+  };
 
   const links = adminNavData.map((item) => (
     <a
@@ -31,7 +40,7 @@ export function AdminSidebar() {
       data-active={item.label === active || undefined}
       href={item.link}
       key={item.label}
-      onClick={() => setActive(item.label)}
+      onClick={() => handleLinkClick(item.label)}
     >
       <item.icon className={classes.linkIcon} stroke={1.8} />
       <span>{item.label}</span>
@@ -65,12 +74,12 @@ export function AdminSidebar() {
 
       {/* Footer */}
       <div className={classes.footer}>
-        <a href="/login" className={classes.link}>
+        <a href="/login" className={classes.link} onClick={() => onNavigate?.()}>
           <IconSwitchHorizontal className={classes.linkIcon} stroke={1.8} />
           <span>Cambiar de Rol</span>
         </a>
 
-        <a href="/logout" className={classes.link}>
+        <a href="/logout" className={classes.link} onClick={() => onNavigate?.()}>
           <IconLogout className={classes.linkIcon} stroke={1.8} />
           <span>Cerrar Sesión</span>
         </a>
