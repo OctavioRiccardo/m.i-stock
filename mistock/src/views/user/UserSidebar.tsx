@@ -1,14 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Box, Title, Code, Group, Badge, Text } from '@mantine/core';
+import { Title, Code, Text } from '@mantine/core';
 import {
   IconBox,
   IconShoppingCart,
   IconReceipt2,
   IconListCheck,
   IconLogout,
-  IconUserCheck,
   IconSwitchHorizontal,
 } from '@tabler/icons-react';
 import classes from './UserSidebar.module.css';

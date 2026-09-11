@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Flex } from '@mantine/core';
-import { UserSidebar } from '@/views/common/UserSidebar';
+import { UserSidebar } from '@/views/user/UserSidebar';
 import { Footer } from '@/views/common/Footer';
 
 export default function UserLayout({

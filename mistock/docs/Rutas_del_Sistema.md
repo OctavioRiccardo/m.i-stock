@@ -139,19 +139,17 @@ src/
 │
 ├── views/                     # Componentes visuales puros y estilos
 │   ├── admin/
-│   │   ├── AdminDashboardView.tsx
-│   │   └── AdminDashboardView.module.css
+│   │   ├── AdminDashboardView.tsx & AdminDashboardView.module.css
+│   │   ├── AdminSidebar.tsx & AdminSidebar.module.css
+│   │   └── AdminNavbar.tsx & AdminNavbar.module.css
 │   ├── auth/
-│   │   ├── LoginFormView.tsx
-│   │   ├── LoginFormView.module.css
-│   │   ├── LogoutView.tsx
-│   │   └── LogoutView.module.css
+│   │   ├── LoginFormView.tsx & LoginFormView.module.css
+│   │   └── LogoutView.tsx & LogoutView.module.css
 │   ├── user/
-│   │   ├── UserDashboardView.tsx
-│   │   └── UserDashboardView.module.css
+│   │   ├── UserDashboardView.tsx & UserDashboardView.module.css
+│   │   ├── UserSidebar.tsx & UserSidebar.module.css
+│   │   └── UserNavbar.tsx & UserNavbar.module.css
 │   └── common/
-│       ├── AdminSidebar.tsx & AdminSidebar.module.css
-│       ├── UserSidebar.tsx & UserSidebar.module.css
 │       └── Footer.tsx & Footer.module.css
 │
 ├── lib/                       # Utilidades e integraciones de infraestructura

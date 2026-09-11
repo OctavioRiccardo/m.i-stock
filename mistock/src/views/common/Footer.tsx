@@ -20,9 +20,6 @@ export function Footer() {
             <Text fw={700} size="sm" c="black">
               miStock
             </Text>
-            <Badge style={{ backgroundColor: '#318482', color: '#ffffff' }} size="xs" radius="sm">
-              v1.0.0
-            </Badge>
           </Group>
           {/* Links & Copyright */}
           <Group gap="lg" wrap="wrap">

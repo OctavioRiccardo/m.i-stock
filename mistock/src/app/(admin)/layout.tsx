@@ -4,7 +4,7 @@ import React from 'react';
 import { AppShell, Burger, Group, Box, Title, Badge } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconShieldCheck } from '@tabler/icons-react';
-import { AdminSidebar } from '@/views/common/AdminSidebar';
+import { AdminSidebar } from '@/views/admin/AdminSidebar';
 import { Footer } from '@/views/common/Footer';
 
 export default function AdminLayout({
