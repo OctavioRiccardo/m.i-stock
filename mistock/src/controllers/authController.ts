@@ -1,113 +1,78 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from '@mantine/form';
 import { createClient } from '@/lib/supabase/client';
 import { LoginFormValues } from '@/models/authModel';
 
-/**
- * ============================================================================
- * CONTROLADOR DE AUTENTICACIÓN (Login Controller)
- * ============================================================================
- * En React + TypeScript, un Controlador se implementa como un Custom Hook.
- * Su objetivo es separar 100% la LÓGICA de la VISTA:
- *
- * 1. Mantiene el ESTADO (cargando, errores, datos del formulario).
- * 2. Aplica VALIDACIONES de negocio.
- * 3. Se conecta a la BASE DE DATOS (Supabase Client).
- * 4. Controla la NAVEGACIÓN (Next.js Router).
- */
-
-
-/**
- * CONTROLADOR DE LOGIN (Inicio de Sesion)
+/*
+ * Controlador para la autenticación de usuarios (Inicio de sesión).
+ * Administra el estado del formulario, la validación de credenciales
+ * mediante Supabase Auth y la redirección post-autenticación.
  */
 export function useLoginController() {
   const router = useRouter();
 
-  // --------------------------------------------------------------------------
-  // 1. ESTADO DEL CONTROLADOR (State)
-  // --------------------------------------------------------------------------
+  // Estado reactivo
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Formulario reactivo con Mantine Form y validaciones explícitas
+  // Configuración del formulario y validaciones declarativas
   const form = useForm<LoginFormValues>({
     initialValues: { email: '', password: '', rememberMe: false, },
-    validate:
-    {
-      email: (value) => /^\S+@\S+$/.test(value) ? null : 'Correo electrónico no válido',
-      password: (value) => value.length >= 6 ? null : 'La contraseña debe tener al menos 6 caracteres',
-    },
+    validate: { email: (value) => (/^\S+@\S+$/.test(value) ? null : 'Correo electrónico no válido'), password: (value) => (value.length >= 6 ? null : 'La contraseña debe tener al menos 6 caracteres'), },
   });
 
-  // --------------------------------------------------------------------------
-  // 2. ACCIONES Y LÓGICA DE NEGOCIO (Handlers)
-  // --------------------------------------------------------------------------
-
   /**
-   * Procesa el envío del formulario de inicio de sesión.
-   * Paso a Paso Didáctico:
-   *  Paso A: Activar el indicador de carga y limpiar errores previos.
-   *  Paso B: Llamar al cliente de Supabase Auth para validar credenciales.
-   *  Paso C: Si falla, guardar mensaje de error accesible para la vista.
-   *  Paso D: Si tiene éxito, redirigir al usuario al Dashboard '/'.
+   * Envía las credenciales a Supabase Auth y redirige al panel principal en caso de éxito.
    */
   const handleSubmit = async (values: LoginFormValues) => {
-    setLoading(true);
-    setError(null);
+    setLoading(true); setError(null);
 
     try {
-      // B. Inicializar cliente de Supabase
-      const supabase = createClient();
+      const supabase = createClient(); const { data, error: authError } = await supabase.auth.signInWithPassword({ email: values.email, password: values.password, });
 
-      // Enviar solicitud de login
-      const { data, error: authError } = await supabase.auth.signInWithPassword({ email: values.email, password: values.password, });
-
-      // C. Manejo de errores devueltos por Supabase
       if (authError) {
         if (authError.message.includes('Invalid login credentials')) {
           setError('Correo electrónico o contraseña incorrectos.');
         } else {
           setError(authError.message || 'Error al iniciar sesión.');
         }
-        setLoading(false);
         return;
       }
 
-      // D. Redirección exitosa
       if (data.session) {
         router.push('/');
         router.refresh();
       }
-    } catch (err: any) {
-      setError(err?.message || 'Error inesperado de conexión.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error inesperado de conexión.';
+      setError(message);
     } finally {
       setLoading(false);
     }
   };
 
-  /**
-   * Permite a la vista limpiar manualmente el mensaje de error.
+  /*
+   * Limpia el mensaje de error activo.
    */
-  const clearError = () => setError(null);
-
-  // --------------------------------------------------------------------------
-  // 3. EXPOSICIÓN DE LA INTERFAZ AL COMPONENTE VISTA (Return Contract)
-  // --------------------------------------------------------------------------
+  const clearError = () => setError(null); s
   return { form, loading, error, handleSubmit: form.onSubmit(handleSubmit), clearError, };
 }
 
-/**
- * CONTROLADOR DE LOGOUT (Cierre de Sesión)
+/*
+ * Controlador para el cierre de sesión.
+ * Invalida la sesión actual en Supabase Auth, limpia cookies
+ * de sesión y redirige al usuario a la pantalla de login.
+ * @param autoExecute Si es true, inicia el logout automáticamente al montar el componente.
  */
 export function useLogoutController(autoExecute: boolean = true) {
   const router = useRouter();
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(autoExecute);
   const [loggedOut, setLoggedOut] = useState<boolean>(false);
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     setLoading(true);
     try {
       const supabase = createClient();
@@ -115,19 +80,43 @@ export function useLogoutController(autoExecute: boolean = true) {
       setLoggedOut(true);
       router.push('/login');
       router.refresh();
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error al cerrar sesión:', err);
       router.push('/login');
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
 
   useEffect(() => {
-    if (autoExecute) {
-      handleLogout();
-    }
-  }, [autoExecute]);
+    if (!autoExecute) return;
+
+    let isMounted = true;
+    const performLogout = async () => {
+      try {
+        const supabase = createClient();
+        await supabase.auth.signOut();
+        if (isMounted) {
+          setLoggedOut(true);
+          router.push('/login');
+          router.refresh();
+        }
+      } catch (err: unknown) {
+        console.error('Error al cerrar sesión:', err);
+        if (isMounted) {
+          router.push('/login');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void performLogout();
+
+    return () => { isMounted = false; };
+  }, [autoExecute, router]);
 
   return { loading, loggedOut, handleLogout, };
 }
