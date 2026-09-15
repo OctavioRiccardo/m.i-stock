@@ -30,11 +30,11 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
             <Grid.Col key={idx} span={{ base: 12, sm: 6, md: 3 }}>
               <Card p="md" className={classes.card}>
                 <Group justify="space-between">
-                  <Text size="xs" fw={700} tt="uppercase" c="black">{kpi.title}</Text>
-                  <IconChartBar size={18} color="#318482" />
+                  <Text size="xs" fw={700} tt="uppercase" c="#657373">{kpi.title}</Text>
+                  <IconChartBar size={18} color="#2A7A78" />
                 </Group>
                 <Group align="flex-end" gap="xs" mt="md">
-                  <Text size="xl" fw={800} c="black">{kpi.value}</Text>
+                  <Text size="xl" fw={800} c="#1C2424">{kpi.value}</Text>
                   {kpi.changePercentage && (<Badge color={kpi.status === 'positive' ? 'teal' : 'red'} size="sm" variant="light">{kpi.changePercentage}</Badge>)}
                 </Group>
               </Card>
@@ -52,50 +52,52 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                 </Group>
               </Group>
 
-              <Table verticalSpacing="sm" highlightOnHover>
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th style={{ color: '#000' }}>Producto</Table.Th>
-                    <Table.Th style={{ color: '#000' }}>Categoría</Table.Th>
-                    <Table.Th style={{ color: '#000' }}>Stock Actual</Table.Th>
-                    <Table.Th style={{ color: '#000' }}>Mínimo Deseado</Table.Th>
-                    <Table.Th style={{ color: '#000' }}>Acción</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {data.stockAlerts.map((alert) => (
-                    <Table.Tr key={alert.id}>
-                      <Table.Td fw={700} style={{ color: '#000' }}>
-                        {alert.productName}
-                      </Table.Td>
-                      <Table.Td style={{ color: '#000' }}>
-                        <Badge variant="outline" color="dark">
-                          {alert.category}
-                        </Badge>
-                      </Table.Td>
-                      <Table.Td>
-                        <Badge color="red" variant="filled">
-                          {alert.currentStock} un.
-                        </Badge>
-                      </Table.Td>
-                      <Table.Td fw={600} style={{ color: '#000' }}>
-                        {alert.minThreshold} un.
-                      </Table.Td>
-                      <Table.Td>
-                        <Button
-                          size="xs"
-                          radius="md"
-                          className={classes.actionButton}
-                          onClick={() => handleRestockAlert(alert.id)}
-                          leftSection={<IconRefresh size={12} />}
-                        >
-                          Reponer Stock
-                        </Button>
-                      </Table.Td>
+              <Table.ScrollContainer minWidth={500}>
+                <Table verticalSpacing="sm" highlightOnHover>
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th style={{ color: '#1C2424' }}>Producto</Table.Th>
+                      <Table.Th style={{ color: '#1C2424' }}>Categoría</Table.Th>
+                      <Table.Th style={{ color: '#1C2424' }}>Stock Actual</Table.Th>
+                      <Table.Th style={{ color: '#1C2424' }}>Mínimo Deseado</Table.Th>
+                      <Table.Th style={{ color: '#1C2424' }}>Acción</Table.Th>
                     </Table.Tr>
-                  ))}
-                </Table.Tbody>
-              </Table>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {data.stockAlerts.map((alert) => (
+                      <Table.Tr key={alert.id}>
+                        <Table.Td fw={700} style={{ color: '#1C2424' }}>
+                          {alert.productName}
+                        </Table.Td>
+                        <Table.Td style={{ color: '#1C2424' }}>
+                          <Badge variant="outline" color="dark">
+                            {alert.category}
+                          </Badge>
+                        </Table.Td>
+                        <Table.Td>
+                          <Badge color="red" variant="filled">
+                            {alert.currentStock} un.
+                          </Badge>
+                        </Table.Td>
+                        <Table.Td fw={600} style={{ color: '#1C2424' }}>
+                          {alert.minThreshold} un.
+                        </Table.Td>
+                        <Table.Td>
+                          <Button
+                            size="xs"
+                            radius="md"
+                            className={classes.actionButton}
+                            onClick={() => handleRestockAlert(alert.id)}
+                            leftSection={<IconRefresh size={12} />}
+                          >
+                            Reponer Stock
+                          </Button>
+                        </Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+              </Table.ScrollContainer>
             </Card>
           </Grid.Col>
 
@@ -106,35 +108,35 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                 <Title order={4} className={classes.title}>
                   Control de Usuarios
                 </Title>
-                <IconUsers size={20} color="#318482" />
+                <IconUsers size={20} color="#2A7A78" />
               </Group>
 
               <Stack gap="xs">
-                <Paper p="xs" radius="md" style={{ backgroundColor: '#ffffff', border: '1px solid rgba(0,0,0,0.1)' }}>
+                <Paper p="xs" radius="md" style={{ backgroundColor: '#ffffff', border: '1px solid #E8E6DF' }}>
                   <Group justify="space-between">
                     <div>
-                      <Text size="xs" fw={700} c="black">
+                      <Text size="xs" fw={700} c="#1C2424">
                         Octavio Riccardo (Dueño)
                       </Text>
                       <Text size="xs" c="dimmed">
                         Rol: Administrador Total
                       </Text>
                     </div>
-                    <Badge color="indigo" size="xs">Admin</Badge>
+                    <Badge style={{ backgroundColor: '#2A7A78', color: '#ffffff' }} size="xs">Admin</Badge>
                   </Group>
                 </Paper>
 
-                <Paper p="xs" radius="md" style={{ backgroundColor: '#ffffff', border: '1px solid rgba(0,0,0,0.1)' }}>
+                <Paper p="xs" radius="md" style={{ backgroundColor: '#ffffff', border: '1px solid #E8E6DF' }}>
                   <Group justify="space-between">
                     <div>
-                      <Text size="xs" fw={700} c="black">
+                      <Text size="xs" fw={700} c="#1C2424">
                         Empleado Turno Mañana
                       </Text>
                       <Text size="xs" c="dimmed">
                         Rol: Cajero / Operador
                       </Text>
                     </div>
-                    <Badge color="teal" size="xs">Usuario</Badge>
+                    <Badge style={{ backgroundColor: '#E2F1F0', color: '#1C2424' }} size="xs">Usuario</Badge>
                   </Group>
                 </Paper>
               </Stack>

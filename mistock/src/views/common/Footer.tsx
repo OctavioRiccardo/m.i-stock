@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Box, Container, Group, Text, Anchor, Badge, Divider } from '@mantine/core';
-import { IconBox, IconLockCheck } from '@tabler/icons-react';
+import { Box, Container, Group, Text, Anchor } from '@mantine/core';
+import { IconBox } from '@tabler/icons-react';
 import classes from './Footer.module.css';
 
 export function Footer() {
@@ -17,23 +17,23 @@ export function Footer() {
             <Box className={classes.logoBadge}>
               <IconBox size={16} />
             </Box>
-            <Text fw={700} size="sm" c="black">
+            <Text fw={700} size="sm" c="#1C2424">
               miStock
             </Text>
           </Group>
           {/* Links & Copyright */}
           <Group gap="lg" wrap="wrap">
-            <Text size="xs" c="black">
+            <Text size="xs" c="#657373">
               &copy; {currentYear} miStock Inc. Todos los derechos reservados.
             </Text>
             <Group gap="md">
-              <Anchor href="#" size="xs" c="black" underline="hover">
+              <Anchor href="#" size="xs" c="#657373" underline="hover">
                 Soporte
               </Anchor>
-              <Anchor href="#" size="xs" c="black" underline="hover">
+              <Anchor href="#" size="xs" c="#657373" underline="hover">
                 Privacidad
               </Anchor>
-              <Anchor href="#" size="xs" c="black" underline="hover">
+              <Anchor href="#" size="xs" c="#657373" underline="hover">
                 Términos
               </Anchor>
             </Group>

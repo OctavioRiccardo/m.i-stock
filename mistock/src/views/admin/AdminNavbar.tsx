@@ -20,7 +20,7 @@ export function AdminNavbar() {
           </Group>
 
           <Group gap="xs">
-            <Button component="a" href="/admin" size="xs" variant="light" style={{ color: '#000000', backgroundColor: '#e5e3cd' }} leftSection={<IconChartBar size={14} />}>
+            <Button component="a" href="/admin" size="xs" variant="light" style={{ color: '#1C2424', backgroundColor: '#E2F1F0' }} leftSection={<IconChartBar size={14} />}>
               Métricas & Reportes
             </Button>
             <Button component="a" href="/logout" size="xs" variant="filled" className={classes.logoutBtn} leftSection={<IconLogout size={14} />}>

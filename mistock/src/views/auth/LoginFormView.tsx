@@ -49,7 +49,7 @@ export function LoginFormView({ loginController }: LoginFormViewProps) {
             </Group>
 
             <Badge
-              style={{ backgroundColor: '#318482', color: '#ffffff' }}
+              style={{ backgroundColor: '#2A7A78', color: '#ffffff' }}
               size="sm"
               radius="xl"
               mt={4}
@@ -80,9 +80,9 @@ export function LoginFormView({ loginController }: LoginFormViewProps) {
           <form onSubmit={handleSubmit}>
             <Stack gap="md">
               <TextInput
-                label={<Text size="sm" fw={600} c="black">Correo Electrónico</Text>}
+                label={<Text size="sm" fw={600} c="#1C2424">Correo Electrónico</Text>}
                 placeholder="usuario@ejemplo.com"
-                leftSection={<IconMail size={16} color="#318482" />}
+                leftSection={<IconMail size={16} color="#2A7A78" />}
                 size="md"
                 radius="md"
                 classNames={{ input: classes.customInput }}
@@ -91,9 +91,9 @@ export function LoginFormView({ loginController }: LoginFormViewProps) {
               />
 
               <PasswordInput
-                label={<Text size="sm" fw={600} c="black">Contraseña</Text>}
+                label={<Text size="sm" fw={600} c="#1C2424">Contraseña</Text>}
                 placeholder="••••••••"
-                leftSection={<IconLock size={16} color="#318482" />}
+                leftSection={<IconLock size={16} color="#2A7A78" />}
                 size="md"
                 radius="md"
                 classNames={{ input: classes.customInput, innerInput: classes.customInput }}
@@ -103,14 +103,14 @@ export function LoginFormView({ loginController }: LoginFormViewProps) {
 
               <Group justify="space-between" mt={4}>
                 <Checkbox
-                  label={<Text size="xs" c="black">Recordarme en este equipo</Text>}
+                  label={<Text size="xs" c="#1C2424">Recordarme en este equipo</Text>}
                   size="xs"
                   styles={{
                     input: { cursor: 'pointer' },
                   }}
                   {...form.getInputProps('rememberMe', { type: 'checkbox' })}
                 />
-                <Anchor href="#" size="xs" c="black" fw={700} underline="hover">
+                <Anchor href="#" size="xs" c="#2A7A78" fw={600} underline="hover">
                   ¿Olvidaste tu contraseña?
                 </Anchor>
               </Group>
@@ -133,7 +133,7 @@ export function LoginFormView({ loginController }: LoginFormViewProps) {
           {/* Footer note */}
           <Text size="xs" ta="center" mt="xl" className={classes.subtitleText}>
             ¿No tienes una cuenta aún?{' '}
-            <Anchor href="#" size="xs" c="black" fw={700} underline="hover">
+            <Anchor href="#" size="xs" c="#2A7A78" fw={600} underline="hover">
               Contacta al administrador
             </Anchor>
           </Text>

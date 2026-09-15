@@ -56,7 +56,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
             </Text>
           </div>
 
-          <Badge size="lg" radius="md" style={{ backgroundColor: '#318482', color: '#fff' }}>
+          <Badge size="lg" radius="md" style={{ backgroundColor: '#2A7A78', color: '#fff' }}>
             Operación Activa
           </Badge>
         </Group>
@@ -79,12 +79,12 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
           <Grid.Col span={{ base: 12, sm: 4 }}>
             <Card p="md" className={classes.card}>
               <Group justify="space-between">
-                <Text size="xs" fw={700} tt="uppercase" c="black">
+                <Text size="xs" fw={700} tt="uppercase" c="#657373">
                   Ventas del Día
                 </Text>
-                <IconShoppingCart size={20} color="#318482" />
+                <IconShoppingCart size={20} color="#2A7A78" />
               </Group>
-              <Text size="xl" fw={800} c="black" mt="xs">
+              <Text size="xl" fw={800} c="#1C2424" mt="xs">
                 {data.dailySalesCount}
               </Text>
             </Card>
@@ -93,12 +93,12 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
           <Grid.Col span={{ base: 12, sm: 4 }}>
             <Card p="md" className={classes.card}>
               <Group justify="space-between">
-                <Text size="xs" fw={700} tt="uppercase" c="black">
+                <Text size="xs" fw={700} tt="uppercase" c="#657373">
                   Recaudación Hoy
                 </Text>
-                <IconBox size={20} color="#318482" />
+                <IconBox size={20} color="#2A7A78" />
               </Group>
-              <Text size="xl" fw={800} c="black" mt="xs">
+              <Text size="xl" fw={800} c="#1C2424" mt="xs">
                 ${data.dailyRevenue.toLocaleString('es-AR')}
               </Text>
             </Card>
@@ -107,12 +107,12 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
           <Grid.Col span={{ base: 12, sm: 4 }}>
             <Card p="md" className={classes.card}>
               <Group justify="space-between">
-                <Text size="xs" fw={700} tt="uppercase" c="black">
+                <Text size="xs" fw={700} tt="uppercase" c="#657373">
                   Productos en Catálogo
                 </Text>
-                <IconBox size={20} color="#318482" />
+                <IconBox size={20} color="#2A7A78" />
               </Group>
-              <Text size="xl" fw={800} c="black" mt="xs">
+              <Text size="xl" fw={800} c="#1C2424" mt="xs">
                 {data.totalProductsInStock} ítems
               </Text>
             </Card>
@@ -131,59 +131,61 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
 
               <TextInput
                 placeholder="Buscar por nombre o código de barra (ej. 779001)..."
-                leftSection={<IconSearch size={16} color="#318482" />}
+                leftSection={<IconSearch size={16} color="#2A7A78" />}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.currentTarget.value)}
                 mb="md"
                 classNames={{ input: classes.searchInput }}
               />
 
-              <Table verticalSpacing="sm" highlightOnHover>
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th style={{ color: '#000' }}>Producto</Table.Th>
-                    <Table.Th style={{ color: '#000' }}>Precio</Table.Th>
-                    <Table.Th style={{ color: '#000' }}>Stock</Table.Th>
-                    <Table.Th style={{ color: '#000' }}>Acción</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {filteredProducts.map((prod) => (
-                    <Table.Tr key={prod.id}>
-                      <Table.Td fw={600} style={{ color: '#000' }}>
-                        {prod.name}
-                        <Text size="xs" c="dimmed">
-                          {prod.category} • Cod: {prod.code}
-                        </Text>
-                      </Table.Td>
-                      <Table.Td fw={700} style={{ color: '#000' }}>
-                        ${prod.price.toLocaleString('es-AR')}
-                      </Table.Td>
-                      <Table.Td>
-                        <Badge
-                          color={prod.stock > 10 ? 'teal' : 'red'}
-                          variant="light"
-                          size="sm"
-                        >
-                          {prod.stock} un.
-                        </Badge>
-                      </Table.Td>
-                      <Table.Td>
-                        <Button
-                          size="xs"
-                          radius="md"
-                          className={classes.saleButton}
-                          onClick={() => handleQuickSale(prod.id)}
-                          leftSection={<IconPlus size={12} />}
-                          disabled={prod.stock <= 0}
-                        >
-                          Vender
-                        </Button>
-                      </Table.Td>
+              <Table.ScrollContainer minWidth={500}>
+                <Table verticalSpacing="sm" highlightOnHover>
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th style={{ color: '#1C2424' }}>Producto</Table.Th>
+                      <Table.Th style={{ color: '#1C2424' }}>Precio</Table.Th>
+                      <Table.Th style={{ color: '#1C2424' }}>Stock</Table.Th>
+                      <Table.Th style={{ color: '#1C2424' }}>Acción</Table.Th>
                     </Table.Tr>
-                  ))}
-                </Table.Tbody>
-              </Table>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {filteredProducts.map((prod) => (
+                      <Table.Tr key={prod.id}>
+                        <Table.Td fw={600} style={{ color: '#1C2424' }}>
+                          {prod.name}
+                          <Text size="xs" c="dimmed">
+                            {prod.category} • Cod: {prod.code}
+                          </Text>
+                        </Table.Td>
+                        <Table.Td fw={700} style={{ color: '#1C2424' }}>
+                          ${prod.price.toLocaleString('es-AR')}
+                        </Table.Td>
+                        <Table.Td>
+                          <Badge
+                            color={prod.stock > 10 ? 'teal' : 'red'}
+                            variant="light"
+                            size="sm"
+                          >
+                            {prod.stock} un.
+                          </Badge>
+                        </Table.Td>
+                        <Table.Td>
+                          <Button
+                            size="xs"
+                            radius="md"
+                            className={classes.saleButton}
+                            onClick={() => handleQuickSale(prod.id)}
+                            leftSection={<IconPlus size={12} />}
+                            disabled={prod.stock <= 0}
+                          >
+                            Vender
+                          </Button>
+                        </Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+              </Table.ScrollContainer>
             </Card>
           </Grid.Col>
 
@@ -194,7 +196,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                 <Title order={4} className={classes.title}>
                   Ventas Recientes
                 </Title>
-                <IconClock size={18} color="#318482" />
+                <IconClock size={18} color="#2A7A78" />
               </Group>
 
               <Stack gap="xs">
@@ -203,18 +205,18 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                     key={sale.id}
                     p="xs"
                     radius="md"
-                    style={{ backgroundColor: '#ffffff', border: '1px solid rgba(0,0,0,0.1)' }}
+                    style={{ backgroundColor: '#ffffff', border: '1px solid #E8E6DF' }}
                   >
                     <Group justify="space-between">
                       <div>
-                        <Text size="xs" fw={700} c="black">
+                        <Text size="xs" fw={700} c="#1C2424">
                           {sale.id}
                         </Text>
                         <Text size="xs" c="dimmed">
                           Hora: {sale.time} • {sale.itemCount} ítem(s)
                         </Text>
                       </div>
-                      <Text size="sm" fw={800} style={{ color: '#318482' }}>
+                      <Text size="sm" fw={800} style={{ color: '#2A7A78' }}>
                         ${sale.totalAmount.toLocaleString('es-AR')}
                       </Text>
                     </Group>

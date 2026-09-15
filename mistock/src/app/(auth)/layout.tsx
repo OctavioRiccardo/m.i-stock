@@ -12,7 +12,7 @@ export default function AuthLayout({
       direction="column"
       style={{
         minHeight: '100vh',
-        backgroundColor: '#dad7c3',
+        backgroundColor: '#F8F7F2',
       }}
     >
       {/* Main content centered without Navbar */}

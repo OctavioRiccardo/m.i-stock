@@ -23,14 +23,14 @@ export default function AdminLayout({
         collapsed: { mobile: !opened },
       }}
       padding="0"
-      style={{ minHeight: '100vh', backgroundColor: '#dad7c3' }}
+      style={{ minHeight: '100vh', backgroundColor: '#F8F7F2' }}
     >
       {/* Header superior para móvil con botón de hamburguesa */}
       <AppShell.Header
         hiddenFrom="sm"
         style={{
-          backgroundColor: '#318482',
-          borderBottom: '1px solid rgba(0, 0, 0, 0.15)',
+          backgroundColor: '#2A7A78',
+          borderBottom: '1px solid rgba(0, 0, 0, 0.08)',
         }}
       >
         <Group h="100%" px="md" justify="space-between">
@@ -52,7 +52,7 @@ export default function AdminLayout({
                   height: 32,
                   borderRadius: 8,
                   backgroundColor: '#ffffff',
-                  color: '#318482',
+                  color: '#2A7A78',
                 }}
               >
                 <IconShieldCheck size={20} />
@@ -60,7 +60,7 @@ export default function AdminLayout({
               <Title order={4} style={{ color: '#ffffff', fontWeight: 800 }}>
                 miStock
               </Title>
-              <Badge color="indigo" variant="filled" size="xs">
+              <Badge style={{ backgroundColor: '#1C2424', color: '#ffffff' }} size="xs">
                 Admin
               </Badge>
             </Group>
@@ -71,8 +71,8 @@ export default function AdminLayout({
       {/* Barra lateral de navegación */}
       <AppShell.Navbar
         style={{
-          backgroundColor: '#318482',
-          borderRight: '1px solid rgba(0, 0, 0, 0.15)',
+          backgroundColor: '#2A7A78',
+          borderRight: '1px solid rgba(0, 0, 0, 0.08)',
         }}
       >
         <AdminSidebar onNavigate={close} />
@@ -81,7 +81,7 @@ export default function AdminLayout({
       {/* Contenedor principal con footer */}
       <AppShell.Main
         style={{
-          backgroundColor: '#dad7c3',
+          backgroundColor: '#F8F7F2',
           display: 'flex',
           flexDirection: 'column',
           minHeight: '100vh',

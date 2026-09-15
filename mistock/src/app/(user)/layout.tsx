@@ -9,7 +9,7 @@ export default function UserLayout({
   children: React.ReactNode;
 }) {
   return (
-    <Flex style={{ minHeight: '100vh', backgroundColor: '#dad7c3' }}>
+    <Flex style={{ minHeight: '100vh', backgroundColor: '#F8F7F2' }}>
       {/* Left Sidebar Menu */}
       <UserSidebar />
 

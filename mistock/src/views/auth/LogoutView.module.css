@@ -7,28 +7,27 @@
 }
 
 .card {
-  background-color: #dddcbaac;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(0, 0, 0, 0.15);
-  box-shadow: none;
+  background-color: #ffffff;
+  border: 1px solid #E8E6DF;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05);
+  border-radius: 16px;
   position: relative;
   text-align: center;
 }
 
 .iconWrapper {
-  background-color: #318482;
+  background-color: #2A7A78;
   color: #ffffff;
   margin: 0 auto;
 }
 
 .title {
-  color: #000000;
+  color: #1C2424;
   letter-spacing: -0.5px;
   font-weight: 800;
 }
 
 .subtitleText {
-  color: #000000;
+  color: #657373;
   font-weight: 500;
 }

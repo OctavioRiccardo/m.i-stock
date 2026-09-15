@@ -33,7 +33,7 @@ export function UserNavbar() {
               href="/dashboard"
               size="xs"
               variant="light"
-              style={{ color: '#000000', backgroundColor: '#e5e3cd' }}
+              style={{ color: '#1C2424', backgroundColor: '#E2F1F0' }}
               leftSection={<IconShoppingCart size={14} />}
             >
               Ventas y Stock

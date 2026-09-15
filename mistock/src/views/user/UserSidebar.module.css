@@ -1,5 +1,5 @@
 .navbar {
-  background-color: #318482;
+  background-color: #2A7A78;
   height: 100vh;
   width: 280px;
   padding: var(--mantine-spacing-md);
@@ -38,7 +38,7 @@
   height: 32px;
   border-radius: 8px;
   background-color: #ffffff;
-  color: #318482;
+  color: #2A7A78;
 }
 
 .brandTitle {
@@ -75,12 +75,12 @@
 
 .link[data-active="true"] {
   background-color: #ffffff;
-  color: #318482;
+  color: #2A7A78;
   font-weight: 700;
 }
 
 .link[data-active="true"] .linkIcon {
-  color: #318482;
+  color: #2A7A78;
 }
 
 .linkIcon {

@@ -1,25 +1,25 @@
 .card {
-  background-color: #dddcbaac;
-  border: 1px solid rgba(0, 0, 0, 0.15);
-  box-shadow: none;
+  background-color: #ffffff;
+  border: 1px solid #E8E6DF;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
   border-radius: 12px;
 }
 
 .title {
-  color: #000000;
+  color: #1C2424;
   font-weight: 800;
 }
 
 .textDark {
-  color: #000000;
+  color: #657373;
 }
 
 .actionButton {
-  background-color: #318482 !important;
+  background-color: #2A7A78 !important;
   color: #ffffff !important;
   font-weight: 600;
 }
 
 .actionButton:hover {
-  background-color: #276b69 !important;
+  background-color: #205E5D !important;
 }

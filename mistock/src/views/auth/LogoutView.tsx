@@ -29,7 +29,7 @@ export function LogoutView({ logoutController }: LogoutViewProps) {
             Estamos finalizando tu sesión en miStock de forma segura...
           </Text>
 
-          <Loader color="#318482" size="md" type="dots" mt="xs" />
+          <Loader color="#2A7A78" size="md" type="dots" mt="xs" />
         </Stack>
       </Paper>
     </Box>
