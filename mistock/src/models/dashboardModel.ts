@@ -1,4 +1,4 @@
-export interface QuickProduct {
+export interface Productos {
   id: string;
   name: string;
   category: string;
@@ -7,7 +7,7 @@ export interface QuickProduct {
   code: string;
 }
 
-export interface UserDashboardData {
+export interface UsuarioDashboard {
   dailySalesCount: number;
   dailyRevenue: number;
   totalProductsInStock: number;
@@ -17,10 +17,9 @@ export interface UserDashboardData {
     totalAmount: number;
     itemCount: number;
   }[];
-  popularProducts: QuickProduct[];
+  ProductosMasVendidos: Productos[];
 }
-
-export interface AdminMetricCard {
+export interface AdminDashboard {
   title: string;
   value: string;
   changePercentage?: string;
