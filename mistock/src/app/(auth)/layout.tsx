@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Flex } from '@mantine/core';
-import { Footer } from '@/views/common/Footer';
+import { Footer } from '@/views/comunes/Footer';
 
 export default function AuthLayout({
   children,

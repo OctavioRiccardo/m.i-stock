@@ -1,4 +1,6 @@
-export interface Productos {
+// Modelos de vista para Dashboards (Admin y Usuario)
+
+export interface QuickProduct {
   id: string;
   name: string;
   category: string;
@@ -7,7 +9,10 @@ export interface Productos {
   code: string;
 }
 
-export interface UsuarioDashboard {
+// Alias en español para compatibilidad
+export type Productos = QuickProduct;
+
+export interface UserDashboardData {
   dailySalesCount: number;
   dailyRevenue: number;
   totalProductsInStock: number;
@@ -17,14 +22,21 @@ export interface UsuarioDashboard {
     totalAmount: number;
     itemCount: number;
   }[];
-  ProductosMasVendidos: Productos[];
+  popularProducts: QuickProduct[];
 }
-export interface AdminDashboard {
+
+// Alias en español para compatibilidad
+export type UsuarioDashboard = UserDashboardData;
+
+export interface AdminMetricCard {
   title: string;
   value: string;
   changePercentage?: string;
   status: 'positive' | 'negative' | 'neutral';
 }
+
+// Alias en español para compatibilidad
+export type AdminMetricas = AdminMetricCard;
 
 export interface LowStockAlert {
   id: string;

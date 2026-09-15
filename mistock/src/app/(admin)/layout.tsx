@@ -5,7 +5,7 @@ import { AppShell, Burger, Group, Box, Title, Badge } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconShieldCheck } from '@tabler/icons-react';
 import { AdminSidebar } from '@/views/admin/AdminSidebar';
-import { Footer } from '@/views/common/Footer';
+import { Footer } from '@/views/comunes/Footer';
 
 export default function AdminLayout({
   children,
