@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { AdminDashboardData } from '@/modelos/modelos_vista/dashboardModel';
+import { AdminDashboardData } from '@/models/modelos_vista/dashboardModel';
 
 const initialMockAdminData: AdminDashboardData = {
   monthlyRevenue: 1450000,

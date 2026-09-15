@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from '@mantine/form';
 import { createClient } from '@/lib/supabase/client';
-import { LoginFormValues } from '@/modelos/modelos_vista/authModel';
+import { LoginFormValues } from '@/models/modelos_vista/authModel';
 
 /*
  * Controlador para la autenticación de usuarios (Inicio de sesión).

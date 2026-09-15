@@ -2,7 +2,7 @@
  * Exportación centralizada de todos los modelos de dominio.
  */
 
-export * from './productModel';
-export * from './saleModel';
-export * from './inventoryModel';
+export * from './productoModel';
+export * from './ventaModel';
+export * from './inventarioModel';
 export * from './userModel';
