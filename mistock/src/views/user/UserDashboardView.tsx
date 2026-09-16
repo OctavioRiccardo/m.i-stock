@@ -25,7 +25,7 @@ import {
   IconClock,
   IconPlus,
 } from '@tabler/icons-react';
-import { useUserDashboardController } from '@/controllers/userDashboardController';
+import { useUserDashboardController } from '@/controllers/userControllers/userDashboardController';
 import classes from './UserDashboardView.module.css';
 
 interface UserDashboardViewProps {

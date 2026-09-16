@@ -3,7 +3,7 @@
 import React from 'react';
 import { Container, Title, Text, Grid, Card, Group, Button, Table, Badge, Stack, Alert, Paper, } from '@mantine/core';
 import { IconChartBar, IconAlertTriangle, IconUsers, IconCheck, IconRefresh, IconShieldCheck } from '@tabler/icons-react';
-import { useAdminDashboardController } from '@/controllers/adminDashboardController';
+import { useAdminDashboardController } from '@/controllers/adminControllers/adminDashboardController';
 import classes from './AdminDashboardView.module.css';
 
 interface AdminDashboardViewProps { controller: ReturnType<typeof useAdminDashboardController>; }

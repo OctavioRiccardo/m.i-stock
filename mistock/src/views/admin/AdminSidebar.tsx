@@ -3,11 +3,12 @@
 import React, { useState } from 'react';
 import { Title, Code, Text } from '@mantine/core';
 import { IconBox, IconChartBar, IconAlertTriangle, IconUsers, IconSettings, IconLogout, IconSwitchHorizontal, IconShieldCheck, } from '@tabler/icons-react';
+import { usePathname } from 'next/navigation';
 import classes from './AdminSidebar.module.css';
 
 const adminNavData = [
   { link: '/admin#', label: 'Métricas & KPIs', icon: IconChartBar },
-  { link: '/', label: 'Gestion Inventario', icon: IconBox },
+  { link: '/admingestioninven#', label: 'Gestion Inventario', icon: IconBox },
   { link: '/', label: 'Gestión de Usuarios', icon: IconUsers },
   { link: '/', label: 'Inventario Global', icon: IconBox },
   { link: '/', label: 'Stock Crítico', icon: IconAlertTriangle },
@@ -17,7 +18,11 @@ const adminNavData = [
 interface AdminSidebarProps { onNavigate?: () => void; }
 
 export function AdminSidebar({ onNavigate }: AdminSidebarProps = {}) {
-  const [active, setActive] = useState('Métricas & KPIs');
+  const pathname = usePathname();
+  const activeLabel = pathname?.includes('admingestioninven')
+    ? 'Gestion Inventario'
+    : 'Métricas & KPIs';
+  const [active, setActive] = useState(activeLabel);
 
   const handleLinkClick = (label: string) => { setActive(label); onNavigate?.(); };
 
