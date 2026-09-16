@@ -1,9 +1,7 @@
 'use client';
 
-import React from 'react';
-import { AppShell, Burger, Group, Box, Title, Badge } from '@mantine/core';
-import { useDisclosure } from '@mantine/hooks';
-import { IconShieldCheck } from '@tabler/icons-react';
+import React, { useState } from 'react';
+import { Menu, X, ShieldCheck } from 'lucide-react';
 import { AdminSidebar } from '@/views/admin/AdminSidebar';
 import { Footer } from '@/views/comunes/Footer';
 
@@ -12,86 +10,72 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [opened, { toggle, close }] = useDisclosure();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <AppShell
-      header={{ height: { base: 60, sm: 0 } }}
-      navbar={{
-        width: 280,
-        breakpoint: 'sm',
-        collapsed: { mobile: !opened },
-      }}
-      padding="0"
-      style={{ minHeight: '100vh', backgroundColor: '#F8F7F2' }}
-    >
-      {/* Header superior para móvil con botón de hamburguesa */}
-      <AppShell.Header
-        hiddenFrom="sm"
-        style={{
-          backgroundColor: '#2A7A78',
-          borderBottom: '1px solid rgba(0, 0, 0, 0.08)',
-        }}
-      >
-        <Group h="100%" px="md" justify="space-between">
-          <Group gap="sm">
-            <Burger
-              opened={opened}
-              onClick={toggle}
-              size="sm"
-              color="#ffffff"
-              aria-label="Abrir menú de navegación"
-            />
-            <Group gap="xs">
-              <Box
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 32,
-                  height: 32,
-                  borderRadius: 8,
-                  backgroundColor: '#ffffff',
-                  color: '#2A7A78',
-                }}
-              >
-                <IconShieldCheck size={20} />
-              </Box>
-              <Title order={4} style={{ color: '#ffffff', fontWeight: 800 }}>
-                miStock
-              </Title>
-              <Badge style={{ backgroundColor: '#1C2424', color: '#ffffff' }} size="xs">
-                Admin
-              </Badge>
-            </Group>
-          </Group>
-        </Group>
-      </AppShell.Header>
+    <div className="min-h-screen bg-[#F8F7F2] text-[#1C2424] flex">
+      {/* Sidebar Desktop (fijo) */}
+      <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:w-64">
+        <AdminSidebar />
+      </aside>
 
-      {/* Barra lateral de navegación */}
-      <AppShell.Navbar
-        style={{
-          backgroundColor: '#2A7A78',
-          borderRight: '1px solid rgba(0, 0, 0, 0.08)',
-        }}
-      >
-        <AdminSidebar onNavigate={close} />
-      </AppShell.Navbar>
+      {/* Mobile Drawer Backdrop */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
 
-      {/* Contenedor principal con footer */}
-      <AppShell.Main
-        style={{
-          backgroundColor: '#F8F7F2',
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: '100vh',
-        }}
+      {/* Mobile Drawer Sidebar */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-2xl transition-transform duration-200 ease-in-out lg:hidden ${
+          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
       >
-        <Box component="main" style={{ flex: 1, paddingBottom: 24 }}>
+        <div className="absolute right-3 top-3 lg:hidden">
+          <button
+            onClick={() => setMobileMenuOpen(false)}
+            className="p-1 rounded-md text-[#657373] hover:text-[#1C2424]"
+            aria-label="Cerrar menú"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <AdminSidebar onNavigate={() => setMobileMenuOpen(false)} />
+      </aside>
+
+      {/* Main Content Area */}
+      <div className="flex-1 lg:pl-64 flex flex-col min-h-screen">
+        {/* Mobile Header */}
+        <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-[#E8E6DF] bg-white px-4 lg:hidden">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="p-1.5 rounded-lg text-[#1C2424] hover:bg-gray-100 transition-colors"
+              aria-label="Abrir menú"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            <div className="flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#2A7A78] text-white">
+                <ShieldCheck className="h-4 w-4" />
+              </div>
+              <span className="font-bold text-sm text-[#1C2424]">miStock</span>
+            </div>
+          </div>
+          <span className="rounded-full bg-[#E2F1F0] px-2 py-0.5 text-xs font-semibold text-[#2A7A78] border border-[#2A7A78]/20">
+            Admin
+          </span>
+        </header>
+
+        {/* Page Content */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8">
           {children}
-        </Box>
+        </main>
+
         <Footer />
-      </AppShell.Main>
-    </AppShell>
+      </div>
+    </div>
   );
 }

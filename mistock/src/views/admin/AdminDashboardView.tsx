@@ -1,150 +1,176 @@
 'use client';
 
 import React from 'react';
-import { Container, Title, Text, Grid, Card, Group, Button, Table, Badge, Stack, Alert, Paper, } from '@mantine/core';
-import { IconChartBar, IconAlertTriangle, IconUsers, IconCheck, IconRefresh, IconShieldCheck } from '@tabler/icons-react';
+import {
+  BarChart3,
+  AlertTriangle,
+  Users,
+  Check,
+  RefreshCw,
+  TrendingUp,
+  TrendingDown,
+} from 'lucide-react';
 import { useAdminDashboardController } from '@/controllers/adminControllers/adminDashboardController';
-import classes from './AdminDashboardView.module.css';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '@/components/ui/table';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-interface AdminDashboardViewProps { controller: ReturnType<typeof useAdminDashboardController>; }
+interface AdminDashboardViewProps {
+  controller: ReturnType<typeof useAdminDashboardController>;
+}
 
 export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
   const { data, alertResolvedMsg, handleRestockAlert } = controller;
 
   return (
-    <Container size="xl" py="lg">
-      <Stack gap="lg">
+    <div className="max-w-7xl mx-auto space-y-6">
+      {/* Title & Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-[#1C2424] tracking-tight">
+          Panel del Administrador
+        </h1>
+        <p className="text-sm text-[#657373]">
+          Métricas clave de rendimiento, alertas de reposición y control operativo.
+        </p>
+      </div>
 
-        <Group justify="space-between" align="center">
-          <div>
-            <Title order={2} className={classes.title}>
-              Panel del Administrador
-            </Title>
-          </div>
-        </Group>
+      {/* Alert Banner */}
+      {alertResolvedMsg && (
+        <Alert variant="success">
+          <Check className="h-4 w-4" />
+          <AlertTitle>Acción Registrada</AlertTitle>
+          <AlertDescription>{alertResolvedMsg}</AlertDescription>
+        </Alert>
+      )}
 
-        {alertResolvedMsg && (<Alert icon={<IconCheck size={18} />} title="Acción Registrada" color="teal" variant="filled" radius="md">{alertResolvedMsg}</Alert>)}
+      {/* KPI Metrics Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {data.kpiMetrics.map((kpi, idx) => (
+          <Card key={idx} className="p-5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-[#657373]">
+                {kpi.title}
+              </span>
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78]">
+                <BarChart3 className="h-4 w-4" />
+              </div>
+            </div>
 
-        <Grid>
-          {data.kpiMetrics.map((kpi, idx) => (
-            <Grid.Col key={idx} span={{ base: 12, sm: 6, md: 3 }}>
-              <Card p="md" className={classes.card}>
-                <Group justify="space-between">
-                  <Text size="xs" fw={700} tt="uppercase" c="#657373">{kpi.title}</Text>
-                  <IconChartBar size={18} color="#2A7A78" />
-                </Group>
-                <Group align="flex-end" gap="xs" mt="md">
-                  <Text size="xl" fw={800} c="#1C2424">{kpi.value}</Text>
-                  {kpi.changePercentage && (<Badge color={kpi.status === 'positive' ? 'teal' : 'red'} size="sm" variant="light">{kpi.changePercentage}</Badge>)}
-                </Group>
-              </Card>
-            </Grid.Col>
-          ))}
-        </Grid>
+            <div className="mt-4 flex items-baseline justify-between">
+              <span className="text-2xl font-extrabold text-[#1C2424] tracking-tight">
+                {kpi.value}
+              </span>
+              {kpi.changePercentage && (
+                <Badge
+                  variant={kpi.status === 'positive' ? 'success' : kpi.status === 'negative' ? 'destructive' : 'secondary'}
+                  className="gap-1 font-medium"
+                >
+                  {kpi.status === 'positive' ? (
+                    <TrendingUp className="h-3 w-3" />
+                  ) : kpi.status === 'negative' ? (
+                    <TrendingDown className="h-3 w-3" />
+                  ) : null}
+                  {kpi.changePercentage}
+                </Badge>
+              )}
+            </div>
+          </Card>
+        ))}
+      </div>
 
-        <Grid>
-          <Grid.Col span={{ base: 12, md: 8 }}>
-            <Card p="md" className={classes.card}>
-              <Group justify="space-between" mb="md">
-                <Group gap="xs">
-                  <IconAlertTriangle size={20} color="#e63946" />
-                  <Title order={4} className={classes.title}>Alertas de Stock Crítico ({data.lowStockCount})</Title>
-                </Group>
-              </Group>
+      {/* Tables Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Alertas de Stock Crítico */}
+        <div className="lg:col-span-8">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-red-500" />
+                <CardTitle className="text-base font-bold">
+                  Alertas de Stock Crítico ({data.lowStockCount})
+                </CardTitle>
+              </div>
+              <Badge variant="destructive">Atención requerida</Badge>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Producto</TableHead>
+                    <TableHead>Categoría</TableHead>
+                    <TableHead>Stock Actual</TableHead>
+                    <TableHead>Mínimo</TableHead>
+                    <TableHead className="text-right">Acción</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.stockAlerts.map((alert) => (
+                    <TableRow key={alert.id}>
+                      <TableCell className="font-semibold">{alert.productName}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{alert.category}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="destructive">{alert.currentStock} un.</Badge>
+                      </TableCell>
+                      <TableCell className="font-medium">{alert.minThreshold} un.</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleRestockAlert(alert.id)}
+                          className="gap-1.5"
+                        >
+                          <RefreshCw className="h-3.5 w-3.5" />
+                          <span>Reponer</span>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
 
-              <Table.ScrollContainer minWidth={500}>
-                <Table verticalSpacing="sm" highlightOnHover>
-                  <Table.Thead>
-                    <Table.Tr>
-                      <Table.Th style={{ color: '#1C2424' }}>Producto</Table.Th>
-                      <Table.Th style={{ color: '#1C2424' }}>Categoría</Table.Th>
-                      <Table.Th style={{ color: '#1C2424' }}>Stock Actual</Table.Th>
-                      <Table.Th style={{ color: '#1C2424' }}>Mínimo Deseado</Table.Th>
-                      <Table.Th style={{ color: '#1C2424' }}>Acción</Table.Th>
-                    </Table.Tr>
-                  </Table.Thead>
-                  <Table.Tbody>
-                    {data.stockAlerts.map((alert) => (
-                      <Table.Tr key={alert.id}>
-                        <Table.Td fw={700} style={{ color: '#1C2424' }}>
-                          {alert.productName}
-                        </Table.Td>
-                        <Table.Td style={{ color: '#1C2424' }}>
-                          <Badge variant="outline" color="dark">
-                            {alert.category}
-                          </Badge>
-                        </Table.Td>
-                        <Table.Td>
-                          <Badge color="red" variant="filled">
-                            {alert.currentStock} un.
-                          </Badge>
-                        </Table.Td>
-                        <Table.Td fw={600} style={{ color: '#1C2424' }}>
-                          {alert.minThreshold} un.
-                        </Table.Td>
-                        <Table.Td>
-                          <Button
-                            size="xs"
-                            radius="md"
-                            className={classes.actionButton}
-                            onClick={() => handleRestockAlert(alert.id)}
-                            leftSection={<IconRefresh size={12} />}
-                          >
-                            Reponer Stock
-                          </Button>
-                        </Table.Td>
-                      </Table.Tr>
-                    ))}
-                  </Table.Tbody>
-                </Table>
-              </Table.ScrollContainer>
-            </Card>
-          </Grid.Col>
+        {/* Control de Usuarios */}
+        <div className="lg:col-span-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-[#2A7A78]" />
+                <CardTitle className="text-base font-bold">Control de Usuarios</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between p-3 rounded-lg border border-[#E8E6DF] bg-white">
+                <div>
+                  <p className="text-sm font-semibold text-[#1C2424]">Octavio Riccardo (Dueño)</p>
+                  <p className="text-xs text-[#657373]">Rol: Administrador Total</p>
+                </div>
+                <Badge variant="default">Admin</Badge>
+              </div>
 
-          {/* System Control Card */}
-          <Grid.Col span={{ base: 12, md: 4 }}>
-            <Card p="md" className={classes.card}>
-              <Group justify="space-between" mb="md">
-                <Title order={4} className={classes.title}>
-                  Control de Usuarios
-                </Title>
-                <IconUsers size={20} color="#2A7A78" />
-              </Group>
-
-              <Stack gap="xs">
-                <Paper p="xs" radius="md" style={{ backgroundColor: '#ffffff', border: '1px solid #E8E6DF' }}>
-                  <Group justify="space-between">
-                    <div>
-                      <Text size="xs" fw={700} c="#1C2424">
-                        Octavio Riccardo (Dueño)
-                      </Text>
-                      <Text size="xs" c="dimmed">
-                        Rol: Administrador Total
-                      </Text>
-                    </div>
-                    <Badge style={{ backgroundColor: '#2A7A78', color: '#ffffff' }} size="xs">Admin</Badge>
-                  </Group>
-                </Paper>
-
-                <Paper p="xs" radius="md" style={{ backgroundColor: '#ffffff', border: '1px solid #E8E6DF' }}>
-                  <Group justify="space-between">
-                    <div>
-                      <Text size="xs" fw={700} c="#1C2424">
-                        Empleado Turno Mañana
-                      </Text>
-                      <Text size="xs" c="dimmed">
-                        Rol: Cajero / Operador
-                      </Text>
-                    </div>
-                    <Badge style={{ backgroundColor: '#E2F1F0', color: '#1C2424' }} size="xs">Usuario</Badge>
-                  </Group>
-                </Paper>
-              </Stack>
-            </Card>
-          </Grid.Col>
-        </Grid>
-
-      </Stack>
-    </Container>
+              <div className="flex items-center justify-between p-3 rounded-lg border border-[#E8E6DF] bg-white">
+                <div>
+                  <p className="text-sm font-semibold text-[#1C2424]">Empleado Turno Mañana</p>
+                  <p className="text-xs text-[#657373]">Rol: Cajero / Operador</p>
+                </div>
+                <Badge variant="secondary">Usuario</Badge>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
   );
 }

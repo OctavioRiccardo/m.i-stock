@@ -1,5 +1,4 @@
 import React from 'react';
-import { Box, Flex } from '@mantine/core';
 import { Footer } from '@/views/comunes/Footer';
 
 export default function AuthLayout({
@@ -8,29 +7,11 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <Flex
-      direction="column"
-      style={{
-        minHeight: '100vh',
-        backgroundColor: '#F8F7F2',
-      }}
-    >
-      {/* Main content centered without Navbar */}
-      <Box
-        component="main"
-        style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '24px 16px',
-        }}
-      >
+    <div className="min-h-screen bg-[#F8F7F2] text-[#1C2424] flex flex-col">
+      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
         {children}
-      </Box>
-
-      {/* Footer displayed at bottom */}
+      </main>
       <Footer />
-    </Flex>
+    </div>
   );
 }

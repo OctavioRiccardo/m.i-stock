@@ -1,144 +1,141 @@
 'use client';
 
-import React from 'react';
-import {
-  Paper,
-  Title,
-  Text,
-  TextInput,
-  PasswordInput,
-  Checkbox,
-  Button,
-  Group,
-  Stack,
-  Alert,
-  Anchor,
-  Box,
-  Badge,
-  ThemeIcon,
-} from '@mantine/core';
-import { IconBox, IconMail, IconLock, IconAlertCircle, IconArrowRight } from '@tabler/icons-react';
+import React, { useState } from 'react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
 import { useLoginController } from '@/controllers/authController';
-import classes from './LoginFormView.module.css';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface LoginFormViewProps {
   loginController: ReturnType<typeof useLoginController>;
 }
 
 export function LoginFormView({ loginController }: LoginFormViewProps) {
-  const { form, loading, error, handleSubmit } = loginController;
+  const { values, fieldErrors, setFieldValue, loading, error, handleSubmit } = loginController;
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <Box className={classes.container}>
-      <Box className={classes.glowWrapper}>
-        {/* Card Component */}
-        <Paper radius="lg" p="xl" withBorder className={classes.card}>
+    <div className="w-full max-w-md mx-auto">
+      <Card className="p-6 sm:p-8">
+        <CardContent className="p-0 space-y-6">
           {/* Header */}
-          <Stack align="center" gap="xs" mb="lg">
-            <Group gap="xs" align="center">
-              <ThemeIcon
-                size="xl"
-                radius="md"
-                className={classes.logoIcon}
-              >
-                <IconBox size={24} />
-              </ThemeIcon>
-              <Title order={2} className={classes.title}>
+          <div className="flex flex-col items-center text-center space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#2A7A78] text-white shadow-md">
+                <ShieldCheck className="h-6 w-6" />
+              </div>
+              <h1 className="text-2xl font-bold text-[#1C2424] tracking-tight">
                 miStock
-              </Title>
-            </Group>
+              </h1>
+            </div>
 
-            <Badge
-              style={{ backgroundColor: '#2A7A78', color: '#ffffff' }}
-              size="sm"
-              radius="xl"
-              mt={4}
-            >
+            <Badge variant="default" className="mt-1">
               Control de Inventario
             </Badge>
 
-            <Text size="sm" ta="center" mt={4} className={classes.subtitleText}>
+            <p className="text-sm text-[#657373] pt-1">
               Ingresa tus credenciales para acceder a tu panel de control.
-            </Text>
-          </Stack>
+            </p>
+          </div>
 
-          {/* Alert Message for Auth Errors */}
+          {/* Alert Error */}
           {error && (
-            <Alert
-              icon={<IconAlertCircle size={18} />}
-              title="Error de Autenticación"
-              color="red"
-              variant="light"
-              mb="md"
-              radius="md"
-            >
-              {error}
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error de Autenticación</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
 
           {/* Login Form */}
-          <form onSubmit={handleSubmit}>
-            <Stack gap="md">
-              <TextInput
-                label={<Text size="sm" fw={600} c="#1C2424">Correo Electrónico</Text>}
-                placeholder="usuario@ejemplo.com"
-                leftSection={<IconMail size={16} color="#2A7A78" />}
-                size="md"
-                radius="md"
-                classNames={{ input: classes.customInput }}
-                required
-                {...form.getInputProps('email')}
-              />
-
-              <PasswordInput
-                label={<Text size="sm" fw={600} c="#1C2424">Contraseña</Text>}
-                placeholder="••••••••"
-                leftSection={<IconLock size={16} color="#2A7A78" />}
-                size="md"
-                radius="md"
-                classNames={{ input: classes.customInput, innerInput: classes.customInput }}
-                required
-                {...form.getInputProps('password')}
-              />
-
-              <Group justify="space-between" mt={4}>
-                <Checkbox
-                  label={<Text size="xs" c="#1C2424">Recordarme en este equipo</Text>}
-                  size="xs"
-                  styles={{
-                    input: { cursor: 'pointer' },
-                  }}
-                  {...form.getInputProps('rememberMe', { type: 'checkbox' })}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Email */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-[#1C2424] uppercase tracking-wider">
+                Correo Electrónico
+              </label>
+              <div className="relative">
+                <Input
+                  type="email"
+                  placeholder="usuario@ejemplo.com"
+                  value={values.email}
+                  onChange={(e) => setFieldValue('email', e.target.value)}
+                  error={fieldErrors.email}
+                  className="pl-9"
+                  required
                 />
-                <Anchor href="#" size="xs" c="#2A7A78" fw={600} underline="hover">
-                  ¿Olvidaste tu contraseña?
-                </Anchor>
-              </Group>
+                <Mail className="absolute left-3 top-2.5 h-4 w-4 text-[#657373]" />
+              </div>
+            </div>
 
-              <Button
-                type="submit"
-                fullWidth
-                size="md"
-                radius="md"
-                loading={loading}
-                rightSection={<IconArrowRight size={18} />}
-                mt="xs"
-                className={classes.submitButton}
-              >
-                Iniciar Sesión
-              </Button>
-            </Stack>
+            {/* Password */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-[#1C2424] uppercase tracking-wider">
+                Contraseña
+              </label>
+              <div className="relative">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={values.password}
+                  onChange={(e) => setFieldValue('password', e.target.value)}
+                  error={fieldErrors.password}
+                  className="pl-9 pr-9"
+                  required
+                />
+                <Lock className="absolute left-3 top-2.5 h-4 w-4 text-[#657373]" />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-2.5 text-[#657373] hover:text-[#1C2424] transition-colors"
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Remember Me & Forgot Password */}
+            <div className="flex items-center justify-between pt-1">
+              <label className="flex items-center gap-2 cursor-pointer text-xs text-[#1C2424]">
+                <input
+                  type="checkbox"
+                  checked={values.rememberMe}
+                  onChange={(e) => setFieldValue('rememberMe', e.target.checked)}
+                  className="h-4 w-4 rounded border-[#E8E6DF] text-[#2A7A78] focus:ring-[#2A7A78]"
+                />
+                <span>Recordarme</span>
+              </label>
+
+              <a href="#" className="text-xs font-semibold text-[#2A7A78] hover:underline">
+                ¿Olvidaste tu contraseña?
+              </a>
+            </div>
+
+            {/* Submit Button */}
+            <Button
+              type="submit"
+              className="w-full mt-2"
+              size="lg"
+              loading={loading}
+            >
+              <span>Iniciar Sesión</span>
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
           </form>
 
           {/* Footer note */}
-          <Text size="xs" ta="center" mt="xl" className={classes.subtitleText}>
+          <p className="text-xs text-center text-[#657373] pt-2">
             ¿No tienes una cuenta aún?{' '}
-            <Anchor href="#" size="xs" c="#2A7A78" fw={600} underline="hover">
+            <a href="#" className="font-semibold text-[#2A7A78] hover:underline">
               Contacta al administrador
-            </Anchor>
-          </Text>
-        </Paper>
-      </Box>
-    </Box>
+            </a>
+          </p>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

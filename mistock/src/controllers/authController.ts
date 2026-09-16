@@ -2,11 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm } from '@mantine/form';
 import { createClient } from '@/lib/supabase/client';
 import { LoginFormValues } from '@/models/modelos_vista/authModel';
 
-/*
+/**
  * Controlador para la autenticación de usuarios (Inicio de sesión).
  * Administra el estado del formulario, la validación de credenciales
  * mediante Supabase Auth y la redirección post-autenticación.
@@ -14,24 +13,49 @@ import { LoginFormValues } from '@/models/modelos_vista/authModel';
 export function useLoginController() {
   const router = useRouter();
 
-  // Estado reactivo
+  const [values, setValues] = useState<LoginFormValues>({
+    email: '',
+    password: '',
+    rememberMe: false,
+  });
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof LoginFormValues, string>>>({});
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Configuración del formulario y validaciones declarativas
-  const form = useForm<LoginFormValues>({
-    initialValues: { email: '', password: '', rememberMe: false, },
-    validate: { email: (value) => (/^\S+@\S+$/.test(value) ? null : 'Correo electrónico no válido'), password: (value) => (value.length >= 6 ? null : 'La contraseña debe tener al menos 6 caracteres'), },
-  });
+  const setFieldValue = <K extends keyof LoginFormValues>(field: K, value: LoginFormValues[K]) => {
+    setValues((prev) => ({ ...prev, [field]: value }));
+    setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  const validate = (): boolean => {
+    const errors: Partial<Record<keyof LoginFormValues, string>> = {};
+    if (!values.email || !/^\S+@\S+$/.test(values.email)) {
+      errors.email = 'Correo electrónico no válido';
+    }
+    if (!values.password || values.password.length < 6) {
+      errors.password = 'La contraseña debe tener al menos 6 caracteres';
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   /**
    * Envía las credenciales a Supabase Auth y redirige al panel principal en caso de éxito.
    */
-  const handleSubmit = async (values: LoginFormValues) => {
-    setLoading(true); setError(null);
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!validate()) return;
+
+    setLoading(true);
+    setError(null);
 
     try {
-      const supabase = createClient(); const { data, error: authError } = await supabase.auth.signInWithPassword({ email: values.email, password: values.password, });
+      const supabase = createClient();
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: values.email,
+        password: values.password,
+      });
 
       if (authError) {
         if (authError.message.includes('Invalid login credentials')) {
@@ -54,18 +78,22 @@ export function useLoginController() {
     }
   };
 
-  /*
-   * Limpia el mensaje de error activo.
-   */
   const clearError = () => setError(null);
-  return { form, loading, error, handleSubmit: form.onSubmit(handleSubmit), clearError, };
+
+  return {
+    values,
+    fieldErrors,
+    setFieldValue,
+    loading,
+    error,
+    handleSubmit,
+    clearError,
+  };
 }
 
-/*
+/**
  * Controlador para el cierre de sesión.
- * Invalida la sesión actual en Supabase Auth, limpia cookies
- * de sesión y redirige al usuario a la pantalla de login.
- * @param autoExecute Si es true, inicia el logout automáticamente al montar el componente.
+ * Invalida la sesión actual en Supabase Auth y redirige al usuario al login.
  */
 export function useLogoutController(autoExecute: boolean = true) {
   const router = useRouter();
@@ -115,11 +143,16 @@ export function useLogoutController(autoExecute: boolean = true) {
 
     void performLogout();
 
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, [autoExecute, router]);
 
-  return { loading, loggedOut, handleLogout, };
+  return {
+    loading,
+    loggedOut,
+    handleLogout,
+  };
 }
 
-// Alias para retrocompatibilidad
 export const useLogin = useLoginController;

@@ -1,45 +1,40 @@
-'use client';
-
 import React from 'react';
-import { Box, Container, Group, Text, Anchor } from '@mantine/core';
-import { IconBox } from '@tabler/icons-react';
-import classes from './Footer.module.css';
+import { Package } from 'lucide-react';
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <Box component="footer" className={classes.footer} py="md">
-      <Container size="lg">
-        <Group justify="space-between" align="center" wrap="wrap" gap="md">
-          {/* Brand & Tagline */}
-          <Group gap="xs">
-            <Box className={classes.logoBadge}>
-              <IconBox size={16} />
-            </Box>
-            <Text fw={700} size="sm" c="#1C2424">
-              miStock
-            </Text>
-          </Group>
-          {/* Links & Copyright */}
-          <Group gap="lg" wrap="wrap">
-            <Text size="xs" c="#657373">
-              &copy; {currentYear} miStock Inc. Todos los derechos reservados.
-            </Text>
-            <Group gap="md">
-              <Anchor href="#" size="xs" c="#657373" underline="hover">
+    <footer className="w-full border-t border-[#E8E6DF] bg-white py-4 mt-auto">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          {/* Brand & Logo */}
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#2A7A78] text-white shadow-sm">
+              <Package className="h-4 w-4" />
+            </div>
+            <span className="text-sm font-bold text-[#1C2424]">miStock</span>
+          </div>
+
+          {/* Copyright & Links */}
+          <div className="flex flex-wrap items-center gap-4 text-xs text-[#657373]">
+            <span>&copy; {currentYear} miStock Inc. Todos los derechos reservados.</span>
+            <div className="flex gap-3">
+              <a href="#" className="hover:text-[#1C2424] transition-colors">
                 Soporte
-              </Anchor>
-              <Anchor href="#" size="xs" c="#657373" underline="hover">
+              </a>
+              <span>•</span>
+              <a href="#" className="hover:text-[#1C2424] transition-colors">
                 Privacidad
-              </Anchor>
-              <Anchor href="#" size="xs" c="#657373" underline="hover">
+              </a>
+              <span>•</span>
+              <a href="#" className="hover:text-[#1C2424] transition-colors">
                 Términos
-              </Anchor>
-            </Group>
-          </Group>
-        </Group>
-      </Container>
-    </Box>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
   );
 }

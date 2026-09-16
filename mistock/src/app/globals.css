@@ -3,23 +3,70 @@
 :root {
   --background: #F8F7F2;
   --foreground: #1C2424;
-  --card-bg: #FFFFFF;
-  --card-border: #E8E6DF;
-  --primary-emerald: #2A7A78;
-  --primary-emerald-hover: #205E5D;
-  --secondary-mint: #E2F1F0;
-  --text-muted: #657373;
+
+  --card: #FFFFFF;
+  --card-foreground: #1C2424;
+
+  --popover: #FFFFFF;
+  --popover-foreground: #1C2424;
+
+  /* Primary Emerald de miStock */
+  --primary: #2A7A78;
+  --primary-foreground: #FFFFFF;
+  --primary-hover: #205E5D;
+
+  /* Secondary Mint suave */
+  --secondary: #E2F1F0;
+  --secondary-foreground: #2A7A78;
+
+  --muted: #F3F4F6;
+  --muted-foreground: #657373;
+
+  --accent: #E2F1F0;
+  --accent-foreground: #2A7A78;
+
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+
+  --border: #E8E6DF;
+  --input: #E8E6DF;
+  --ring: #2A7A78;
+
+  --radius: 0.5rem;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+* {
+  border-color: var(--border);
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }

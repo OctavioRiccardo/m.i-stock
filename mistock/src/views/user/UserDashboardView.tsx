@@ -2,31 +2,28 @@
 
 import React from 'react';
 import {
-  Container,
-  Title,
-  Text,
-  Grid,
-  Card,
-  Group,
-  TextInput,
-  Button,
-  Table,
-  Badge,
-  Stack,
-  Alert,
-  Paper,
-  ActionIcon,
-} from '@mantine/core';
-import {
-  IconSearch,
-  IconShoppingCart,
-  IconBox,
-  IconCheck,
-  IconClock,
-  IconPlus,
-} from '@tabler/icons-react';
+  Search,
+  ShoppingCart,
+  Package,
+  Check,
+  Clock,
+  Plus,
+  DollarSign,
+} from 'lucide-react';
 import { useUserDashboardController } from '@/controllers/userControllers/userDashboardController';
-import classes from './UserDashboardView.module.css';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '@/components/ui/table';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface UserDashboardViewProps {
   controller: ReturnType<typeof useUserDashboardController>;
@@ -43,190 +40,175 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
   } = controller;
 
   return (
-    <Container size="xl" py="lg">
-      <Stack gap="lg">
-        {/* Welcome Header */}
-        <Group justify="space-between" align="center">
-          <div>
-            <Title order={2} className={classes.title}>
-              Panel del Empleado
-            </Title>
-            <Text size="sm" className={classes.textDark}>
-              Consulta productos y registra ventas rápidas en el sistema.
-            </Text>
+    <div className="max-w-7xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-[#1C2424] tracking-tight">
+            Panel del Empleado
+          </h1>
+          <p className="text-sm text-[#657373]">
+            Consulta de catálogo y registro rápido de ventas en caja.
+          </p>
+        </div>
+
+        <Badge variant="default" className="text-xs py-1 px-3 self-start sm:self-auto">
+          Operación Activa
+        </Badge>
+      </div>
+
+      {/* Sale Success Notification */}
+      {saleSuccessMessage && (
+        <Alert variant="success">
+          <Check className="h-4 w-4" />
+          <AlertTitle>¡Venta Exitosa!</AlertTitle>
+          <AlertDescription>{saleSuccessMessage}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Quick Metrics */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card className="p-5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#657373]">
+              Ventas del Día
+            </span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78]">
+              <ShoppingCart className="h-4 w-4" />
+            </div>
           </div>
+          <p className="text-2xl font-extrabold text-[#1C2424] tracking-tight mt-3">
+            {data.dailySalesCount}
+          </p>
+        </Card>
 
-          <Badge size="lg" radius="md" style={{ backgroundColor: '#2A7A78', color: '#fff' }}>
-            Operación Activa
-          </Badge>
-        </Group>
+        <Card className="p-5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#657373]">
+              Recaudación Hoy
+            </span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78]">
+              <DollarSign className="h-4 w-4" />
+            </div>
+          </div>
+          <p className="text-2xl font-extrabold text-[#1C2424] tracking-tight mt-3">
+            ${data.dailyRevenue.toLocaleString('es-AR')}
+          </p>
+        </Card>
 
-        {/* Success Alert */}
-        {saleSuccessMessage && (
-          <Alert
-            icon={<IconCheck size={18} />}
-            title="¡Venta Exitosa!"
-            color="teal"
-            variant="filled"
-            radius="md"
-          >
-            {saleSuccessMessage}
-          </Alert>
-        )}
+        <Card className="p-5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#657373]">
+              Productos en Catálogo
+            </span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78]">
+              <Package className="h-4 w-4" />
+            </div>
+          </div>
+          <p className="text-2xl font-extrabold text-[#1C2424] tracking-tight mt-3">
+            {data.totalProductsInStock} ítems
+          </p>
+        </Card>
+      </div>
 
-        {/* Quick Metrics */}
-        <Grid>
-          <Grid.Col span={{ base: 12, sm: 4 }}>
-            <Card p="md" className={classes.card}>
-              <Group justify="space-between">
-                <Text size="xs" fw={700} tt="uppercase" c="#657373">
-                  Ventas del Día
-                </Text>
-                <IconShoppingCart size={20} color="#2A7A78" />
-              </Group>
-              <Text size="xl" fw={800} c="#1C2424" mt="xs">
-                {data.dailySalesCount}
-              </Text>
-            </Card>
-          </Grid.Col>
+      {/* Main Sections Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Catálogo y Registro Rápido */}
+        <div className="lg:col-span-7">
+          <Card>
+            <CardHeader className="pb-3 border-b border-[#E8E6DF]">
+              <CardTitle className="text-base font-bold text-[#1C2424]">
+                Catálogo y Registro Rápido
+              </CardTitle>
+            </CardHeader>
 
-          <Grid.Col span={{ base: 12, sm: 4 }}>
-            <Card p="md" className={classes.card}>
-              <Group justify="space-between">
-                <Text size="xs" fw={700} tt="uppercase" c="#657373">
-                  Recaudación Hoy
-                </Text>
-                <IconBox size={20} color="#2A7A78" />
-              </Group>
-              <Text size="xl" fw={800} c="#1C2424" mt="xs">
-                ${data.dailyRevenue.toLocaleString('es-AR')}
-              </Text>
-            </Card>
-          </Grid.Col>
+            <CardContent className="pt-4 space-y-4">
+              <div className="relative">
+                <Input
+                  placeholder="Buscar por nombre o código de barra (ej. 779001)..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-[#657373]" />
+              </div>
 
-          <Grid.Col span={{ base: 12, sm: 4 }}>
-            <Card p="md" className={classes.card}>
-              <Group justify="space-between">
-                <Text size="xs" fw={700} tt="uppercase" c="#657373">
-                  Productos en Catálogo
-                </Text>
-                <IconBox size={20} color="#2A7A78" />
-              </Group>
-              <Text size="xl" fw={800} c="#1C2424" mt="xs">
-                {data.totalProductsInStock} ítems
-              </Text>
-            </Card>
-          </Grid.Col>
-        </Grid>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Producto</TableHead>
+                    <TableHead>Precio</TableHead>
+                    <TableHead>Stock</TableHead>
+                    <TableHead className="text-right">Acción</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredProducts.map((prod) => (
+                    <TableRow key={prod.id}>
+                      <TableCell>
+                        <div className="font-semibold text-sm text-[#1C2424]">{prod.name}</div>
+                        <div className="text-xs text-[#657373]">
+                          {prod.category} • Cod: {prod.code}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-bold text-[#1C2424]">
+                        ${prod.price.toLocaleString('es-AR')}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={prod.stock > 10 ? 'default' : 'destructive'}>
+                          {prod.stock} un.
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          onClick={() => handleQuickSale(prod.id)}
+                          disabled={prod.stock <= 0}
+                          className="gap-1"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          <span>Vender</span>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
 
-        {/* Quick Sale & Product Lookup Section */}
-        <Grid>
-          <Grid.Col span={{ base: 12, md: 7 }}>
-            <Card p="md" className={classes.card}>
-              <Group justify="space-between" mb="md">
-                <Title order={4} className={classes.title}>
-                  Catálogo y Registro Rápido
-                </Title>
-              </Group>
+        {/* Ventas Recientes */}
+        <div className="lg:col-span-5">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-[#E8E6DF]">
+              <CardTitle className="text-base font-bold text-[#1C2424]">
+                Ventas Recientes
+              </CardTitle>
+              <Clock className="h-4 w-4 text-[#2A7A78]" />
+            </CardHeader>
 
-              <TextInput
-                placeholder="Buscar por nombre o código de barra (ej. 779001)..."
-                leftSection={<IconSearch size={16} color="#2A7A78" />}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.currentTarget.value)}
-                mb="md"
-                classNames={{ input: classes.searchInput }}
-              />
-
-              <Table.ScrollContainer minWidth={500}>
-                <Table verticalSpacing="sm" highlightOnHover>
-                  <Table.Thead>
-                    <Table.Tr>
-                      <Table.Th style={{ color: '#1C2424' }}>Producto</Table.Th>
-                      <Table.Th style={{ color: '#1C2424' }}>Precio</Table.Th>
-                      <Table.Th style={{ color: '#1C2424' }}>Stock</Table.Th>
-                      <Table.Th style={{ color: '#1C2424' }}>Acción</Table.Th>
-                    </Table.Tr>
-                  </Table.Thead>
-                  <Table.Tbody>
-                    {filteredProducts.map((prod) => (
-                      <Table.Tr key={prod.id}>
-                        <Table.Td fw={600} style={{ color: '#1C2424' }}>
-                          {prod.name}
-                          <Text size="xs" c="dimmed">
-                            {prod.category} • Cod: {prod.code}
-                          </Text>
-                        </Table.Td>
-                        <Table.Td fw={700} style={{ color: '#1C2424' }}>
-                          ${prod.price.toLocaleString('es-AR')}
-                        </Table.Td>
-                        <Table.Td>
-                          <Badge
-                            color={prod.stock > 10 ? 'teal' : 'red'}
-                            variant="light"
-                            size="sm"
-                          >
-                            {prod.stock} un.
-                          </Badge>
-                        </Table.Td>
-                        <Table.Td>
-                          <Button
-                            size="xs"
-                            radius="md"
-                            className={classes.saleButton}
-                            onClick={() => handleQuickSale(prod.id)}
-                            leftSection={<IconPlus size={12} />}
-                            disabled={prod.stock <= 0}
-                          >
-                            Vender
-                          </Button>
-                        </Table.Td>
-                      </Table.Tr>
-                    ))}
-                  </Table.Tbody>
-                </Table>
-              </Table.ScrollContainer>
-            </Card>
-          </Grid.Col>
-
-          {/* Recent Sales Activity */}
-          <Grid.Col span={{ base: 12, md: 5 }}>
-            <Card p="md" className={classes.card}>
-              <Group justify="space-between" mb="md">
-                <Title order={4} className={classes.title}>
-                  Ventas Recientes
-                </Title>
-                <IconClock size={18} color="#2A7A78" />
-              </Group>
-
-              <Stack gap="xs">
-                {data.recentSales.map((sale) => (
-                  <Paper
-                    key={sale.id}
-                    p="xs"
-                    radius="md"
-                    style={{ backgroundColor: '#ffffff', border: '1px solid #E8E6DF' }}
-                  >
-                    <Group justify="space-between">
-                      <div>
-                        <Text size="xs" fw={700} c="#1C2424">
-                          {sale.id}
-                        </Text>
-                        <Text size="xs" c="dimmed">
-                          Hora: {sale.time} • {sale.itemCount} ítem(s)
-                        </Text>
-                      </div>
-                      <Text size="sm" fw={800} style={{ color: '#2A7A78' }}>
-                        ${sale.totalAmount.toLocaleString('es-AR')}
-                      </Text>
-                    </Group>
-                  </Paper>
-                ))}
-              </Stack>
-            </Card>
-          </Grid.Col>
-        </Grid>
-      </Stack>
-    </Container>
+            <CardContent className="pt-4 space-y-3">
+              {data.recentSales.map((sale) => (
+                <div
+                  key={sale.id}
+                  className="flex items-center justify-between p-3 rounded-lg border border-[#E8E6DF] bg-white"
+                >
+                  <div>
+                    <p className="text-xs font-bold text-[#1C2424]">{sale.id}</p>
+                    <p className="text-xs text-[#657373]">
+                      Hora: {sale.time} • {sale.itemCount} ítem(s)
+                    </p>
+                  </div>
+                  <span className="text-sm font-extrabold text-[#2A7A78]">
+                    ${sale.totalAmount.toLocaleString('es-AR')}
+                  </span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
   );
 }
