@@ -1,60 +1,106 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Title, Code, Text } from '@mantine/core';
-import { IconBox, IconChartBar, IconAlertTriangle, IconUsers, IconSettings, IconLogout, IconSwitchHorizontal, IconShieldCheck, } from '@tabler/icons-react';
-import classes from './AdminSidebar.module.css';
+import React from 'react';
+import { usePathname } from 'next/navigation';
+import {
+  BarChart3,
+  Boxes,
+  Users,
+  Layers,
+  AlertTriangle,
+  Settings,
+  LogOut,
+  ArrowLeftRight,
+  ShieldCheck,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const adminNavData = [
-  { link: '/adminmetricas#', label: 'Métricas & KPIs', icon: IconChartBar },
-  { link: '/admingestioninven#', label: 'Gestion Inventario', icon: IconBox },
-  { link: '/', label: 'Gestión de Usuarios', icon: IconUsers },
-  { link: '/', label: 'Inventario Global', icon: IconBox },
-  { link: '/', label: 'Stock Crítico', icon: IconAlertTriangle },
-  { link: '/', label: 'Configuración', icon: IconSettings },
+  { link: '/adminmetricas#', label: 'Métricas & KPIs', icon: BarChart3 },
+  { link: '/admingestioninven#', label: 'Gestion Inventario', icon: Boxes },
+  { link: '#', label: 'Gestión de Usuarios', icon: Users },
+  { link: '#', label: 'Inventario Global', icon: Layers },
+  { link: '#', label: 'Stock Crítico', icon: AlertTriangle },
+  { link: '#', label: 'Configuración', icon: Settings },
 ];
 
-interface AdminSidebarProps { onNavigate?: () => void; }
+interface AdminSidebarProps {
+  onNavigate?: () => void;
+  className?: string;
+}
 
-export function AdminSidebar({ onNavigate }: AdminSidebarProps = {}) {
-  const [active, setActive] = useState('Métricas & KPIs');
+export function AdminSidebar({ onNavigate, className }: AdminSidebarProps = {}) {
+  const pathname = usePathname();
 
-  const handleLinkClick = (label: string) => { setActive(label); onNavigate?.(); };
-
-  const links = adminNavData.map((item) => (
-    <a className={classes.link} data-active={item.label === active || undefined} href={item.link} key={item.label} onClick={() => handleLinkClick(item.label)}>
-      <item.icon className={classes.linkIcon} stroke={1.8} />
-      <span>{item.label}</span>
-    </a>
-  ));
+  const isGestionInven = pathname?.includes('admingestioninven');
+  const activeLabel = isGestionInven ? 'Gestion Inventario' : 'Métricas & KPIs';
 
   return (
-    <nav className={classes.navbar}>
-      <div className={classes.navbarMain}>
-        {/* Header */}
-        <div className={classes.header}>
-          <div className={classes.brandBox}>
-            <div className={classes.brandLogo}>
-              <IconShieldCheck size={22} />
-            </div>
-            <div>
-              <Title order={4} className={classes.brandTitle}>
-                M.I Stock
-              </Title>
-            </div>
+    <nav className={cn('flex flex-col h-full bg-white border-r border-[#E8E6DF] w-64', className)}>
+      {/* Brand Header */}
+      <div className="flex items-center justify-between px-5 h-16 border-b border-[#E8E6DF]">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#2A7A78] text-white shadow-sm">
+            <ShieldCheck className="h-5 w-5" />
           </div>
-          <Code className={classes.version}>v1.0</Code>
+          <div>
+            <h1 className="text-base font-bold text-[#1C2424] tracking-tight leading-none">
+              M.I Stock
+            </h1>
+            <span className="text-[11px] font-medium text-[#657373]">Panel de Control</span>
+          </div>
         </div>
-        {links}
+        <span className="rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-[#657373] border border-gray-200">
+          v1.0
+        </span>
       </div>
 
-      <div className={classes.footer}>
-        <a href="/login" className={classes.link} onClick={() => onNavigate?.()}>
-          <IconSwitchHorizontal className={classes.linkIcon} stroke={1.8} />
+      {/* Nav Links */}
+      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+        <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-[#657373]">
+          Administración
+        </p>
+
+        {adminNavData.map((item) => {
+          const Icon = item.icon;
+          const isActive = item.label === activeLabel;
+
+          return (
+            <a
+              key={item.label}
+              href={item.link}
+              onClick={() => onNavigate?.()}
+              className={cn(
+                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150',
+                isActive
+                  ? 'bg-[#2A7A78] text-white shadow-sm'
+                  : 'text-[#657373] hover:bg-black/5 hover:text-[#1C2424]'
+              )}
+            >
+              <Icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-white' : 'text-[#657373]')} />
+              <span>{item.label}</span>
+            </a>
+          );
+        })}
+      </div>
+
+      {/* Footer User & Session */}
+      <div className="p-3 border-t border-[#E8E6DF] space-y-1">
+        <a
+          href="/login"
+          onClick={() => onNavigate?.()}
+          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[#657373] hover:bg-black/5 hover:text-[#1C2424] transition-colors"
+        >
+          <ArrowLeftRight className="h-4 w-4" />
           <span>Cambiar de Rol</span>
         </a>
-        <a href="/logout" className={classes.link} onClick={() => onNavigate?.()}>
-          <IconLogout className={classes.linkIcon} stroke={1.8} />
+
+        <a
+          href="/logout"
+          onClick={() => onNavigate?.()}
+          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+        >
+          <LogOut className="h-4 w-4" />
           <span>Cerrar Sesión</span>
         </a>
       </div>

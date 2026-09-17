@@ -10,7 +10,7 @@ import {
   TrendingUp,
   TrendingDown,
 } from 'lucide-react';
-import { useAdminDashboardController } from '@/controllers/adminControllers/adminDashboardController';
+import { useAdminDashboardController } from '@/controllers/adminControllers/dashboardController';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

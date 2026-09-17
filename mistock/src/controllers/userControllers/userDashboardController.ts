@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { UserDashboardData, QuickProduct } from '@/models/modelos_vista/dashboardModel';
+import { useState } from 'react';
+import { UserDashboardData } from '@/models/modelos_vista/dashboardModel';
 
 // Mock data inicial didáctico (que luego se conectará a las tablas Supabase 'Producto' y 'Venta')
 const initialMockUserData: UserDashboardData = {

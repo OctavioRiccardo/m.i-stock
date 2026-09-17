@@ -14,7 +14,7 @@ import {
   Building2,
   Tag,
 } from 'lucide-react';
-import { useAdminDashboardController } from '@/controllers/adminControllers/adminDashboardController';
+import { useAdminInventarioController } from '@/controllers/adminControllers/inventarioController';
 import {
   FormularioCargaProducto,
   valoresInicialesCargaProducto,
@@ -44,7 +44,7 @@ import {
 } from '@/components/ui/dialog';
 
 interface AdminGestionInventarioProps {
-  controller: ReturnType<typeof useAdminDashboardController>;
+  controller: ReturnType<typeof useAdminInventarioController>;
 }
 
 const unidadesDisponibles: { value: UnidadMedida; label: string }[] = [

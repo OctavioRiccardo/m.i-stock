@@ -1,1 +1,2 @@
-export * from './adminDashboardController';
+export * from './dashboardController';
+export * from './inventarioController';
