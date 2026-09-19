@@ -1,10 +1,34 @@
 'use client';
 
+/**
+ * ====================================================================
+ * CONTROLADOR DE GESTIÓN DE INVENTARIO (Patrón MVC)
+ * ====================================================================
+ * 
+ * Propósito:
+ * Administrar el catálogo de productos y la taxonomía de categorías del negocio.
+ * Garantiza la integridad referencial y las reglas de negocio en la carga de stock.
+ * 
+ * Regla de Negocio Fundamental:
+ * "Un producto NO puede existir sin una categoría definida previamente.
+ * Todo producto debe pertenecer estrictamente a una categoría válida."
+ * 
+ * Rol en la Arquitectura:
+ * - Capa Controller ("C") consumida por `AdminGestionInventario` (View).
+ * - Utiliza las entidades del Modelo de Dominio (`Producto`, `Categoria`) y
+ *   los DTOs del Modelo de Vista (`FormularioCargaProducto`).
+ * - Mantiene el estado reactivo del inventario, gestiona la validación de unicidad
+ *   de código SKU/barra y comunica el resultado a la vista mediante estados de éxito/error.
+ */
+
 import { useState } from 'react';
 import { Categoria, Producto } from '@/models/modelos_dominio/productoModel';
 import { FormularioCargaProducto } from '@/models/modelos_vista/cargaProductoModel';
 
-// Mock inicial de Categorías
+/**
+ * Catálogo inicial simulado de Categorías de productos.
+ * Representa las familias comerciales en las cuales se agruparán los artículos.
+ */
 const initialCategorias: Categoria[] = [
   { id: 'cat-1', nombre: 'Almacén', descripcion: 'Comestibles secos, aceites, harinas, condimentos', activo: true },
   { id: 'cat-2', nombre: 'Bebidas', descripcion: 'Aguas, gaseosas, jugos y aperitivos', activo: true },
@@ -13,7 +37,10 @@ const initialCategorias: Categoria[] = [
   { id: 'cat-5', nombre: 'Golosinas', descripcion: 'Galletitas, chocolates, alfajores y caramelos', activo: true },
 ];
 
-// Mock inicial de Productos en Inventario
+/**
+ * Inventario inicial simulado de Productos.
+ * Cada producto cuenta con asociación estricta a su `categoriaId`.
+ */
 const initialProductos: Producto[] = [
   {
     id: 'PROD-101',
@@ -63,8 +90,16 @@ const initialProductos: Producto[] = [
 ];
 
 /**
- * Controlador exclusivo para la Gestión de Inventario y Catálogo.
- * Administra el alta de productos, definición de categorías y control de stock.
+ * Hook Controlador para la Gestión y Alta de Inventario.
+ * 
+ * Responsabilidades:
+ * 1. Exponer la lista reactiva de categorías y productos.
+ * 2. Permitir la creación de nuevas categorías "al vuelo" o previas al alta.
+ * 3. Validar y procesar el guardado de nuevos productos respetando la regla
+ *    de categoría obligatoria y código SKU único.
+ * 4. Gestionar mensajes de retroalimentación temporal (éxito/error).
+ * 
+ * @returns {Object} Estado del inventario y métodos de mutación (agregarCategoria, guardarProducto).
  */
 export function useAdminInventarioController() {
   const [categorias, setCategorias] = useState<Categoria[]>(initialCategorias);
@@ -74,7 +109,12 @@ export function useAdminInventarioController() {
   const [mensajeError, setMensajeError] = useState<string | null>(null);
 
   /**
-   * Crea y registra una nueva categoría obligatoria para alojar productos
+   * Registra una nueva categoría en el sistema.
+   * Permite al administrador crear categorías antes o durante la carga de productos.
+   * 
+   * @param {string} nombre - Nombre comercial o descriptivo de la categoría (obligatorio).
+   * @param {string} [descripcion] - Detalle opcional sobre los artículos que engloba.
+   * @returns {Categoria} La entidad de categoría recién creada con su identificador generado.
    */
   const agregarCategoria = (nombre: string, descripcion?: string): Categoria => {
     const nuevaCat: Categoria = {
@@ -93,14 +133,23 @@ export function useAdminInventarioController() {
   };
 
   /**
-   * Guarda un nuevo producto asociado estrictamente a una categoría
+   * Guarda un nuevo producto en el catálogo verificando todas las reglas de negocio.
+   * 
+   * Reglas validadas:
+   * 1. Presencia y existencia de una categoría válida (`categoriaId`).
+   * 2. Campos obligatorios completos (`nombre`, `codigo`).
+   * 3. Unicidad estricta del código de barras / SKU en el catálogo.
+   * 4. Precios coherentes (`precioVenta > 0`).
+   * 
+   * @param {FormularioCargaProducto} datos - Objeto de transferencia (DTO) proveniente de la vista.
+   * @returns {Object} Resultado con indicador de éxito, mensaje explicativo y producto creado.
    */
   const guardarProducto = (
     datos: FormularioCargaProducto
   ): { exito: boolean; mensaje: string; producto?: Producto } => {
     setMensajeError(null);
 
-    // REGLA DE NEGOCIO: El producto no puede existir sin una categoría definida
+    // REGLA DE NEGOCIO: Un producto no puede existir sin una categoría definida
     if (!datos.categoriaId || datos.categoriaId.trim() === '') {
       const errorMsg = 'El producto no puede existir sin una categoría definida. Debe seleccionar o crear una categoría primero.';
       setMensajeError(errorMsg);

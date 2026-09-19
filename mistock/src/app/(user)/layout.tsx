@@ -1,5 +1,17 @@
 'use client';
 
+/**
+ * ====================================================================
+ * LAYOUT DE EMPLEADO / OPERADOR (Responsive POS Shell)
+ * ====================================================================
+ * 
+ * Propósito:
+ * Proveer la estructura de diseño adaptativo para las terminales de ventas:
+ * - Sidebar de escritorio con accesos a la operativa diaria.
+ * - Drawer responsivo para tablets o teléfonos en línea de cajas.
+ * - Cabecera móvil y pie de página institucional.
+ */
+
 import React, { useState } from 'react';
 import { Menu, X, UserCheck } from 'lucide-react';
 import { UserSidebar } from '@/views/user/UserSidebar';
@@ -11,6 +23,7 @@ export default function UserLayout({
   children: React.ReactNode;
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
 
   return (
     <div className="min-h-screen bg-[#F8F7F2] text-[#1C2424] flex">

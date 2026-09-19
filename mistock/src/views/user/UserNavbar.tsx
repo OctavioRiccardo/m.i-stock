@@ -1,10 +1,23 @@
 'use client';
 
+/**
+ * ====================================================================
+ * VISTA: BARRA SUPERIOR DE NAVEGACIÓN DEL EMPLEADO (View Component)
+ * ====================================================================
+ * 
+ * Propósito:
+ * Encabezado horizontal para el espacio operativo de empleados/cajeros:
+ * distintivo de 'Panel Empleado', acceso al catálogo y acción de cierre de sesión.
+ */
+
 import React from 'react';
 import { Package, ShoppingCart, LogOut, UserCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
+/**
+ * Barra superior fija para el área de operaciones del empleado.
+ */
 export function UserNavbar() {
   return (
     <header className="h-14 border-b border-[#E8E6DF] bg-white sticky top-0 z-20">

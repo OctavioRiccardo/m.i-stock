@@ -1,37 +1,80 @@
 'use client';
 
+/**
+ * ====================================================================
+ * CONTROLADOR DE AUTENTICACIÓN (Patrón MVC para React / Next.js)
+ * ====================================================================
+ * 
+ * Propósito:
+ * Encapsular la lógica de negocio y las interacciones con el backend
+ * (Supabase Auth) para las operaciones de inicio y cierre de sesión.
+ * 
+ * Rol en la Arquitectura:
+ * - Actúa como intermediario entre las Vistas (LoginFormView, LogoutView)
+ *   y los Servicios de Autenticación de Supabase.
+ * - Administra el estado reactivo del formulario (valores, validaciones,
+ *   estados de carga y mensajes de error amigables).
+ * - Centraliza la navegación post-autenticación manteniendo los componentes
+ *   de vista como componentes puramente declarativos de presentación.
+ */
+
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { LoginFormValues } from '@/models/modelos_vista/authModel';
 
 /**
- * Controlador para la autenticación de usuarios (Inicio de sesión).
- * Administra el estado del formulario, la validación de credenciales
- * mediante Supabase Auth y la redirección post-autenticación.
+ * Hook Controlador para el Formulario de Inicio de Sesión.
+ * 
+ * Responsabilidades:
+ * 1. Controlar el estado reactivo de los campos (email, password, rememberMe).
+ * 2. Ejecutar validaciones locales antes de contactar con el backend.
+ * 3. Enviar credenciales a Supabase Auth (`signInWithPassword`).
+ * 4. Normalizar y traducir errores técnicos a mensajes comprensibles para el usuario.
+ * 5. Dirigir al usuario autenticado hacia su panel correspondiente (/admin).
+ * 
+ * @returns {Object} Estado del formulario, handlers de cambio, validación y submit.
  */
 export function useLoginController() {
   const router = useRouter();
 
+  // Estado reactivo que almacena los valores ingresados por el usuario
   const [values, setValues] = useState<LoginFormValues>({
     email: '',
     password: '',
     rememberMe: false,
   });
+
+  // Diccionario reactivo de errores por campo para retroalimentación visual inmediata
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof LoginFormValues, string>>>({});
+
+  // Indicador de solicitud asíncrona en curso (deshabilita inputs y muestra spinners)
   const [loading, setLoading] = useState<boolean>(false);
+
+  // Mensaje de error global (credenciales incorrectas, fallos de red, etc.)
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * Actualiza el valor de un campo específico y limpia su error asociado
+   */
   const setFieldValue = <K extends keyof LoginFormValues>(field: K, value: LoginFormValues[K]) => {
     setValues((prev) => ({ ...prev, [field]: value }));
     setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
+  /**
+   * Valida sintácticamente el formulario en el cliente antes del envío al servidor.
+   * Evita llamadas de red innecesarias si los datos son inválidos.
+   */
   const validate = (): boolean => {
     const errors: Partial<Record<keyof LoginFormValues, string>> = {};
+
+    // Validación de formato de correo electrónico
     if (!values.email || !/^\S+@\S+$/.test(values.email)) {
       errors.email = 'Correo electrónico no válido';
     }
+
+    // Validación de longitud mínima de contraseña
     if (!values.password || values.password.length < 6) {
       errors.password = 'La contraseña debe tener al menos 6 caracteres';
     }
@@ -41,7 +84,11 @@ export function useLoginController() {
   };
 
   /**
-   * Envía las credenciales a Supabase Auth y redirige al panel principal en caso de éxito.
+   * Procesa el envío del formulario:
+   * 1. Previene el refresco nativo del navegador.
+   * 2. Comprueba las validaciones locales.
+   * 3. Invoca `signInWithPassword` en el cliente Supabase.
+   * 4. En caso de éxito, redirige al panel de administración y actualiza la sesión.
    */
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -58,6 +105,7 @@ export function useLoginController() {
       });
 
       if (authError) {
+        // Traducción de mensajes técnicos de Supabase a mensajes amigables
         if (authError.message.includes('Invalid login credentials')) {
           setError('Correo electrónico o contraseña incorrectos.');
         } else {
@@ -67,6 +115,7 @@ export function useLoginController() {
       }
 
       if (data.session) {
+        // Navegación segura hacia el dashboard del administrador
         router.push('/admin');
         router.refresh();
       }
@@ -78,6 +127,7 @@ export function useLoginController() {
     }
   };
 
+  // Limpia manualmente el mensaje de error global
   const clearError = () => setError(null);
 
   return {
@@ -92,14 +142,23 @@ export function useLoginController() {
 }
 
 /**
- * Controlador para el cierre de sesión.
- * Invalida la sesión actual en Supabase Auth y redirige al usuario al login.
+ * Hook Controlador para el Cierre de Sesión (Logout).
+ * 
+ * Responsabilidades:
+ * 1. Invalidar la sesión JWT activa en Supabase Auth (`signOut`).
+ * 2. Limpiar cookies y credenciales del navegador.
+ * 3. Redirigir al usuario a la pantalla pública de login (`/login`).
+ * 
+ * @param {boolean} autoExecute - Si es true, ejecuta el cierre automáticamente al montar la vista.
  */
 export function useLogoutController(autoExecute: boolean = true) {
   const router = useRouter();
   const [loading, setLoading] = useState<boolean>(autoExecute);
   const [loggedOut, setLoggedOut] = useState<boolean>(false);
 
+  /**
+   * Ejecuta el cierre de sesión bajo demanda (ej: clic en un botón de la barra de navegación)
+   */
   const handleLogout = useCallback(async () => {
     setLoading(true);
     try {
@@ -109,13 +168,16 @@ export function useLogoutController(autoExecute: boolean = true) {
       router.push('/login');
       router.refresh();
     } catch (err: unknown) {
-      console.error('Error al cerrar sesión:', err);
+      console.error('Error al cerrar sesión en Supabase:', err);
       router.push('/login');
     } finally {
       setLoading(false);
     }
   }, [router]);
 
+  /**
+   * Efecto automático para vistas dedicadas de cierre de sesión (como /logout)
+   */
   useEffect(() => {
     if (!autoExecute) return;
 
@@ -130,7 +192,7 @@ export function useLogoutController(autoExecute: boolean = true) {
           router.refresh();
         }
       } catch (err: unknown) {
-        console.error('Error al cerrar sesión:', err);
+        console.error('Error al cerrar sesión automáticamente:', err);
         if (isMounted) {
           router.push('/login');
         }
@@ -155,4 +217,5 @@ export function useLogoutController(autoExecute: boolean = true) {
   };
 }
 
+// Alias de retrocompatibilidad
 export const useLogin = useLoginController;

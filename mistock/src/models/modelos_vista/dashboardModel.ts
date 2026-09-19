@@ -1,9 +1,26 @@
-// Modelos de vista para Dashboards (Admin y Usuario)
+/**
+ * ====================================================================
+ * MODELO DE VISTA: DASHBOARDS Y MÉTRICAS (ViewModels)
+ * ====================================================================
+ * 
+ * Propósito:
+ * Define las estructuras de datos agregadas consumidas por las vistas de panel:
+ * - `AdminDashboardData`: Tarjetas KPI, resumen financiero, alertas de reposición.
+ * - `UserDashboardData`: Punto de venta, ventas del día, catálogo rápido de despacho.
+ * 
+ * Razón de Existencia en la Arquitectura:
+ * Estos modelos no coinciden 1:1 con ninguna tabla de base de datos; son proyecciones
+ * consolidadas (agregaciones SQL / cálculos) diseñadas específicamente para maximizar
+ * la velocidad de renderizado de los componentes React.
+ */
 
-// ==========================================
-// 1. Interfaces en Español (Versión Actual)
-// ==========================================
+// ====================================================================
+// 1. Tipos Semánticos en Español (Definición didáctica y académica)
+// ====================================================================
 
+/**
+ * Representación simplificada de un producto para listas rápidas en el POS.
+ */
 export interface Productos {
   id: string;
   nombre: string;
@@ -13,6 +30,9 @@ export interface Productos {
   codigo: string;
 }
 
+/**
+ * Resumen consolidado para la pantalla operativa del empleado.
+ */
 export interface UsuarioDashboard {
   VentasDiarias: number;
   GananciasDiarias: number;
@@ -26,6 +46,9 @@ export interface UsuarioDashboard {
   ProductosMasVendidos: Productos[];
 }
 
+/**
+ * Tarjeta de indicador clave de rendimiento (KPI) para el administrador.
+ */
 export interface AdminMetricas {
   titulo: string;
   valor: string;
@@ -33,6 +56,9 @@ export interface AdminMetricas {
   estado: 'positive' | 'negative' | 'neutral';
 }
 
+/**
+ * Alerta prioritaria generada cuando un producto alcanza o cae por debajo de su umbral mínimo.
+ */
 export interface AlertaStockBajo {
   id: string;
   productoNombre: string;
@@ -41,6 +67,9 @@ export interface AlertaStockBajo {
   categoria: string;
 }
 
+/**
+ * Estado general consumido por el panel del Administrador.
+ */
 export interface AdminDashboard {
   GananciasMensuales: number;
   TotalProductos: number;
@@ -50,9 +79,9 @@ export interface AdminDashboard {
   alertasStockBajo: AlertaStockBajo[];
 }
 
-// ==========================================
-// 2. Interfaces y Alias de compatibilidad con controladores
-// ==========================================
+// ====================================================================
+// 2. Interfaces y Tipos de Compatibilidad para los Controladores
+// ====================================================================
 
 export interface QuickProduct {
   id: string;

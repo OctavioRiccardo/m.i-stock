@@ -1,5 +1,18 @@
 'use client';
 
+/**
+ * ====================================================================
+ * VISTA: FORMULARIO DE INICIO DE SESIÓN (Patrón MVC - View)
+ * ====================================================================
+ * 
+ * Propósito:
+ * Presentar la interfaz de acceso con la estética y componentes de Dub.co:
+ * - Campos de correo y contraseña con iconos contextuales.
+ * - Conmutador visual para mostrar/ocultar contraseña (estado efímero local).
+ * - Notificaciones de error de autenticación mediante el componente `Alert`.
+ * - Desacople total: la vista delega la lógica de negocio a `loginController`.
+ */
+
 import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
 import { useLoginController } from '@/controllers/authController';
@@ -15,7 +28,9 @@ interface LoginFormViewProps {
 
 export function LoginFormView({ loginController }: LoginFormViewProps) {
   const { values, fieldErrors, setFieldValue, loading, error, handleSubmit } = loginController;
+  // Estado local puramente visual para alternar la visibilidad de la contraseña
   const [showPassword, setShowPassword] = useState(false);
+
 
   return (
     <div className="w-full max-w-md mx-auto">

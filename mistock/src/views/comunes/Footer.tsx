@@ -1,8 +1,19 @@
+/**
+ * ====================================================================
+ * COMPONENTE COMÚN: PIE DE PÁGINA (Footer)
+ * ====================================================================
+ * 
+ * Propósito:
+ * Pie de página global reutilizado en los layouts de administración y usuario.
+ * Provee la marca miStock, el copyright dinámico y enlaces institucionales.
+ */
+
 import React from 'react';
 import { Package } from 'lucide-react';
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
+
 
   return (
     <footer className="w-full border-t border-[#E8E6DF] bg-white py-4 mt-auto">

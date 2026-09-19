@@ -1,5 +1,21 @@
 'use client';
 
+/**
+ * ====================================================================
+ * VISTA: PANEL PRINCIPAL DEL ADMINISTRADOR (Patrón MVC - View)
+ * ====================================================================
+ * 
+ * Propósito:
+ * Renderizar de forma puramente declarativa las métricas financieras,
+ * los indicadores clave (KPIs) y la tabla de reposición de stock crítico.
+ * 
+ * Rol en la Arquitectura:
+ * - Es la capa "V" (View).
+ * - No contiene llamadas directas a APIs ni lógica de cálculo empresarial.
+ * - Recibe su estado y acciones a través de la prop `controller`
+ *   (instancia de `useAdminDashboardController`).
+ */
+
 import React from 'react';
 import {
   BarChart3,
@@ -24,12 +40,20 @@ import {
 } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
+/**
+ * Props esperadas por la vista del panel del Administrador.
+ * Recibe el controlador fuertemente tipado.
+ */
 interface AdminDashboardViewProps {
   controller: ReturnType<typeof useAdminDashboardController>;
 }
 
+/**
+ * Componente de Vista del Panel de Administración.
+ */
 export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
   const { data, alertResolvedMsg, handleRestockAlert } = controller;
+
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">

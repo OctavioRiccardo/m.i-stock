@@ -1,5 +1,16 @@
 'use client';
 
+/**
+ * ====================================================================
+ * VISTA: PANTALLA DE CIERRE DE SESIÓN (Patrón MVC - View)
+ * ====================================================================
+ * 
+ * Propósito:
+ * Mostrar una pantalla de transición con spinner y mensaje seguro mientras
+ * el controlador `useLogoutController` invalida la sesión de Supabase Auth
+ * y redirige automáticamente hacia `/login`.
+ */
+
 import React from 'react';
 import { LogOut, Loader2 } from 'lucide-react';
 import { useLogoutController } from '@/controllers/authController';
@@ -9,8 +20,10 @@ interface LogoutViewProps {
   logoutController: ReturnType<typeof useLogoutController>;
 }
 
-export function LogoutView({ logoutController: _logoutController }: LogoutViewProps) {
-  // logoutController handles the signout effect
+export function LogoutView({ logoutController }: LogoutViewProps) {
+  // El controlador ejecuta automáticamente la invalidación de cookies y la redirección
+  const { loading } = logoutController;
+
   return (
     <div className="w-full max-w-md mx-auto">
       <Card className="text-center p-6 sm:p-8">
@@ -28,10 +41,11 @@ export function LogoutView({ logoutController: _logoutController }: LogoutViewPr
           </p>
 
           <div className="pt-2">
-            <Loader2 className="h-6 w-6 animate-spin text-[#2A7A78]" />
+            {loading && <Loader2 className="h-6 w-6 animate-spin text-[#2A7A78]" />}
           </div>
         </CardContent>
       </Card>
     </div>
   );
 }
+

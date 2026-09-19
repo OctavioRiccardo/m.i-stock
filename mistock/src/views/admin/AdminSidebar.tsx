@@ -1,5 +1,21 @@
 'use client';
 
+/**
+ * ====================================================================
+ * VISTA: BARRA LATERAL DE NAVEGACIÓN DEL ADMINISTRADOR (View Component)
+ * ====================================================================
+ * 
+ * Propósito:
+ * Proveer el menú de navegación principal para las secciones administrativas:
+ * - Métricas & KPIs (`/adminmetricas#`)
+ * - Gestión de Inventario & Alta (`/admingestioninven#`)
+ * - Enlaces rápidos a cambio de rol y cierre de sesión.
+ * 
+ * Comportamiento Reactivo:
+ * Detecta la ruta activa mediante `usePathname()` para destacar visualmente el enlace actual.
+ * Acepta un callback `onNavigate` para cerrar automáticamente el drawer en dispositivos móviles.
+ */
+
 import React from 'react';
 import { usePathname } from 'next/navigation';
 import {
@@ -15,6 +31,9 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+/**
+ * Estructura de elementos del menú de navegación de administración.
+ */
 const adminNavData = [
   { link: '/adminmetricas#', label: 'Métricas & KPIs', icon: BarChart3 },
   { link: '/admingestioninven#', label: 'Gestion Inventario', icon: Boxes },
@@ -32,8 +51,10 @@ interface AdminSidebarProps {
 export function AdminSidebar({ onNavigate, className }: AdminSidebarProps = {}) {
   const pathname = usePathname();
 
+  // Detección de la ruta activa para aplicar los estilos visuales de Dub.co
   const isGestionInven = pathname?.includes('admingestioninven');
   const activeLabel = isGestionInven ? 'Gestion Inventario' : 'Métricas & KPIs';
+
 
   return (
     <nav className={cn('flex flex-col h-full bg-white border-r border-[#E8E6DF] w-64', className)}>

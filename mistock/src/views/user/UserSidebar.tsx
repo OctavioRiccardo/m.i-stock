@@ -1,5 +1,15 @@
 'use client';
 
+/**
+ * ====================================================================
+ * VISTA: BARRA LATERAL DE NAVEGACIÓN DEL EMPLEADO (View Component)
+ * ====================================================================
+ * 
+ * Propósito:
+ * Menú lateral exclusivo para el rol de usuario/empleado:
+ * accesos directos a ventas, catálogo, historial diario y resumen de stock.
+ */
+
 import React, { useState } from 'react';
 import {
   ShoppingCart,
@@ -12,12 +22,16 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+/**
+ * Enlaces de navegación rápida para la operativa de ventas.
+ */
 const userNavData = [
   { link: '/dashboard', label: 'Ventas y Operación', icon: ShoppingCart },
   { link: '/dashboard#productos', label: 'Catálogo de Productos', icon: Package },
   { link: '/dashboard#historial', label: 'Historial del Día', icon: Receipt },
   { link: '/dashboard#resumen', label: 'Resumen de Stock', icon: ListCheck },
 ];
+
 
 interface UserSidebarProps {
   onNavigate?: () => void;

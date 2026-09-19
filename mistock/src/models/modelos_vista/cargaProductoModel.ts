@@ -2,28 +2,33 @@ import { UnidadMedida } from '@/models/modelos_dominio/productoModel';
 
 /**
  * ====================================================================
- * MODELO DE VISTA: CARGA / ALTA DE PRODUCTO EN INVENTARIO
- * Define los tipos para el formulario, estado de UI y métricas
- * calculadas en tiempo real para la pantalla de ingreso de productos.
+ * MODELO DE VISTA: FORMULARIO DE CARGA DE PRODUCTO (ViewModel)
  * ====================================================================
+ * 
+ * Propósito:
+ * Define las estructuras de datos exclusivas de la interfaz de usuario para el alta de productos:
+ * - Estado de los campos de entrada del formulario interactivo.
+ * - Valores iniciales por defecto para el reseteo del formulario.
+ * - Estados de UI (indicadores de guardado, carga de selectores, modales).
+ * - Métricas de rentabilidad calculadas en vivo al momento de la digitación de costos.
  */
 
 /**
- * Valores del formulario de carga de producto (ideal para useForm de Mantine)
+ * Representa los campos controlados del formulario de alta de producto.
  */
 export interface FormularioCargaProducto {
-  codigo: string;             // Código de barras (EAN/UPC) o SKU interno
+  codigo: string;             // Código de barras (EAN/UPC) o SKU interno autogenerado
   nombre: string;             // Nombre comercial del producto
-  descripcion: string;        // Descripción o detalles adicionales
-  categoriaId: string;        // ID de la categoría seleccionada
+  descripcion: string;        // Descripción o especificaciones adicionales
+  categoriaId: string;        // ID de la categoría seleccionada (campo obligatorio por regla de negocio)
   unidadMedida: UnidadMedida; // Unidad de medida ('unidad', 'kg', 'litro', etc.)
-  precioCosto: number;        // Costo de compra o fabricación
+  precioCosto: number;        // Costo de compra o adquisición
   precioVenta: number;        // Precio final de venta al público
-  stockInicial: number;       // Cantidad física con la que ingresa al inventario
-  stockMinimo: number;        // Umbral de alerta para reposición de stock
-  ubicacion?: string;         // Ubicación física (ej: "Estante 3 - Pasillo A")
-  proveedor?: string;         // Nombre o contacto del proveedor (opcional)
-  motivoIngreso?: string;     // Justificación del ingreso (ej: "Compra inicial", "Nuevo ingreso")
+  stockInicial: number;       // Cantidad física inicial ingresada al inventario
+  stockMinimo: number;        // Umbral de alerta para reposición de stock crítico
+  ubicacion?: string;         // Referencia física en depósito (ej: "Estante 3 - Pasillo A")
+  proveedor?: string;         // Nombre o razón social del distribuidor
+  motivoIngreso?: string;     // Justificación del alta (ej: "Inventario inicial", "Compra mayorista")
 }
 
 /**

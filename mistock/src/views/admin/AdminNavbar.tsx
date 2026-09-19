@@ -1,9 +1,22 @@
 'use client';
 
+/**
+ * ====================================================================
+ * VISTA: BARRA SUPERIOR DE NAVEGACIÓN DEL ADMINISTRADOR (View Component)
+ * ====================================================================
+ * 
+ * Propósito:
+ * Encabezado horizontal superior con accesos rápidos para el Administrador:
+ * marca institucional, enlace directo al tablero principal y botón de cierre de sesión.
+ */
+
 import React from 'react';
 import { Package, BarChart3, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+/**
+ * Barra de navegación superior fija para el área administrativa.
+ */
 export function AdminNavbar() {
   return (
     <header className="h-14 border-b border-[#E8E6DF] bg-white sticky top-0 z-20">

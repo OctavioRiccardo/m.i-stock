@@ -1,5 +1,22 @@
 'use client';
 
+/**
+ * ====================================================================
+ * VISTA: TERMINAL DE VENTAS Y PANEL DEL EMPLEADO (Patrón MVC - View)
+ * ====================================================================
+ * 
+ * Propósito:
+ * Proporcionar una pantalla ágil y simplificada para la operación diaria en caja:
+ * - Indicadores clave de la jornada (recaudación total, cantidad de ventas).
+ * - Búsqueda en tiempo real por nombre o código de barras (SKU).
+ * - Botón de venta rápida de un clic con descuento inmediato de stock.
+ * - Registro visual de ventas recientes para control del cajero.
+ * 
+ * Rol en la Arquitectura:
+ * - Es la capa "V" (View) para el rol de usuario/operador.
+ * - Desacoplada de la base de datos; delega toda mutación a `useUserDashboardController`.
+ */
+
 import React from 'react';
 import {
   Search,
@@ -25,10 +42,16 @@ import {
 } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
+/**
+ * Props para la vista del panel del empleado.
+ */
 interface UserDashboardViewProps {
   controller: ReturnType<typeof useUserDashboardController>;
 }
 
+/**
+ * Componente de Vista para el Punto de Venta (POS) del empleado.
+ */
 export function UserDashboardView({ controller }: UserDashboardViewProps) {
   const {
     data,

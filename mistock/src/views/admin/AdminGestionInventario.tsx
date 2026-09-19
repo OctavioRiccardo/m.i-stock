@@ -1,5 +1,25 @@
 'use client';
 
+/**
+ * ====================================================================
+ * VISTA: GESTIÓN DE INVENTARIO Y ALTA DE PRODUCTOS (Patrón MVC - View)
+ * ====================================================================
+ * 
+ * Propósito:
+ * Proveer una interfaz visual intuitiva y guiada para la carga de productos
+ * y administración de categorías del catálogo.
+ * 
+ * Cumplimiento de Regla de Negocio:
+ * "El producto no puede existir sin una categoría definida."
+ * La vista implementa un flujo en dos pasos obligatorios:
+ * - Paso 1: Selección o creación inmediata de la categoría contenedora.
+ * - Paso 2: Habilitación del formulario detallado de producto y cálculo de márgenes.
+ * 
+ * Rol en la Arquitectura:
+ * - Es la capa "V" (View).
+ * - Delega la validación de duplicados y la persistencia en `useAdminInventarioController`.
+ */
+
 import React, { useState } from 'react';
 import {
   Boxes,
@@ -47,6 +67,7 @@ interface AdminGestionInventarioProps {
   controller: ReturnType<typeof useAdminInventarioController>;
 }
 
+// Opciones predefinidas de fraccionamiento para el selector de unidades
 const unidadesDisponibles: { value: UnidadMedida; label: string }[] = [
   { value: 'unidad', label: 'Unidad (un.)' },
   { value: 'kg', label: 'Kilogramo (kg)' },
@@ -57,7 +78,16 @@ const unidadesDisponibles: { value: UnidadMedida; label: string }[] = [
 ];
 
 export function AdminGestionInventario({ controller }: AdminGestionInventarioProps) {
-  const { categorias, productos, loading, mensajeExito, mensajeError, agregarCategoria, guardarProducto, limpiarMensajes, } = controller;
+  const {
+    categorias,
+    productos,
+    loading,
+    mensajeExito,
+    mensajeError,
+    agregarCategoria,
+    guardarProducto,
+    limpiarMensajes,
+  } = controller;
 
   // Estado del modal para nueva categoría
   const [modalCatOpened, setModalCatOpened] = useState(false);

@@ -1,5 +1,18 @@
 'use client';
 
+/**
+ * ====================================================================
+ * LAYOUT DE ADMINISTRACIÓN (Responsive Admin Shell)
+ * ====================================================================
+ * 
+ * Propósito:
+ * Proveer la estructura de layout responsivo (Dub.co design system):
+ * - Sidebar de escritorio fijo a la izquierda (w-64).
+ * - Drawer móvil deslizable con backdrop difuminado.
+ * - Header móvil con botón hamburguesa.
+ * - Contenedor principal para vistas administrativas y Footer.
+ */
+
 import React, { useState } from 'react';
 import { Menu, X, ShieldCheck } from 'lucide-react';
 import { AdminSidebar } from '@/views/admin/AdminSidebar';
@@ -11,6 +24,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
 
   return (
     <div className="min-h-screen bg-[#F8F7F2] text-[#1C2424] flex">
