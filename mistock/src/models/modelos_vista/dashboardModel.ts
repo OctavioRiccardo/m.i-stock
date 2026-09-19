@@ -14,9 +14,6 @@
  * la velocidad de renderizado de los componentes React.
  */
 
-// ====================================================================
-// 1. Tipos Semánticos en Español (Definición didáctica y académica)
-// ====================================================================
 
 /**
  * Representación simplificada de un producto para listas rápidas en el POS.

@@ -16,7 +16,7 @@
  * - Paso 2: Habilitación del formulario detallado de producto y cálculo de márgenes.
  * 
  * Rol en la Arquitectura:
- * - Es la capa "V" (View).
+ * - Es la capa vista.
  * - Delega la validación de duplicados y la persistencia en `useAdminInventarioController`.
  */
 
