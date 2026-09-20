@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Trabajo Final miStock - Informe Técnico Consolidado</title>
+</head>
+<body style="font-family: Calibri, -apple-system, Roboto, sans-serif; color: #2D3748; line-height: 1.6; font-size: 11pt; max-width: 900px; margin: 0 auto; padding: 40px 20px;">
+
+  <h1 style="color: #1A535C; font-size: 24pt; text-align: center; margin-bottom: 6px; font-weight: bold;">SISTEMA miStock</h1>
+  <h2 style="color: #2A7A78; font-size: 15pt; text-align: center; margin-top: 0; margin-bottom: 24px; font-weight: bold;">Documento Técnico Consolidado: Arquitectura del Software, Patrón MVC y Base de Datos Relacional</h2>
+
+  <table style="width: 100%; border-collapse: collapse; margin: 18px 0; font-family: Calibri, sans-serif; font-size: 10pt;"><thead><tr><th style="background-color: #2A7A78; color: #ffffff; padding: 10px 12px; border: 1px solid #CBD5E1; text-align: left; font-weight: bold;">Propiedad del Proyecto</th><th style="background-color: #2A7A78; color: #ffffff; padding: 10px 12px; border: 1px solid #CBD5E1; text-align: left; font-weight: bold;">Detalle</th></tr></thead><tbody><tr style="background-color: #FFFFFF;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Proyecto</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">miStock — Sistema de Gestión de Inventario, Punto de Venta (POS) y Catálogo Comercial</td></tr><tr style="background-color: #F8F9FA;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Destinatarios</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Equipo Docente / Evaluadores Académicos de Práctica Profesional Supervisada</td></tr><tr style="background-color: #FFFFFF;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Fecha de Emisión</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Septiembre 2026</td></tr><tr style="background-color: #F8F9FA;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Stack Frontend</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Next.js 16.3 (App Router Turbopack) + React 19 + TypeScript + Tailwind CSS v4 + Radix UI</td></tr><tr style="background-color: #FFFFFF;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Stack Backend</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Supabase BaaS + PostgreSQL 15+ con Row Level Security (RLS) + Supabase Auth (GoTrue JWT)</td></tr></tbody></table>
+
+  <hr style="border: 0; height: 2px; background: #2A7A78; margin: 30px 0;" />
+
+  <h1 style="color: #1A535C; font-size: 18pt; border-bottom: 2px solid #2A7A78; padding-bottom: 6px; margin-top: 36px;">PARTE 1: ARQUITECTURA DEL SISTEMA Y PATRÓN MVC EN REACT</h1>
+
+  <h2 style="color: #2A7A78; font-size: 14pt; margin-top: 24px;">1.1. Adaptación del Patrón MVC en React / Next.js</h2>
+  <p>En aplicaciones web modernas construidas con React y Next.js, el patrón clásico Modelo-Vista-Controlador (MVC) se adapta para convivir con el ciclo de vida de componentes, el renderizado reactivo y la inmutabilidad de estado.</p>
+  <p>En <strong>miStock</strong>, la arquitectura garantiza una separación estricta de responsabilidades en cuatro capas modulares:</p>
+
+  <pre style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-left: 4px solid #2A7A78; padding: 14px; font-family: Consolas, monospace; font-size: 9pt; line-height: 1.4; color: #1E293B; overflow-x: auto;">
++-----------------------------------------------------------------------------------+
+|                     1. CAPA DE VISTAS (UI - Componentes React)                    |
+|  - Admin: AdminDashboardView, AdminGestionInventario, AdminSidebar                |
+|  - Ventas/Salón: UserDashboardView, UserSidebar                                   |
+|  - Autenticación: LoginFormView, LogoutView                                       |
++-----------------------------------------------------------------------------------+
+                                  ▲                │
+         Render Reactivo (Props)  │                │  Eventos de Usuario / Submit
+                                  │                ▼
++-----------------------------------------------------------------------------------+
+|                 2. CAPA DE CONTROLADORES (Custom React Hooks)                     |
+|  - adminControllers/dashboardController (Métricas consolidadas, KPIs, Alertas)    |
+|  - adminControllers/inventarioController (Reglas de catálogo, SKU único, Bajas)   |
+|  - userControllers/userDashboardController (Ventas salón, Descuento inmediato)    |
+|  - authController (useLoginController, useLogoutController)                       |
++-----------------------------------------------------------------------------------+
+                 ▲                                                 ▲
+      Tipado /   │                                      Consultas  │ Sesiones /
+      DTOs       │                                      Asíncronas │ Cookies HttpOnly
+                 ▼                                                 ▼
++-------------------------------------------+   +-----------------------------------+
+|          3. MODELOS (TypeScript)          |   |  4. BACKEND (Supabase / Postgres) |
+|  - modelos_dominio/ (Entidades BD)        |   |  - PostgreSQL 15+ con RLS         |
+|  - modelos_vista/ (Formularios, DTOs UI)  |   |  - Supabase Auth (JWT HttpOnly)   |
++-------------------------------------------+   +-----------------------------------+
+</pre>
+
+  <h2 style="color: #2A7A78; font-size: 14pt; margin-top: 24px;">1.2. División de Modelos: Dominio vs. Vista</h2>
+  <p>Una de las decisiones arquitectónicas fundamentales del proyecto es la separación explícita de los modelos en dos subdirectorios dentro de <code>src/models/</code>:</p>
+
+  <h3 style="color: #2F3E46; font-size: 12pt;">A. Modelos de Dominio (<code>src/models/modelos_dominio/</code>)</h3>
+  <ul>
+    <li><strong>Propósito:</strong> Representan la verdad del negocio y las entidades persistentes almacenadas en la base de datos relacional PostgreSQL.</li>
+    <li><strong>Características:</strong> Son completamente agnósticos a la interfaz de usuario. No contienen estados efímeros como <code>loading</code>, <code>isOpen</code> o mensajes de validación.</li>
+    <li><strong>productoModel.ts:</strong> Define <code>Producto</code>, <code>Categoria</code>, <code>UnidadMedida</code> y los DTOs <code>CrearProductoDTO</code> y <code>ActualizarProductoDTO</code>.</li>
+    <li><strong>ventaModel.ts:</strong> Modela la transacción comercial (<code>Venta</code>), métodos de pago (<code>MetodoPago</code>) y los renglones congelados (<code>DetalleVenta</code>).</li>
+    <li><strong>inventarioModel.ts:</strong> Modela la trazabilidad y auditoría física (<code>MovimientoStock</code>, <code>TipoMovimientoStock</code>, <code>AjusteInventario</code>).</li>
+    <li><strong>userModel.ts:</strong> Modela la entidad <code>Usuario</code>, roles comerciales (<code>admin</code>, <code>empleado</code>, <code>cajero</code>) y estados.</li>
+  </ul>
+
+  <h3 style="color: #2F3E46; font-size: 12pt;">B. Modelos de Vista (<code>src/models/modelos_vista/</code>)</h3>
+  <ul>
+    <li><strong>Propósito:</strong> Modelan el estado temporal, formularios y datos agregados requeridos por React para renderizar cada pantalla.</li>
+    <li><strong>Justificación Técnica:</strong> Los formularios necesitan soportar estados intermedios mientras el usuario escribe (strings vacíos antes de parsear números, mensajes de error específicos por campo, opciones para selects).</li>
+    <li><strong>Estado Derivado:</strong> Contienen cálculos al vuelo que no se persisten en base de datos (ganancia neta, margen porcentual de rentabilidad, bandera <code>esRentable</code>).</li>
+    <li><strong>cargaProductoModel.ts:</strong> <code>FormularioCargaProducto</code>, <code>valoresInicialesCargaProducto</code> y <code>CargaProductoViewState</code>.</li>
+    <li><strong>dashboardModel.ts:</strong> <code>AdminDashboardData</code>, métricas de facturación acumulada, KPIs y alertas de stock crítico.</li>
+    <li><strong>authModel.ts:</strong> <code>LoginFormValues</code> (email, password, rememberMe).</li>
+  </ul>
+
+  <h2 style="color: #2A7A78; font-size: 14pt; margin-top: 24px;">1.3. La Capa de Vistas</h2>
+  <ul>
+    <li><strong>Principio de Diseño:</strong> Las vistas no se comunican directamente con la base de datos ni contienen lógica de negocio pesada. Solo reciben datos procesados mediante props y emiten eventos hacia sus controladores.</li>
+    <li><strong>Organización por Roles:</strong> <code>views/admin/</code> (paneles de administración y catálogo), <code>views/user/</code> (punto de venta de salón), <code>views/auth/</code> (login y logout) y <code>views/comunes/</code> (footer y layouts).</li>
+    <li><strong>Diseño Visual:</strong> Construidas con el stack minimalista de Dub.co (Tailwind CSS v4 + Radix UI + Lucide Icons), garantizando alta velocidad de carga y accesibilidad WAI-ARIA.</li>
+  </ul>
+
+  <h2 style="color: #2A7A78; font-size: 14pt; margin-top: 24px;">1.4. La Capa de Controladores (Custom React Hooks)</h2>
+  <p>Los controladores se implementan como Custom React Hooks (<code>use...Controller</code>). Centralizan toda la lógica de negocio, llamadas a APIs y mutaciones de estado reactivo, aplicando el Principio de Responsabilidad Única (SRP):</p>
+  <ul>
+    <li><strong>adminControllers/dashboardController.ts:</strong> Gestiona métricas de facturación, cálculo de ventas diarias y resolución de alertas de reposición.</li>
+    <li><strong>adminControllers/inventarioController.ts:</strong> Gobierna la regla de negocio que exige categoría previa obligatoria para cada producto, valida unicidad de códigos SKU, filtra catálogo por categoría y administra bajas lógicas.</li>
+    <li><strong>userControllers/userDashboardController.ts:</strong> Maneja el punto de venta de mostrador, búsqueda rápida de productos y registro de tickets de venta.</li>
+    <li><strong>authController.ts:</strong> Gestiona de forma segura los flujos de inicio de sesión y cierre de sesión.</li>
+  </ul>
+
+  <h2 style="color: #2A7A78; font-size: 14pt; margin-top: 24px;">1.5. Flujo Técnico del Controlador de Autenticación (authController.ts)</h2>
+  <p>El archivo <code>authController.ts</code> gobierna la seguridad perimetral de la aplicación mediante el siguiente ciclo de vida de autenticación:</p>
+
+  <pre style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-left: 4px solid #2A7A78; padding: 14px; font-family: Consolas, monospace; font-size: 9pt; line-height: 1.45; color: #1E293B;">
+PASO A PASO DEL FLUJO DE AUTENTICACIÓN (LOGIN SEGURO):
+1. El usuario ingresa email y contraseña en LoginFormView.
+2. Al presionar "Iniciar Sesión", la vista ejecuta handleSubmit(event).
+3. useLoginController ejecuta validaciones síncronas en cliente (formato email regex y contraseña >= 6).
+4. Si la validación pasa, invoca supabase.auth.signInWithPassword({ email, password }).
+5. Supabase Auth (GoTrue) verifica las credenciales con bcrypt contra auth.users.
+6. Si las credenciales fallan, retorna error 400 y el hook traduce el error a un mensaje legible en español.
+7. Si son válidas, Supabase retorna la sesión activa con JWT y Refresh Token.
+8. La librería @supabase/ssr sincroniza las cookies seguras HttpOnly en el navegador.
+9. El controlador dispara router.push("/admin") y router.refresh().
+10. El Middleware de Next.js valida el JWT en servidor y entrega la pantalla autorizada.
+</pre>
+
+  <div style="background-color: #F4F9F8; border-left: 4px solid #2A7A78; padding: 12px 16px; margin: 16px 0; border-radius: 0 6px 6px 0;">
+    <strong style="color: #1A535C;">Controlador de Cierre de Sesión (useLogoutController):</strong>
+    <p style="margin: 4px 0 0 0; font-size: 10pt; color: #2D3748;">Ejecuta <code>supabase.auth.signOut()</code> para revocar la sesión activa en el servidor y limpiar las cookies seguras. Incorpora protección contra fugas de memoria (memory leaks) verificando si el componente sigue montado (<code>isMounted</code>) antes de mutar estados locales y redirigiendo hacia <code>/login</code>.</p>
+  </div>
+
+  <h2 style="color: #2A7A78; font-size: 14pt; margin-top: 24px;">1.6. Stack Tecnológico y Librerías Utilizadas</h2>
+  <h3 style="color: #2F3E46; font-size: 12pt;">A. Tecnologías de Frontend (Interfaz y Lógica Cliente)</h3>
+  <table style="width: 100%; border-collapse: collapse; margin: 18px 0; font-family: Calibri, sans-serif; font-size: 10pt;"><thead><tr><th style="background-color: #2A7A78; color: #ffffff; padding: 10px 12px; border: 1px solid #CBD5E1; text-align: left; font-weight: bold;">Tecnología / Librería</th><th style="background-color: #2A7A78; color: #ffffff; padding: 10px 12px; border: 1px solid #CBD5E1; text-align: left; font-weight: bold;">Versión</th><th style="background-color: #2A7A78; color: #ffffff; padding: 10px 12px; border: 1px solid #CBD5E1; text-align: left; font-weight: bold;">Rol en el Proyecto y Justificación</th></tr></thead><tbody><tr style="background-color: #FFFFFF;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Next.js</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">16.3.4</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Framework principal. Utiliza App Router, Server Components y compilación ultra rápida con Turbopack.</td></tr><tr style="background-color: #F8F9FA;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">React & React-DOM</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">19.2.8</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Biblioteca base de UI. Aprovecha la concurrencia, renderizado reactivo y Hooks de última generación.</td></tr><tr style="background-color: #FFFFFF;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">TypeScript</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">^5.0.0</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Tipado estricto en tiempo de compilación, interfaces de dominio, DTOs y prevención de errores.</td></tr><tr style="background-color: #F8F9FA;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Tailwind CSS</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">^4.0.0</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Motor de estilos de alto rendimiento basado en CSS nativo moderno.</td></tr><tr style="background-color: #FFFFFF;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Radix UI</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">^1.1 / ^2.3</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Primitivas de componentes accesibles y sin estilos para modales, dropdowns y selects.</td></tr><tr style="background-color: #F8F9FA;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Lucide React</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">^1.46.0</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Iconografía vectorial consistente, ligera y personalizable.</td></tr><tr style="background-color: #FFFFFF;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Class Variance Authority (CVA)</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">^0.7.1</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Manejo declarativo de variantes y tamaños de componentes UI.</td></tr><tr style="background-color: #F8F9FA;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">clsx & tailwind-merge</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">^2.1 / ^3.7</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Función utilitaria cn() para resolver colisiones de especificidad de clases CSS.</td></tr></tbody></table>
+
+  <h3 style="color: #2F3E46; font-size: 12pt; margin-top: 20px;">B. Tecnologías de Backend, Autenticación y Base de Datos</h3>
+  <table style="width: 100%; border-collapse: collapse; margin: 18px 0; font-family: Calibri, sans-serif; font-size: 10pt;"><thead><tr><th style="background-color: #2A7A78; color: #ffffff; padding: 10px 12px; border: 1px solid #CBD5E1; text-align: left; font-weight: bold;">Tecnología / SDK</th><th style="background-color: #2A7A78; color: #ffffff; padding: 10px 12px; border: 1px solid #CBD5E1; text-align: left; font-weight: bold;">Versión</th><th style="background-color: #2A7A78; color: #ffffff; padding: 10px 12px; border: 1px solid #CBD5E1; text-align: left; font-weight: bold;">Rol en el Proyecto y Justificación</th></tr></thead><tbody><tr style="background-color: #FFFFFF;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Supabase (PostgreSQL)</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Cloud</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Base de datos relacional PostgreSQL 15+ con integridad referencial y claves foráneas.</td></tr><tr style="background-color: #F8F9FA;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">@supabase/supabase-js</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">^2.115.0</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">SDK oficial para consultas CRUD, llamadas a RPC y comunicación cliente-servidor.</td></tr><tr style="background-color: #FFFFFF;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">@supabase/ssr</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">^0.12.6</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Gestión de sesiones Next.js mediante cookies HttpOnly seguras validadas en Middleware.</td></tr><tr style="background-color: #F8F9FA;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Supabase Auth (GoTrue)</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Integrado</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Servicio de identidad con hashing bcrypt, emisión y renovación automática de tokens JWT.</td></tr><tr style="background-color: #FFFFFF;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Row Level Security (RLS)</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Nativo</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Políticas declarativas de seguridad a nivel de fila que aíslan datos según el rol del usuario.</td></tr></tbody></table>
+
+  <hr style="border: 0; height: 2px; background: #2A7A78; margin: 36px 0;" />
+
+  <h1 style="color: #1A535C; font-size: 18pt; border-bottom: 2px solid #2A7A78; padding-bottom: 6px; margin-top: 36px;">PARTE 2: ANÁLISIS DEL ESQUEMA DE BASE DE DATOS (SUPABASE / POSTGRESQL)</h1>
+
+  <h2 style="color: #2A7A78; font-size: 14pt; margin-top: 24px;">2.1. Propósito y Arquitectura Relacional</h2>
+  <p>El esquema SQL define la persistencia relacional en PostgreSQL 15+ para miStock. Cubre tres módulos funcionales integrados: Identidad de Usuarios (RBAC), Catálogo e Inventario Físico (Libro Mayor), y Facturación de Caja (Punto de Venta).</p>
+
+  <h2 style="color: #2A7A78; font-size: 14pt; margin-top: 24px;">2.2. Matriz de Relaciones de la Base de Datos</h2>
+  <table style="width: 100%; border-collapse: collapse; margin: 18px 0; font-family: Calibri, sans-serif; font-size: 10pt;"><thead><tr><th style="background-color: #2A7A78; color: #ffffff; padding: 10px 12px; border: 1px solid #CBD5E1; text-align: left; font-weight: bold;">Tabla Origen</th><th style="background-color: #2A7A78; color: #ffffff; padding: 10px 12px; border: 1px solid #CBD5E1; text-align: left; font-weight: bold;">Card.</th><th style="background-color: #2A7A78; color: #ffffff; padding: 10px 12px; border: 1px solid #CBD5E1; text-align: left; font-weight: bold;">Tabla Destino</th><th style="background-color: #2A7A78; color: #ffffff; padding: 10px 12px; border: 1px solid #CBD5E1; text-align: left; font-weight: bold;">Clave Foránea</th><th style="background-color: #2A7A78; color: #ffffff; padding: 10px 12px; border: 1px solid #CBD5E1; text-align: left; font-weight: bold;">Regla Integridad</th><th style="background-color: #2A7A78; color: #ffffff; padding: 10px 12px; border: 1px solid #CBD5E1; text-align: left; font-weight: bold;">Propósito</th></tr></thead><tbody><tr style="background-color: #FFFFFF;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">auth.users</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">1:1</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">public.usuario</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">id_usuario</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">ON DELETE CASCADE</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Vincula cuenta de Supabase con perfil público del empleado</td></tr><tr style="background-color: #F8F9FA;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">public.usuario</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">1:N</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">public.ventas</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">id_usuario</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">ON DELETE SET NULL</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Audita el cajero o vendedor que registró la venta</td></tr><tr style="background-color: #FFFFFF;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">public.usuario</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">1:N</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">public.movimientos_stock</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">id_usuario</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">ON DELETE SET NULL</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Identifica al responsable del ajuste físico o ingreso de stock</td></tr><tr style="background-color: #F8F9FA;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">public.categorias</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">1:N</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">public.productos</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">id_categoria</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">ON DELETE SET NULL</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Agrupa los productos bajo una familia comercial</td></tr><tr style="background-color: #FFFFFF;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">public.productos</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">1:N</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">public.movimientos_stock</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">id_producto</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">ON DELETE CASCADE</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Historial auditado de ingresos, ventas y mermas</td></tr><tr style="background-color: #F8F9FA;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">public.productos</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">1:N</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">public.detalle_ventas</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">id_producto</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">ON DELETE RESTRICT</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Protección legal: impide borrar productos con ventas registradas</td></tr><tr style="background-color: #FFFFFF;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">public.ventas</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">1:N</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">public.detalle_ventas</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">id_venta</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">ON DELETE CASCADE</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Renglones e ítems incluidos en cada comprobante</td></tr><tr style="background-color: #F8F9FA;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">public.ventas</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">1:N</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">public.pagos</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">id_venta</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">ON DELETE CASCADE</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Soporta pagos divididos (ej. efectivo + transferencia)</td></tr></tbody></table>
+
+  <h2 style="color: #2A7A78; font-size: 14pt; margin-top: 24px;">2.3. Desglose Estructural de Tablas y Atributos</h2>
+
+  <h3 style="color: #2F3E46; font-size: 12pt;">A. Tipos ENUM Personalizados</h3>
+  <ul>
+    <li><strong>public.user_rol:</strong> Valores ("admin", "vendedor", "no_rol"). El valor por defecto "no_rol" previene la escalada de privilegios al registrarse por primera vez.</li>
+    <li><strong>public.tipo_movimiento:</strong> Valores ("compra", "venta", "ajuste", "devolucion"). Tipifica el motivo de alteración de inventario.</li>
+  </ul>
+
+  <h3 style="color: #2F3E46; font-size: 12pt;">B. Módulo de Usuarios: public.usuario</h3>
+  <p>Almacena la información de los empleados vinculados a <code>auth.users</code>. Clave primaria <code>id_usuario</code> (UUID) con <code>ON DELETE CASCADE</code>. Incluye email, nombre, rol de usuario y marcas temporales <code>creado_el</code> y <code>actualizado_el</code> con zona horaria (<code>timestamptz</code>).</p>
+
+  <h3 style="color: #2F3E46; font-size: 12pt;">C. Módulo de Catálogo: public.categorias y public.productos</h3>
+  <ul>
+    <li><strong>public.categorias:</strong> <code>id_categoria</code> (UUID, PK), <code>nombre</code> (TEXT, UNIQUE, NOT NULL). Garantiza unicidad taxonómica.</li>
+    <li><strong>public.productos:</strong> <code>id_producto</code> (UUID, PK), <code>id_categoria</code> (UUID, FK), <code>nombre</code> (TEXT), <code>sku</code> (TEXT, UNIQUE).</li>
+    <li><strong>Restricción de Stock:</strong> <code>stock_actual</code> (INTEGER) cuenta con <code>CHECK (stock_actual >= 0)</code> que impide a nivel motor existencias negativas.</li>
+    <li><strong>Alertas de Reposición:</strong> <code>stock_minimo</code> (INTEGER, Default: 5) define el umbral para disparar advertencias de stock crítico.</li>
+    <li><strong>Borrado Lógico:</strong> <code>activo</code> (BOOLEAN, Default: true) permite retirar productos del catálogo activo sin alterar el historial contable de ventas pasadas.</li>
+  </ul>
+
+  <h3 style="color: #2F3E46; font-size: 12pt;">D. Módulo de Inventario: public.movimientos_stock (Patrón Ledger)</h3>
+  <p>Cada variación de stock se registra de forma inmutable en esta tabla con <code>id_producto</code>, <code>id_usuario</code>, <code>cantidad</code> (positiva para ingresos, negativa para ventas/mermas), <code>tipo</code> (ENUM) y <code>motivo</code> explicativo.</p>
+
+  <h3 style="color: #2F3E46; font-size: 12pt;">E. Módulo de Ventas y Cobros: public.ventas, public.detalle_ventas y public.pagos</h3>
+  <ul>
+    <li><strong>public.ventas:</strong> Cabecera de la operación con <code>id_venta</code> (UUID, PK), <code>id_usuario</code> (FK cajero), <code>total</code> (CHECK total >= 0), <code>estado</code> ("completada", "pendiente", "cancelada").</li>
+    <li><strong>public.detalle_ventas:</strong> Renglones del ticket. Cuenta con <code>precio_unitario</code> congelado (Snapshot) para garantizar que futuros aumentos no alteren tickets pasados, y <code>ON DELETE RESTRICT</code> en <code>id_producto</code> para evitar borrados accidentales.</li>
+    <li><strong>public.pagos:</strong> Liquidación de la venta. Soporta pagos divididos (Split Payment) al permitir múltiples registros de cobro (efectivo, débito, transferencia) vinculados a la misma venta.</li>
+  </ul>
+
+  <h2 style="color: #2A7A78; font-size: 14pt; margin-top: 24px;">2.4. Automatizaciones en Base de Datos (Triggers y Funciones)</h2>
+
+  <h3 style="color: #2F3E46; font-size: 12pt;">A. Sincronización Automática de Usuarios (handle_new_user)</h3>
+  <p>Disparado mediante <code>AFTER INSERT ON auth.users</code> con privilegios <code>SECURITY DEFINER</code> y <code>SET search_path = public</code>. Crea automáticamente la fila en <code>public.usuario</code> cuando el usuario inicia sesión por primera vez con Google o correo.</p>
+  <pre style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-left: 4px solid #2A7A78; padding: 12px; font-family: Consolas, monospace; font-size: 9pt; line-height: 1.4; color: #1E293B;">
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  INSERT INTO public.usuario (id_usuario, email, nombre)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', '')
+  );
+  RETURN NEW;
+END;
+$$;
+CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users
+FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+</pre>
+
+  <h3 style="color: #2F3E46; font-size: 12pt;">B. Recálculo Automático de Stock (actualizar_stock_producto)</h3>
+  <p>Disparado mediante <code>AFTER INSERT ON public.movimientos_stock</code>. Aplica de forma atómica la suma o resta sobre <code>productos.stock_actual</code>. Si la operación resulta en un valor negativo, la restricción <code>CHECK</code> aborta la transacción completa.</p>
+  <pre style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-left: 4px solid #2A7A78; padding: 12px; font-family: Consolas, monospace; font-size: 9pt; line-height: 1.4; color: #1E293B;">
+CREATE OR REPLACE FUNCTION public.actualizar_stock_producto()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  UPDATE public.productos
+  SET stock_actual = stock_actual + NEW.cantidad,
+      actualizado_el = now()
+  WHERE id_producto = NEW.id_producto;
+  RETURN NEW;
+END;
+$$;
+CREATE TRIGGER tr_actualizar_stock AFTER INSERT ON public.movimientos_stock
+FOR EACH ROW EXECUTE FUNCTION public.actualizar_stock_producto();
+</pre>
+
+  <h3 style="color: #2F3E46; font-size: 12pt;">C. Validación de Rol Admin sin Bucle RLS (is_admin)</h3>
+  <p>Marcada como <code>SECURITY DEFINER</code> y <code>STABLE</code> para cachear su resultado en la consulta y evitar la recursión infinita cuando las políticas RLS de la tabla usuario consultan a la misma tabla.</p>
+  <pre style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-left: 4px solid #2A7A78; padding: 12px; font-family: Consolas, monospace; font-size: 9pt; line-height: 1.4; color: #1E293B;">
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.usuario
+    WHERE id_usuario = auth.uid() AND rol = 'admin'
+  );
+$$;
+</pre>
+
+  <h2 style="color: #2A7A78; font-size: 14pt; margin-top: 24px;">2.5. Estrategia de Seguridad: Row Level Security (RLS)</h2>
+  <table style="width: 100%; border-collapse: collapse; margin: 18px 0; font-family: Calibri, sans-serif; font-size: 10pt;"><thead><tr><th style="background-color: #2A7A78; color: #ffffff; padding: 10px 12px; border: 1px solid #CBD5E1; text-align: left; font-weight: bold;">Tabla</th><th style="background-color: #2A7A78; color: #ffffff; padding: 10px 12px; border: 1px solid #CBD5E1; text-align: left; font-weight: bold;">Operación</th><th style="background-color: #2A7A78; color: #ffffff; padding: 10px 12px; border: 1px solid #CBD5E1; text-align: left; font-weight: bold;">Roles Autorizados</th><th style="background-color: #2A7A78; color: #ffffff; padding: 10px 12px; border: 1px solid #CBD5E1; text-align: left; font-weight: bold;">Condición Declarada de la Política</th></tr></thead><tbody><tr style="background-color: #FFFFFF;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">categorias</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">SELECT</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">authenticated (Staff)</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">USING (true) — Todo el staff puede consultar el catálogo</td></tr><tr style="background-color: #F8F9FA;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">categorias</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">INSERT/UPDATE/DELETE</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">authenticated (Solo Admin)</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">USING (public.is_admin()) — Solo administradores modifican</td></tr><tr style="background-color: #FFFFFF;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">productos</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">SELECT</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">authenticated (Staff)</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">USING (true) — Todo el personal consulta artículos</td></tr><tr style="background-color: #F8F9FA;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">productos</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">INSERT/UPDATE/DELETE</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">authenticated (Solo Admin)</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">USING (public.is_admin()) — Solo administradores editan</td></tr><tr style="background-color: #FFFFFF;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">usuario</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">SELECT</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">authenticated (Staff)</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">USING (true) — Para visualizar cajeros y staff</td></tr><tr style="background-color: #F8F9FA;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">usuario</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">INSERT/UPDATE/DELETE</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">authenticated (Solo Admin)</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">USING (public.is_admin()) — Solo administradores gestionan roles</td></tr><tr style="background-color: #FFFFFF;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">ventas</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">SELECT / INSERT</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">authenticated (Staff)</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Todo el personal autenticado puede registrar comprobantes</td></tr><tr style="background-color: #F8F9FA;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">detalle_ventas</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">SELECT / INSERT</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">authenticated (Staff)</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Todo el personal autenticado puede cargar renglones</td></tr><tr style="background-color: #FFFFFF;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">pagos</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">SELECT / INSERT</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">authenticated (Staff)</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Todo el personal autenticado puede registrar pagos</td></tr><tr style="background-color: #F8F9FA;"><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">movimientos_stock</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">SELECT / INSERT</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">authenticated (Staff)</td><td style="padding: 8px 12px; border: 1px solid #CBD5E1; vertical-align: top; color: #2D3748;">Todo el staff registra ingresos o salidas</td></tr></tbody></table>
+
+  <div style="background-color: #F4F9F8; border-left: 4px solid #2A7A78; padding: 12px 16px; margin: 16px 0; border-radius: 0 6px 6px 0;">
+    <strong style="color: #1A535C;">Modelo de Apéndice Único (Append-Only):</strong>
+    <p style="margin: 4px 0 0 0; font-size: 10pt; color: #2D3748;">Nótese que para ventas, detalle_ventas, pagos y movimientos_stock NO existen políticas de UPDATE ni DELETE. Ningún usuario ni administrador puede modificar o borrar comprobantes ya emitidos, garantizando la inmutabilidad y valor probatorio en auditorías contables.</p>
+  </div>
+
+  <h2 style="color: #2A7A78; font-size: 14pt; margin-top: 24px;">2.6. Índices de Rendimiento Implementados</h2>
+  <ul>
+    <li><strong>idx_productos_categoria:</strong> Sobre <code>productos(id_categoria)</code> para agilizar el filtrado por categoría comercial.</li>
+    <li><strong>idx_movimientos_producto:</strong> Sobre <code>movimientos_stock(id_producto)</code> para calcular rápidamente historiales de stock.</li>
+    <li><strong>idx_movimientos_usuario:</strong> Sobre <code>movimientos_stock(id_usuario)</code> para auditorías por operador.</li>
+    <li><strong>idx_ventas_usuario:</strong> Sobre <code>ventas(id_usuario)</code> para liquidación de caja diaria por cajero.</li>
+    <li><strong>idx_ventas_fecha:</strong> Sobre <code>ventas(creado_el DESC)</code> para paneles de control y reportes de facturación.</li>
+    <li><strong>idx_pagos_venta:</strong> Sobre <code>pagos(id_venta)</code> para consolidar medios de cobro por ticket.</li>
+    <li><strong>idx_detalle_venta:</strong> Sobre <code>detalle_ventas(id_venta)</code> para recuperar renglones al emitir o imprimir comprobantes.</li>
+  </ul>
+
+  <h2 style="color: #2A7A78; font-size: 14pt; margin-top: 24px;">2.7. Puntos Críticos y Recomendaciones de Mejora</h2>
+
+  <h3 style="color: #2F3E46; font-size: 12pt;">A. Alineación con Modelos Frontend (TypeScript)</h3>
+  <ul>
+    <li><strong>Estructura de Precios:</strong> En el frontend se maneja <code>precioCosto</code> y <code>precioVenta</code> para calcular margen de ganancia. En SQL solo existe <code>precio</code>. Se recomienda añadir <code>precio_costo numeric(10,2) NOT NULL DEFAULT 0.00</code> en <code>productos</code>.</li>
+    <li><strong>Unidad de Medida:</strong> El frontend permite seleccionar <code>unidad</code>, <code>kg</code>, <code>litro</code>, <code>gramo</code>, <code>metro</code>, <code>paquete</code>. Se recomienda crear el ENUM <code>unidad_medida</code> o columna <code>varchar(20) DEFAULT 'unidad'</code> en <code>productos</code>.</li>
+    <li><strong>Descripción:</strong> Se recomienda agregar <code>descripcion text</code> a <code>categorias</code> y <code>productos</code>.</li>
+    <li><strong>Integridad de Categoría:</strong> Si la regla de negocio es que un producto no puede existir sin categoría, cambiar <code>id_categoria</code> a <code>NOT NULL</code> con <code>ON DELETE RESTRICT</code> en lugar de <code>ON DELETE SET NULL</code>.</li>
+  </ul>
+
+  <h3 style="color: #2F3E46; font-size: 12pt;">B. Buenas Prácticas de PostgreSQL y Supabase</h3>
+  <ul>
+    <li><strong>Índice Faltante:</strong> Crear <code>CREATE INDEX idx_detalle_ventas_producto ON public.detalle_ventas(id_producto)</code> para optimizar consultas de qué tickets incluyen un producto dado y acelerar comprobaciones de <code>ON DELETE RESTRICT</code>.</li>
+    <li><strong>Optimización de RLS:</strong> Envolver las llamadas de políticas en subconsultas <code>USING ((SELECT public.is_admin()))</code> para que Postgres evalúe la función una sola vez por consulta en vez de ejecutarla por cada fila leída.</li>
+    <li><strong>Seguridad en Funciones:</strong> Añadir siempre <code>SET search_path = public</code> a la función <code>actualizar_stock_producto</code> para prevenir ataques de secuestro de ruta de búsqueda.</li>
+    <li><strong>Automatización de Movimientos desde Ventas:</strong> Crear una función transaccional o trigger en <code>detalle_ventas</code> para que al insertar una venta se genere automáticamente el movimiento de tipo "venta" en <code>movimientos_stock</code>.</li>
+  </ul>
+
+</body>
+</html>
