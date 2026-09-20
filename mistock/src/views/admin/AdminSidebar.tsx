@@ -35,12 +35,12 @@ import { cn } from '@/lib/utils';
  * Estructura de elementos del menú de navegación de administración.
  */
 const adminNavData = [
-  { link: '/adminmetricas#', label: 'Métricas & KPIs', icon: BarChart3 },
-  { link: '/admingestioninven#', label: 'Gestion Inventario', icon: Boxes },
-  { link: '#', label: 'Gestión de Usuarios', icon: Users },
-  { link: '#', label: 'Inventario Global', icon: Layers },
-  { link: '#', label: 'Stock Crítico', icon: AlertTriangle },
-  { link: '#', label: 'Configuración', icon: Settings },
+  { link: '/adminmetricas', label: 'Métricas & KPIs', icon: BarChart3 },
+  { link: '/admingestioninven', label: 'Gestion Inventario', icon: Boxes },
+  { link: '/adminusuarios', label: 'Gestión de Usuarios', icon: Users },
+  { link: '/admininventarioglobal', label: 'Inventario Global', icon: Layers },
+  { link: '/adminstockcritico', label: 'Stock Crítico', icon: AlertTriangle },
+  { link: '/adminconfiguracion', label: 'Configuración', icon: Settings },
 ];
 
 interface AdminSidebarProps {
@@ -51,9 +51,12 @@ interface AdminSidebarProps {
 export function AdminSidebar({ onNavigate, className }: AdminSidebarProps = {}) {
   const pathname = usePathname();
 
-  // Detección de la ruta activa para aplicar los estilos visuales de Dub.co
-  const isGestionInven = pathname?.includes('admingestioninven');
-  const activeLabel = isGestionInven ? 'Gestion Inventario' : 'Métricas & KPIs';
+  // Detección dinámica de la ruta activa para aplicar los estilos visuales de Dub.co
+  const activeItem = adminNavData.find((item) => {
+    return pathname === item.link || (item.link !== '/admin' && pathname?.startsWith(item.link));
+  });
+  const activeLabel = activeItem ? activeItem.label : (pathname === '/admin' ? 'Métricas & KPIs' : '');
+
 
 
   return (
