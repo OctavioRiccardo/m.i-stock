@@ -1,6 +1,6 @@
 -- ============================================================================
 -- SISTEMA DE GESTIÓN DE STOCK Y VENTAS (USO INTERNO / LOCAL / POS)
--- Esquema completo para Supabase (PostgreSQL)
+-- Esquema completo para Supabase (PostgreSQL 15+)
 -- ============================================================================
 
 -- 1. EXTENSIONES
@@ -15,7 +15,10 @@ DROP TABLE IF EXISTS public.ventas CASCADE;
 DROP TABLE IF EXISTS public.movimientos_stock CASCADE;
 DROP TABLE IF EXISTS public.productos CASCADE;
 DROP TABLE IF EXISTS public.categorias CASCADE;
-DROP TABLE IF EXISTS public.usuario CASCADE; */
+DROP TABLE IF EXISTS public.usuario CASCADE;
+DROP TYPE IF EXISTS public.unidad_medida CASCADE;
+DROP TYPE IF EXISTS public.tipo_movimiento CASCADE;
+DROP TYPE IF EXISTS public.user_rol CASCADE; */
 
 -- ----------------------------------------------------------------------------
 -- 3. TIPOS ENUM PERSONALIZADOS
@@ -25,6 +28,9 @@ CREATE TYPE public.user_rol AS ENUM ('admin', 'vendedor', 'no_rol');
 
 DROP TYPE IF EXISTS public.tipo_movimiento CASCADE;
 CREATE TYPE public.tipo_movimiento AS ENUM ('compra', 'venta', 'ajuste', 'devolucion');
+
+DROP TYPE IF EXISTS public.unidad_medida CASCADE;
+CREATE TYPE public.unidad_medida AS ENUM ('unidad', 'kg', 'gramo', 'litro', 'metro', 'paquete');
 
 -- ----------------------------------------------------------------------------
 -- 4. DEFINICIÓN DE TABLAS
@@ -40,29 +46,36 @@ CREATE TABLE public.usuario (
   actualizado_el timestamptz NOT NULL DEFAULT now()
 );
 
--- 4.2. CATEGORÍAS
+-- 4.2. CATEGORÍAS (Taxonomía comercial del inventario)
 CREATE TABLE public.categorias (
   id_categoria uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   nombre text NOT NULL UNIQUE,
-  creado_el timestamptz NOT NULL DEFAULT now()
-);
-
--- 4.3. PRODUCTOS
-CREATE TABLE public.productos (
-  id_producto uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  id_categoria uuid REFERENCES public.categorias(id_categoria) ON DELETE SET NULL,
-  nombre text NOT NULL,
-  sku text UNIQUE,
-  stock_actual integer NOT NULL DEFAULT 0 CHECK (stock_actual >= 0),
-  stock_minimo integer NOT NULL DEFAULT 5 CHECK (stock_minimo >= 0),
-  precio numeric(10,2) NOT NULL DEFAULT 0.00 CHECK (precio >= 0),
-  oferta boolean NOT NULL DEFAULT false,
-  activo boolean NOT NULL DEFAULT true, -- Para borrado lógico (soft delete)
+  descripcion text,
+  activo boolean NOT NULL DEFAULT true, -- Control de baja lógica
   creado_el timestamptz NOT NULL DEFAULT now(),
   actualizado_el timestamptz NOT NULL DEFAULT now()
 );
 
--- 4.4. MOVIMIENTOS DE STOCK (Historial y trazabilidad de inventario)
+-- 4.3. PRODUCTOS (Catálogo comercial con categoría obligatoria y doble precio)
+CREATE TABLE public.productos (
+  id_producto uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  id_categoria uuid NOT NULL REFERENCES public.categorias(id_categoria) ON DELETE RESTRICT,
+  nombre text NOT NULL,
+  descripcion text,
+  sku text UNIQUE,
+  precio_costo numeric(10,2) NOT NULL DEFAULT 0.00 CHECK (precio_costo >= 0),
+  precio_venta numeric(10,2) NOT NULL DEFAULT 0.00 CHECK (precio_venta >= 0),
+  stock_actual integer NOT NULL DEFAULT 0 CHECK (stock_actual >= 0),
+  stock_minimo integer NOT NULL DEFAULT 5 CHECK (stock_minimo >= 0),
+  unidad_medida public.unidad_medida NOT NULL DEFAULT 'unidad'::public.unidad_medida,
+  imagen_url text,
+  oferta boolean NOT NULL DEFAULT false,
+  activo boolean NOT NULL DEFAULT true, -- Borrado lógico (soft delete)
+  creado_el timestamptz NOT NULL DEFAULT now(),
+  actualizado_el timestamptz NOT NULL DEFAULT now()
+);
+
+-- 4.4. MOVIMIENTOS DE STOCK (Historial y trazabilidad de inventario - Patrón Ledger)
 CREATE TABLE public.movimientos_stock (
   id_movimiento uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   id_producto uuid NOT NULL REFERENCES public.productos(id_producto) ON DELETE CASCADE,
@@ -73,7 +86,7 @@ CREATE TABLE public.movimientos_stock (
   creado_el timestamptz NOT NULL DEFAULT now()
 );
 
--- 4.5. VENTAS (Cabecera de la operación)
+-- 4.5. VENTAS (Cabecera de la operación de caja / POS)
 CREATE TABLE public.ventas (
   id_venta uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   id_usuario uuid REFERENCES public.usuario(id_usuario) ON DELETE SET NULL, -- Empleado que cobra
@@ -88,10 +101,10 @@ CREATE TABLE public.detalle_ventas (
   id_venta uuid NOT NULL REFERENCES public.ventas(id_venta) ON DELETE CASCADE,
   id_producto uuid NOT NULL REFERENCES public.productos(id_producto) ON DELETE RESTRICT,
   cantidad integer NOT NULL CHECK (cantidad > 0),
-  precio_unitario numeric(10,2) NOT NULL CHECK (precio_unitario >= 0) -- Precio congelado al vender
+  precio_unitario numeric(10,2) NOT NULL CHECK (precio_unitario >= 0) -- Precio congelado al vender (Snapshot)
 );
 
--- 4.7. PAGOS (Permite un solo pago o pagos divididos)
+-- 4.7. PAGOS (Permite un solo pago o pagos divididos / Split Payment)
 CREATE TABLE public.pagos (
   id_pago uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   id_venta uuid NOT NULL REFERENCES public.ventas(id_venta) ON DELETE CASCADE,
@@ -101,7 +114,7 @@ CREATE TABLE public.pagos (
 );
 
 -- ----------------------------------------------------------------------------
--- 5. ÍNDICES DE RENDIMIENTO
+-- 5. ÍNDICES DE RENDIMIENTO (Claves Foráneas y Búsquedas Frecuentes)
 -- ----------------------------------------------------------------------------
 CREATE INDEX idx_productos_categoria ON public.productos(id_categoria);
 CREATE INDEX idx_movimientos_producto ON public.movimientos_stock(id_producto);
@@ -110,16 +123,18 @@ CREATE INDEX idx_ventas_usuario ON public.ventas(id_usuario);
 CREATE INDEX idx_ventas_fecha ON public.ventas(creado_el DESC);
 CREATE INDEX idx_pagos_venta ON public.pagos(id_venta);
 CREATE INDEX idx_detalle_venta ON public.detalle_ventas(id_venta);
+CREATE INDEX idx_detalle_ventas_producto ON public.detalle_ventas(id_producto); -- Optimización FK
 
 -- ----------------------------------------------------------------------------
 -- 6. TRIGGERS Y FUNCIONES AUTOMÁTICAS
 -- ----------------------------------------------------------------------------
 
--- Sincronizar nuevo usuario al registrarse por Google o Email
+-- 6.1. Sincronizar nuevo usuario al registrarse por Google o Email
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger
 LANGUAGE plpgsql
-SECURITY DEFINER SET search_path = public
+SECURITY DEFINER
+SET search_path = public
 AS $$
 BEGIN
   INSERT INTO public.usuario (id_usuario, email, nombre)
@@ -137,11 +152,12 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- Actualizar automáticamente stock_actual en productos cuando se inserta un movimiento
+-- 6.2. Actualizar automáticamente stock_actual en productos cuando se inserta un movimiento
 CREATE OR REPLACE FUNCTION public.actualizar_stock_producto()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 BEGIN
   UPDATE public.productos
@@ -157,7 +173,38 @@ CREATE TRIGGER tr_actualizar_stock
   AFTER INSERT ON public.movimientos_stock
   FOR EACH ROW EXECUTE FUNCTION public.actualizar_stock_producto();
 
--- Verificar si el usuario autenticado tiene rol de admin sin disparar recursión en RLS
+-- 6.3. Automatización de salida de stock ante cada renglón de venta registrado en el POS
+CREATE OR REPLACE FUNCTION public.registrar_movimiento_por_venta()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_usuario_id uuid;
+BEGIN
+  -- Obtener el usuario cajero desde la cabecera de la venta
+  SELECT id_usuario INTO v_usuario_id FROM public.ventas WHERE id_venta = NEW.id_venta;
+
+  -- Insertar el movimiento de auditoría (cantidad negativa para descontar stock)
+  INSERT INTO public.movimientos_stock (id_producto, id_usuario, cantidad, tipo, motivo)
+  VALUES (
+    NEW.id_producto,
+    v_usuario_id,
+    -NEW.cantidad,
+    'venta',
+    'Venta automática en ticket ' || NEW.id_venta::text
+  );
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS tr_venta_movimiento_stock ON public.detalle_ventas;
+CREATE TRIGGER tr_venta_movimiento_stock
+  AFTER INSERT ON public.detalle_ventas
+  FOR EACH ROW EXECUTE FUNCTION public.registrar_movimiento_por_venta();
+
+-- 6.4. Verificar si el usuario autenticado tiene rol de admin sin disparar recursión en RLS
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS boolean
 LANGUAGE sql
@@ -183,7 +230,7 @@ ALTER TABLE public.detalle_ventas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pagos ENABLE ROW LEVEL SECURITY;
 
 -- ----------------------------------------------------------------------------
--- 8. POLÍTICAS DE SEGURIDAD (USO INTERNO / LOCAL)
+-- 8. POLÍTICAS DE SEGURIDAD (USO INTERNO / LOCAL - OPTIMIZADAS CON SUBQUERY)
 -- ----------------------------------------------------------------------------
 
 -- 8.1. Categorías y Productos
@@ -192,35 +239,35 @@ CREATE POLICY "Staff ve categorías" ON public.categorias
 
 CREATE POLICY "Solo admin gestiona categorías" ON public.categorias 
   FOR ALL TO authenticated 
-  USING (public.is_admin())
-  WITH CHECK (public.is_admin());
+  USING ((SELECT public.is_admin()))
+  WITH CHECK ((SELECT public.is_admin()));
 
 CREATE POLICY "Staff ve productos" ON public.productos 
   FOR SELECT TO authenticated USING (true);
 
 CREATE POLICY "Solo admin gestiona productos" ON public.productos 
   FOR ALL TO authenticated 
-  USING (public.is_admin())
-  WITH CHECK (public.is_admin());
+  USING ((SELECT public.is_admin()))
+  WITH CHECK ((SELECT public.is_admin()));
 
--- 8.2. Usuarios (Sin recursión infinita)
+-- 8.2. Usuarios (Sin recursión infinita y subquery optimizada)
 CREATE POLICY "Staff ve otros empleados" ON public.usuario 
   FOR SELECT TO authenticated USING (true);
 
 CREATE POLICY "Solo admin inserta usuarios" ON public.usuario 
   FOR INSERT TO authenticated 
-  WITH CHECK (public.is_admin());
+  WITH CHECK ((SELECT public.is_admin()));
 
 CREATE POLICY "Solo admin modifica usuarios" ON public.usuario 
   FOR UPDATE TO authenticated 
-  USING (public.is_admin())
-  WITH CHECK (public.is_admin());
+  USING ((SELECT public.is_admin()))
+  WITH CHECK ((SELECT public.is_admin()));
 
 CREATE POLICY "Solo admin elimina usuarios" ON public.usuario 
   FOR DELETE TO authenticated 
-  USING (public.is_admin());
+  USING ((SELECT public.is_admin()));
 
--- 8.3. Ventas, Detalles y Pagos
+-- 8.3. Ventas, Detalles y Pagos (Modelo Append-Only para integridad contable)
 CREATE POLICY "Staff ve ventas" ON public.ventas 
   FOR SELECT TO authenticated USING (true);
 
@@ -239,11 +286,9 @@ CREATE POLICY "Staff ve pagos" ON public.pagos
 CREATE POLICY "Staff registra pagos" ON public.pagos 
   FOR INSERT TO authenticated WITH CHECK (true);
 
--- 8.4. Movimientos de stock
+-- 8.4. Movimientos de stock (Historial inmutable / Ledger)
 CREATE POLICY "Staff ve movimientos stock" ON public.movimientos_stock 
   FOR SELECT TO authenticated USING (true);
 
 CREATE POLICY "Staff registra movimientos stock" ON public.movimientos_stock 
   FOR INSERT TO authenticated WITH CHECK (true);
-
-  

@@ -3,16 +3,16 @@
 **Proyecto:** miStock — Sistema de Gestión de Inventario y Punto de Venta (POS)  
 **Ubicación del Archivo de Migración:** [`mistock/supabase/migrations/schema.sql`](file:///b:/Programas/Github/m.i-stock/mistock/supabase/migrations/schema.sql)  
 **Motor de Persistencia:** PostgreSQL 15+ administrado mediante Supabase  
-**Fecha de Análisis:** Septiembre 2026  
+**Estado:** Consolidado y Alineado con Modelos de Dominio Frontend (TypeScript)  
 
 ---
 
 ## 1. Resumen Ejecutivo y Propósito
 
-El esquema SQL define la arquitectura relacional y el modelo de datos central para el sistema **miStock**. Su diseño está enfocado en una operatoria comercial para **comercio minorista, locales comerciales o almacenes**, soportando dos flujos críticos:
-1. **Administración de Catálogo e Inventario Físico:** Clasificación taxonómica de productos, alertas de stock mínimo, auditoría histórica de entradas/salidas mediante un patrón de libro mayor (*ledger*).
-2. **Operación de Caja y Punto de Venta (POS):** Registro de tickets de venta, congelamiento de precios históricos, soporte para pagos divididos (*split payments*) y trazabilidad del empleado responsable.
-3. **Autenticación e Identidad Robusta:** Integración directa con `auth.users` de Supabase, asignación de roles de negocio (`admin`, `vendedor`, `no_rol`) y control granular de acceso a nivel de fila (**Row Level Security - RLS**).
+El esquema SQL define la arquitectura relacional y el modelo de datos central para el sistema **miStock**. Su diseño está enfocado en una operatoria comercial para **comercio minorista, locales comerciales o almacenes**, soportando tres flujos críticos:
+1. **Administración de Catálogo e Inventario Físico:** Clasificación taxonómica de productos, regla estricta de pertenencia a categoría obligatoria (`NOT NULL` con `ON DELETE RESTRICT`), control de costos de reposición y precios de venta al consumidor, alertas de stock mínimo y auditoría histórica de entradas/salidas mediante un patrón de libro mayor (*ledger*).
+2. **Operación de Caja y Punto de Venta (POS):** Registro de tickets de venta, congelamiento de precios históricos (*Snapshot*), soporte para pagos divididos (*split payments*), trazabilidad del empleado responsable y **descuento automático de existencias físicas ante cada venta**.
+3. **Autenticación e Identidad Robusta:** Integración directa con `auth.users` de Supabase, asignación de roles de negocio (`admin`, `vendedor`, `no_rol`) y control granular de acceso a nivel de fila (**Row Level Security - RLS**) con optimización de subconsultas escalares.
 
 ---
 
@@ -23,7 +23,7 @@ erDiagram
     auth_users ||--|| usuario : "1:1 vincula perfil"
     usuario ||--o{ movimientos_stock : "registra / audita"
     usuario ||--o{ ventas : "opera caja"
-    categorias ||--o{ productos : "clasifica (1:N)"
+    categorias ||--|{ productos : "clasifica obligatoriamente (1:N)"
     productos ||--o{ movimientos_stock : "tiene historial"
     productos ||--o{ detalle_ventas : "se vende en"
     ventas ||--|{ detalle_ventas : "contiene renglones (1:N)"
@@ -41,17 +41,24 @@ erDiagram
     categorias {
         uuid id_categoria PK
         text nombre UK
+        text descripcion
+        boolean activo
         timestamptz creado_el
+        timestamptz actualizado_el
     }
 
     productos {
         uuid id_producto PK
         uuid id_categoria FK
         text nombre
+        text descripcion
         text sku UK
+        numeric precio_costo
+        numeric precio_venta
         integer stock_actual
         integer stock_minimo
-        numeric precio
+        unidad_medida unidad_medida
+        text imagen_url
         boolean oferta
         boolean activo
         timestamptz creado_el
@@ -108,6 +115,8 @@ erDiagram
   - `'venta'`: Salida de mercadería por facturación (-).
   - `'ajuste'`: Corrección manual por inventario físico, rotura, merma o extravío (+/-).
   - `'devolucion'`: Reintegro de productos al inventario (+).
+* `public.unidad_medida`: Unidades físicas admitidas para la venta y control de inventario:
+  - `'unidad'`, `'kg'`, `'gramo'`, `'litro'`, `'metro'`, `'paquete'`.
 
 ---
 
@@ -127,28 +136,35 @@ Extiende el esquema interno de Supabase (`auth.users`) almacenando metadatos de 
 Agrupación taxonómica para organizar productos.
 * **`id_categoria` (UUID, PK):** Generado automáticamente mediante `gen_random_uuid()`.
 * **`nombre` (TEXT, UNIQUE, NOT NULL):** Garantiza que no existan categorías duplicadas (ej: "Almacén", "Bebidas").
+* **`descripcion` (TEXT):** Detalle comercial sobre la familia de productos.
+* **`activo` (BOOLEAN, Default: true):** Control de baja lógica de categorías.
 
 #### Tabla: `public.productos`
-Entidad principal del catálogo comercial.
-* **Identificadores y Taxonomía:**
+Entidad principal del catálogo comercial, alineada con `productoModel.ts`.
+* **Taxonomía e Integridad Estricta:**
   - `id_producto` (UUID, PK).
-  - `id_categoria` (UUID, FK): Apunta a `public.categorias(id_categoria) ON DELETE SET NULL`.
+  - `id_categoria` (UUID, FK): `NOT NULL REFERENCES public.categorias(id_categoria) ON DELETE RESTRICT`. Cumple la regla de negocio que prohíbe productos huérfanos e impide borrar categorías con productos asociados.
   - `sku` (TEXT, UNIQUE): Código de barras o código interno de inventario único.
-* **Control de Existencias:**
+* **Estructura de Precios y Costos:**
+  - `precio_costo` (NUMERIC(10,2), Default: 0.00, `CHECK precio_costo >= 0`): Costo mayorista / reposición. Permite reportar márgenes reales de rentabilidad.
+  - `precio_venta` (NUMERIC(10,2), Default: 0.00, `CHECK precio_venta >= 0`): Precio final al consumidor.
+* **Control Físico y Unidades:**
   - `stock_actual` (INTEGER): Existencias físicas actuales. Restricción `CHECK (stock_actual >= 0)` que impide stock negativo a nivel de motor.
   - `stock_minimo` (INTEGER, Default: 5): Umbral de seguridad para disparar alertas de stock crítico y órdenes de reposición.
+  - `unidad_medida` (`unidad_medida`, Default: `'unidad'`): Unidad de comercialización.
 * **Comercialización y Borrado Lógico:**
-  - `precio` (NUMERIC(10,2)): Precio de venta al público con 2 decimales.
+  - `descripcion` (TEXT): Detalles descriptivos del artículo.
+  - `imagen_url` (TEXT): URL del recurso gráfico o foto del producto.
   - `oferta` (BOOLEAN): Flag promocional.
   - `activo` (BOOLEAN, Default: true): **Soft Delete (Borrado Lógico)**. Permite dar de baja un producto comercialmente sin romper las referencias históricas de tickets de ventas pasadas.
 
 #### Tabla: `public.movimientos_stock`
 Auditoría y trazabilidad histórica del inventario (Patrón *Ledger / Libro Mayor*).
-* **`id_producto` (UUID, FK):** Referencia al producto afectado.
+* **`id_producto` (UUID, FK):** Referencia al producto afectado (`ON DELETE CASCADE`).
 * **`id_usuario` (UUID, FK):** Empleado o administrador responsable del movimiento.
 * **`cantidad` (INTEGER):** Variación de stock (+ para ingresos, - para egresos).
 * **`tipo` (`tipo_movimiento`):** Origen del movimiento (`compra`, `venta`, `ajuste`, `devolucion`).
-* **`motivo` (TEXT):** Justificación detallada (ej: "Vencimiento lote #482", "Diferencia de conteo físico").
+* **`motivo` (TEXT):** Justificación detallada (ej: "Venta automática en ticket ...", "Vencimiento lote #482").
 
 ---
 
@@ -178,83 +194,43 @@ Gestión de cobros asociados a la venta.
 ## 4. Automatizaciones en la Base de Datos (Funciones y Triggers)
 
 ### 4.1. Sincronización Automática de Usuarios (`handle_new_user`)
-```sql
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER SET search_path = public
-AS $$
-BEGIN
-  INSERT INTO public.usuario (id_usuario, email, nombre)
-  VALUES (
-    NEW.id,
-    NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', '')
-  );
-  RETURN NEW;
-END;
-$$;
-```
 * **Mecanismo:** Trigger `AFTER INSERT ON auth.users`.
 * **Beneficio:** Cuando un empleado inicia sesión por primera vez con Google o correo electrónico, se genera automáticamente su ficha en `public.usuario` con rol `'no_rol'`.
-* **Seguridad:** Usa `SECURITY DEFINER` y fija explícitamente `SET search_path = public` para prevenir ataques de secuestro de ruta de búsqueda (*search_path hijacking*).
+* **Seguridad:** Utiliza `SECURITY DEFINER` y fija explícitamente `SET search_path = public` para prevenir ataques de secuestro de ruta de búsqueda (*search_path hijacking*).
 
 ---
 
 ### 4.2. Recálculo Automático de Stock por Movimiento (`actualizar_stock_producto`)
-```sql
-CREATE OR REPLACE FUNCTION public.actualizar_stock_producto()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-BEGIN
-  UPDATE public.productos
-  SET stock_actual = stock_actual + NEW.cantidad,
-      actualizado_el = now()
-  WHERE id_producto = NEW.id_producto;
-  RETURN NEW;
-END;
-$$;
-```
 * **Mecanismo:** Trigger `AFTER INSERT ON public.movimientos_stock`.
-* **Beneficio:** Desacopla la lógica de actualización: cualquier operación que inserte un movimiento (ej: venta, recepción de compra o ajuste) actualiza de forma atómica el stock del producto sin necesidad de dos queries separadas en el backend.
-* **Integridad:** Si el resultado produce un valor menor a 0, la restricción `CHECK (stock_actual >= 0)` en `productos` aborta la transacción completa y revierte el movimiento.
+* **Beneficio:** Aplica de forma atómica la suma o resta sobre `productos.stock_actual`. Si la operación resulta en un valor negativo, la restricción `CHECK (stock_actual >= 0)` aborta la transacción completa y revierte el movimiento.
+* **Seguridad:** Fija explícitamente `SET search_path = public`.
 
 ---
 
-### 4.3. Validación de Permisos sin Recursión RLS (`is_admin`)
-```sql
-CREATE OR REPLACE FUNCTION public.is_admin()
-RETURNS boolean
-LANGUAGE sql
-SECURITY DEFINER
-STABLE
-SET search_path = public
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.usuario
-    WHERE id_usuario = auth.uid() AND rol = 'admin'
-  );
-$$;
-```
-* **Problema que resuelve:** Cuando una política RLS de la tabla `usuario` consulta a la propia tabla `usuario`, PostgreSQL entra en un bucle de **recursión infinita**.
-* **Solución:** La función está marcada como `SECURITY DEFINER` (se ejecuta con privilegios elevados del creador) y `STABLE` (su resultado se almacena en caché durante la duración de la consulta), permitiendo comprobar si el usuario actual es `'admin'` sin disparar nuevamente las políticas de fila.
+### 4.3. Automatización de Salida de Stock ante Ventas (`registrar_movimiento_por_venta`)
+* **Mecanismo:** Trigger `AFTER INSERT ON public.detalle_ventas`.
+* **Beneficio:** Cada vez que el cajero confirma una venta y se insertan los renglones en `detalle_ventas`, este trigger genera automáticamente en la misma transacción un movimiento en `movimientos_stock` con `tipo = 'venta'` y `cantidad = -NEW.cantidad`. A su vez, esto dispara el recálculo en `actualizar_stock_producto`, garantizando que el stock físico **siempre esté sincronizado en tiempo real**.
+
+---
+
+### 4.4. Validación de Permisos sin Recursión RLS (`is_admin`)
+* **Mecanismo:** Función `SECURITY DEFINER` y `STABLE` con `SET search_path = public`.
+* **Beneficio:** Comprueba si el usuario autenticado tiene rol `'admin'` sin disparar recursión infinita en las políticas RLS de `public.usuario`.
 
 ---
 
 ## 5. Estrategia de Seguridad: Row Level Security (RLS)
 
-Todas las tablas tienen RLS habilitado explícitamente (`ENABLE ROW LEVEL SECURITY`). Las políticas implementan un modelo de **Control de Acceso Basado en Roles (RBAC)**:
+Todas las tablas tienen RLS habilitado explícitamente (`ENABLE ROW LEVEL SECURITY`). Las políticas implementan un modelo de **Control de Acceso Basado en Roles (RBAC)** con optimización de subconsultas `((SELECT public.is_admin()))`:
 
-| Tabla | Operación | Roles Autorizados | Condición / Política |
+| Tabla | Operación | Roles Autorizados | Condición / Política Optimizada |
 | :--- | :--- | :--- | :--- |
 | `categorias` | SELECT | `authenticated` (Staff) | `USING (true)` (Todo el personal puede ver el catálogo) |
-| `categorias` | INSERT / UPDATE / DELETE | `authenticated` (Solo Admin) | `USING (public.is_admin())` |
+| `categorias` | INSERT / UPDATE / DELETE | `authenticated` (Solo Admin) | `USING ((SELECT public.is_admin()))` |
 | `productos` | SELECT | `authenticated` (Staff) | `USING (true)` |
-| `productos` | INSERT / UPDATE / DELETE | `authenticated` (Solo Admin) | `USING (public.is_admin())` |
+| `productos` | INSERT / UPDATE / DELETE | `authenticated` (Solo Admin) | `USING ((SELECT public.is_admin()))` |
 | `usuario` | SELECT | `authenticated` (Staff) | `USING (true)` (Para ver nombres de cajeros/empleados) |
-| `usuario` | INSERT / UPDATE / DELETE | `authenticated` (Solo Admin) | `USING (public.is_admin())` |
+| `usuario` | INSERT / UPDATE / DELETE | `authenticated` (Solo Admin) | `USING ((SELECT public.is_admin()))` |
 | `ventas` | SELECT / INSERT | `authenticated` (Staff) | Todo el staff autenticado puede registrar ventas |
 | `detalle_ventas` | SELECT / INSERT | `authenticated` (Staff) | Todo el staff autenticado puede cargar renglones |
 | `pagos` | SELECT / INSERT | `authenticated` (Staff) | Todo el staff autenticado puede registrar pagos |
@@ -262,7 +238,7 @@ Todas las tablas tienen RLS habilitado explícitamente (`ENABLE ROW LEVEL SECURI
 
 > [!NOTE]
 > **Modelo de Apéndice Único (*Append-Only*):**  
-> Nótese que para `ventas`, `detalle_ventas`, `pagos` y `movimientos_stock` **NO existen políticas de `UPDATE` ni `DELETE`**. Esto significa que ningún vendedor ni administrador puede modificar o borrar tickets o movimientos ya emitidos, protegiendo la inmutabilidad de los registros contables y de auditoría.
+> Para `ventas`, `detalle_ventas`, `pagos` y `movimientos_stock` **NO existen políticas de `UPDATE` ni `DELETE`**. Ningún vendedor ni administrador puede modificar o borrar tickets o movimientos ya emitidos, protegiendo la inmutabilidad de los registros contables y de auditoría.
 
 ---
 
@@ -276,73 +252,21 @@ El script incluye índices sobre claves foráneas y columnas de ordenamiento tem
 * `idx_ventas_fecha` sobre `ventas(creado_el DESC)` (Acelera reportes diarios y dashboards de caja).
 * `idx_pagos_venta` sobre `pagos(id_venta)`.
 * `idx_detalle_venta` sobre `detalle_ventas(id_venta)`.
+* `idx_detalle_ventas_producto` sobre `detalle_ventas(id_producto)` (Acelera consultas históricas y restricciones `RESTRICT`).
 
 ---
 
-## 7. Puntos Críticos y Oportunidades de Mejora a Tener en Cuenta
+## 7. Estado de las Mejoras y Ajustes Realizados
 
-A continuación se detallan observaciones técnicas relevantes al comparar el esquema SQL con el frontend actual de Next.js y las mejores prácticas de Supabase / Postgres:
+Todas las recomendaciones de diseño y rendimiento fueron aplicadas directamente en [`schema.sql`](file:///b:/Programas/Github/m.i-stock/mistock/supabase/migrations/schema.sql):
 
-### 7.1. Discrepancias entre Modelo SQL y Modelos Frontend (`TypeScript`)
-
-1. **Estructura de Precios (`precioCosto` vs `precioVenta`):**
-   * En el frontend (`productoModel.ts` y en la vista de carga de inventario) se contemplan dos precios: **`precioCosto`** (para calcular margen de ganancia) y **`precioVenta`**.
-   * En la tabla SQL `productos` solo existe una columna: `precio numeric(10,2)`.
-   * *Recomendación:* Agregar `precio_costo numeric(10,2) NOT NULL DEFAULT 0.00` a `public.productos` para poder reportar rentabilidad real.
-
-2. **Unidad de Medida del Producto:**
-   * En la aplicación web permitimos seleccionar unidades: `unidad`, `kg`, `litro`, `gramo`, `metro`, `paquete`.
-   * En la tabla SQL `productos` no existe actualmente una columna `unidad_medida`.
-   * *Recomendación:* Crear un ENUM `public.unidad_medida` o columna `varchar(20) DEFAULT 'unidad'`.
-
-3. **Descripción de Productos y Categorías:**
-   * El frontend maneja `descripcion` en categorías y en productos. En SQL, `categorias` no cuenta con campo de descripción.
-   * *Recomendación:* Añadir `descripcion text` a `categorias` y `productos`.
-
-4. **Integridad Referencial en Categorías:**
-   * Regla de negocio en frontend: *"Un producto NO puede existir sin una categoría definida previamente"*.
-   * En SQL: `id_categoria uuid REFERENCES public.categorias(id_categoria) ON DELETE SET NULL`. Permite valores `NULL`.
-   * *Recomendación:* Si la regla de negocio es estricta, la columna en SQL debería ser `NOT NULL` con `ON DELETE RESTRICT`, impidiendo borrar una categoría que aún contenga productos.
-
----
-
-### 7.2. Recomendaciones de Rendimiento y Buenas Prácticas de PostgreSQL
-
-1. **Índice Faltante en Clave Foránea de Detalle de Ventas:**
-   * La columna `id_producto` en `public.detalle_ventas` no tiene índice propio.
-   * *Impacto:* Al realizar consultas como *"¿En qué ventas se vendió el producto X?"* o al comprobar restricciones de borrado (`ON DELETE RESTRICT`), Postgres se verá forzado a realizar un escaneo secuencial (*Seq Scan*).
-   * *Solución sugerida:*
-     ```sql
-     CREATE INDEX idx_detalle_ventas_producto ON public.detalle_ventas(id_producto);
-     ```
-
-2. **Optimización de Políticas RLS (Subquery Wrapping):**
-   * Siguiendo las directrices de optimización de Supabase, cuando una función como `public.is_admin()` se llama dentro de un `USING` sin envolver en un `SELECT`, PostgreSQL puede evaluarla fila por fila en tablas grandes:
-     ```sql
-     -- Actual:
-     USING (public.is_admin())
-     
-     -- Optimizado (se ejecuta una sola vez y se cachea para toda la consulta):
-     USING ((SELECT public.is_admin()))
-     ```
-
-3. **Seguridad en la Función `actualizar_stock_producto`:**
-   * La función está declarada con `SECURITY DEFINER`, pero le falta el parámetro `SET search_path = public`.
-   * *Mejora de seguridad:* Agregar siempre `SET search_path = public` a toda función `SECURITY DEFINER` para evitar vulnerabilidades de inyección por variables de entorno de búsqueda de esquemas.
-
-4. **Automatización de Movimientos desde Ventas:**
-   * Actualmente, el trigger de stock escucha inserciones en `movimientos_stock`. Si desde el frontend al cobrar una venta solo se inserta en `ventas` y `detalle_ventas`, el stock **no se descontará** a menos que también se inserte explícitamente en `movimientos_stock`.
-   * *Alternativa sugerida:* Crear una función transaccional en Postgres (o función RPC / Trigger en `detalle_ventas`) que al registrar la venta genere en la misma transacción el movimiento de stock correspondiente con tipo `'venta'`.
-
----
-
-## 8. Conclusión
-
-El esquema de base de datos de **miStock** cuenta con una base sólida, profesional y bien estructurada:
-- Implementa claves primarias con UUIDs no secuenciales.
-- Garantiza integridad física del stock mediante restricciones `CHECK (stock_actual >= 0)`.
-- Separa claramente los dominios de inventario y facturación.
-- Resguarda la seguridad mediante **Row Level Security (RLS)** y roles controlados.
-- Preserva la inmutabilidad de precios históricos en las ventas.
-
-Las sugerencias detalladas en la sección 7 permitirán alinear al 100% la base de datos con los formularios desarrollados en la interfaz de usuario de Next.js y maximizar el rendimiento a medida que el catálogo y el volumen de transacciones crezcan.
+| Área | Ajuste Aplicado en `schema.sql` | Beneficio Técnico |
+| :--- | :--- | :--- |
+| **Precios** | `precio_costo` + `precio_venta` (`numeric(10,2)`) | Cálculo de rentabilidad real y márgenes brutos. |
+| **Unidades** | ENUM `public.unidad_medida` | Integridad física en venta por peso, volumen o bulto. |
+| **Descripciones** | `descripcion text` en `categorias` y `productos` | Persistencia completa de datos comerciales del frontend. |
+| **Taxonomía** | `id_categoria NOT NULL ... ON DELETE RESTRICT` | Impide productos huérfanos y protege categorías activas. |
+| **Índices** | `idx_detalle_ventas_producto` | Evita escaneos secuenciales lentos en consultas de ventas. |
+| **RLS Performance** | `USING ((SELECT public.is_admin()))` | Evaluación escalar única por query (5x-100x más rápida). |
+| **Seguridad PL/pgSQL** | `SET search_path = public` en triggers | Blindaje contra ataques de secuestro de esquema. |
+| **POS Automatizado** | Trigger `tr_venta_movimiento_stock` | Descuento automático de stock sin depender de código frontend. |
