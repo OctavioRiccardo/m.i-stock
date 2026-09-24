@@ -74,6 +74,8 @@ export interface AdminDashboard {
   AlertasStockBajo: number;
   metricas: AdminMetricas[];
   alertasStockBajo: AlertaStockBajo[];
+  productosMasVendidos: ProductoRankingVentas[];
+  productosMenosVendidos: ProductoRankingVentas[];
 }
 
 // ====================================================================
@@ -117,6 +119,20 @@ export interface LowStockAlert {
   category: string;
 }
 
+export interface ProductoRankingVentas {
+  id: string;
+  nombre: string;
+  codigo: string;
+  categoria: string;
+  unidadesVendidas: number;
+  stockActual: number;
+  montoTotal: number;
+  tendencia: 'alza' | 'baja' | 'estancada';
+}
+
+// Alias de compatibilidad
+export type ProductSalesRanking = ProductoRankingVentas;
+
 export interface AdminDashboardData {
   monthlyRevenue: number;
   totalProducts: number;
@@ -124,4 +140,8 @@ export interface AdminDashboardData {
   lowStockCount: number;
   kpiMetrics: AdminMetricCard[];
   stockAlerts: LowStockAlert[];
+  productosMasVendidos: ProductoRankingVentas[];
+  productosMenosVendidos: ProductoRankingVentas[];
 }
+
+

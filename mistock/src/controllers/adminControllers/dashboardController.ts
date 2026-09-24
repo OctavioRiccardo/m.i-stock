@@ -28,11 +28,11 @@ const initialMockAdminData: AdminDashboardData = {
   monthlyRevenue: 1450000,
   totalProducts: 480,
   activeUsersCount: 8,
-  lowStockCount: 4,
+  lowStockCount: 8,
   kpiMetrics: [
-    { title: 'Ventas del Mes', value: '$1.450.000', changePercentage: '+12.5%', status: 'positive' },
-    { title: 'Productos Activos', value: '480', changePercentage: '+4 nuevos', status: 'positive' },
-    { title: 'Stock Crítico', value: '4 ítems', changePercentage: '-2 atendidos', status: 'negative' },
+    { title: 'Ventas del Mes', value: '$1.450.000', status: 'positive' },
+    { title: 'Productos Activos', value: '480', status: 'positive' },
+    { title: 'Stock Crítico', value: '8 ítems', status: 'negative' },
     { title: 'Usuarios del Sistema', value: '8 activos', status: 'neutral' },
   ],
   stockAlerts: [
@@ -40,29 +40,259 @@ const initialMockAdminData: AdminDashboardData = {
     { id: 'ALT-2', productName: 'Papel Higiénico Pack x4', currentStock: 5, minThreshold: 15, category: 'Limpieza' },
     { id: 'ALT-3', productName: 'Leche Larga Vida 1L', currentStock: 2, minThreshold: 20, category: 'Lácteos' },
     { id: 'ALT-4', productName: 'Harina 0000 1kg', currentStock: 4, minThreshold: 12, category: 'Almacén' },
+    { id: 'ALT-5', productName: 'Aceite de Girasol 900ml', currentStock: 3, minThreshold: 15, category: 'Almacén' },
+    { id: 'ALT-6', productName: 'Azúcar Común 1kg', currentStock: 6, minThreshold: 20, category: 'Almacén' },
+    { id: 'ALT-7', productName: 'Café Molido 250g', currentStock: 2, minThreshold: 10, category: 'Infusiones' },
+    { id: 'ALT-8', productName: 'Detergente Vajilla 750ml', currentStock: 4, minThreshold: 14, category: 'Limpieza' },
+  ],
+  productosMasVendidos: [
+    {
+      id: 'TOP-1',
+      nombre: 'Yerba Mate Especial 1kg',
+      codigo: 'ALM-YER-1001',
+      categoria: 'Almacén',
+      unidadesVendidas: 185,
+      stockActual: 24,
+      montoTotal: 425500,
+      tendencia: 'alza',
+    },
+    {
+      id: 'TOP-2',
+      nombre: 'Leche Larga Vida Entera 1L',
+      codigo: 'LAC-LEC-1002',
+      categoria: 'Lácteos',
+      unidadesVendidas: 142,
+      stockActual: 8,
+      montoTotal: 184600,
+      tendencia: 'alza',
+    },
+    {
+      id: 'TOP-3',
+      nombre: 'Gaseosa Cola 1.5L',
+      codigo: 'BEB-COL-1003',
+      categoria: 'Bebidas',
+      unidadesVendidas: 118,
+      stockActual: 35,
+      montoTotal: 295000,
+      tendencia: 'alza',
+    },
+    {
+      id: 'TOP-4',
+      nombre: 'Pan Lactal Familiar 500g',
+      codigo: 'PAN-LAC-1004',
+      categoria: 'Panadería',
+      unidadesVendidas: 96,
+      stockActual: 12,
+      montoTotal: 144000,
+      tendencia: 'alza',
+    },
+    {
+      id: 'TOP-5',
+      nombre: 'Arroz Largo Fino 1kg',
+      codigo: 'ALM-ARR-1005',
+      categoria: 'Almacén',
+      unidadesVendidas: 88,
+      stockActual: 40,
+      montoTotal: 132000,
+      tendencia: 'alza',
+    },
+    {
+      id: 'TOP-6',
+      nombre: 'Fideos Guiseros 500g',
+      codigo: 'ALM-FID-1006',
+      categoria: 'Almacén',
+      unidadesVendidas: 76,
+      stockActual: 32,
+      montoTotal: 98800,
+      tendencia: 'alza',
+    },
+    {
+      id: 'TOP-7',
+      nombre: 'Galletitas Dulces Surtidas 400g',
+      codigo: 'GAL-SUR-1007',
+      categoria: 'Galletitas',
+      unidadesVendidas: 65,
+      stockActual: 18,
+      montoTotal: 97500,
+      tendencia: 'alza',
+    },
+    {
+      id: 'TOP-8',
+      nombre: 'Queso Cremoso 1kg',
+      codigo: 'LAC-QUE-1008',
+      categoria: 'Lácteos',
+      unidadesVendidas: 54,
+      stockActual: 14,
+      montoTotal: 243000,
+      tendencia: 'alza',
+    },
+    {
+      id: 'TOP-9',
+      nombre: 'Agua Mineral sin Gas 2L',
+      codigo: 'BEB-AGU-1009',
+      categoria: 'Bebidas',
+      unidadesVendidas: 49,
+      stockActual: 45,
+      montoTotal: 58800,
+      tendencia: 'alza',
+    },
+    {
+      id: 'TOP-10',
+      nombre: 'Manteca Calidad Extra 200g',
+      codigo: 'LAC-MAN-1010',
+      categoria: 'Lácteos',
+      unidadesVendidas: 42,
+      stockActual: 16,
+      montoTotal: 92400,
+      tendencia: 'alza',
+    },
+  ],
+  productosMenosVendidos: [
+    {
+      id: 'LOW-1',
+      nombre: 'Lavandina Concentrada 5L',
+      codigo: 'LIM-LAV-2001',
+      categoria: 'Limpieza',
+      unidadesVendidas: 1,
+      stockActual: 42,
+      montoTotal: 4500,
+      tendencia: 'estancada',
+    },
+    {
+      id: 'LOW-2',
+      nombre: 'Esponja Multiuso Pack x3',
+      codigo: 'LIM-ESP-2002',
+      categoria: 'Limpieza',
+      unidadesVendidas: 2,
+      stockActual: 60,
+      montoTotal: 3200,
+      tendencia: 'baja',
+    },
+    {
+      id: 'LOW-3',
+      nombre: 'Té Verde en Saquitos x20',
+      codigo: 'INF-TEV-2003',
+      categoria: 'Infusiones',
+      unidadesVendidas: 3,
+      stockActual: 30,
+      montoTotal: 5400,
+      tendencia: 'baja',
+    },
+    {
+      id: 'LOW-4',
+      nombre: 'Galletitas de Salvado 200g',
+      codigo: 'GAL-SAL-2004',
+      categoria: 'Galletitas',
+      unidadesVendidas: 4,
+      stockActual: 28,
+      montoTotal: 7200,
+      tendencia: 'estancada',
+    },
+    {
+      id: 'LOW-5',
+      nombre: 'Sal Fina Dosificador 500g',
+      codigo: 'ALM-SAL-2005',
+      categoria: 'Almacén',
+      unidadesVendidas: 5,
+      stockActual: 55,
+      montoTotal: 6000,
+      tendencia: 'baja',
+    },
+    {
+      id: 'LOW-6',
+      nombre: 'Vinagre de Manzana 500ml',
+      codigo: 'ALM-VIN-2006',
+      categoria: 'Almacén',
+      unidadesVendidas: 5,
+      stockActual: 34,
+      montoTotal: 7500,
+      tendencia: 'estancada',
+    },
+    {
+      id: 'LOW-7',
+      nombre: 'Limpiador de Pisos Lavanda 900ml',
+      codigo: 'LIM-PIS-2007',
+      categoria: 'Limpieza',
+      unidadesVendidas: 6,
+      stockActual: 48,
+      montoTotal: 10800,
+      tendencia: 'baja',
+    },
+    {
+      id: 'LOW-8',
+      nombre: 'Servilletas de Papel x80',
+      codigo: 'PAP-SER-2008',
+      categoria: 'Limpieza',
+      unidadesVendidas: 7,
+      stockActual: 50,
+      montoTotal: 8400,
+      tendencia: 'baja',
+    },
+    {
+      id: 'LOW-9',
+      nombre: 'Edulcorante Líquido 200ml',
+      codigo: 'ALM-EDU-2009',
+      categoria: 'Almacén',
+      unidadesVendidas: 8,
+      stockActual: 26,
+      montoTotal: 12800,
+      tendencia: 'baja',
+    },
+    {
+      id: 'LOW-10',
+      nombre: 'Lentejas Selección 400g',
+      codigo: 'ALM-LEN-2010',
+      categoria: 'Almacén',
+      unidadesVendidas: 9,
+      stockActual: 38,
+      montoTotal: 14400,
+      tendencia: 'estancada',
+    },
   ],
 };
+
+export type RotacionTab = 'mas_vendidos' | 'menos_vendidos';
 
 /**
  * Hook Controlador para el Dashboard del Administrador.
  * 
  * Responsabilidades:
  * 1. Proveer los KPIs operacionales y financieros consolidados.
- * 2. Gestionar la lista de alertas de stock por debajo del umbral mínimo.
- * 3. Procesar las solicitudes de reposición / resolución de alertas críticas.
- * 4. Gestionar estados temporales de notificación visual tras acciones del usuario.
+ * 2. Gestionar la lista de alertas de stock por debajo del umbral mínimo con paginación.
+ * 3. Analizar la rotación de stock (más vendidos vs menos vendidos) con paginación.
+ * 4. Procesar las solicitudes de reposición / resolución de alertas críticas.
+ * 5. Gestionar estados temporales de notificación visual tras acciones del usuario.
  * 
- * @returns {Object} Estado consolidado del panel y método disparador de reposición.
+ * @returns {Object} Estado consolidado del panel y métodos de interacción.
  */
 export function useAdminDashboardController() {
   // Estado principal que contiene métricas agregadas y alertas activas
   const [data, setData] = useState<AdminDashboardData>(initialMockAdminData);
+
+  // Paginación para Alertas de Stock Crítico
+  const [paginaStockCritico, setPaginaStockCritico] = useState<number>(1);
+  const itemsPorPaginaStock = 4;
+
+  // Pestaña activa para la tarjeta de rotación de productos ('mas_vendidos' | 'menos_vendidos')
+  const [rotacionTab, setRotacionTab] = useState<RotacionTab>('mas_vendidos');
+
+  // Paginación para Rotación de Stock
+  const [paginaRotacion, setPaginaRotacion] = useState<number>(1);
+  const itemsPorPaginaRotacion = 5;
 
   // Indicador de carga para operaciones asíncronas del dashboard
   const [loading, setLoading] = useState<boolean>(false);
 
   // Mensaje temporal de éxito tras resolver una alerta de stock
   const [alertResolvedMsg, setAlertResolvedMsg] = useState<string | null>(null);
+
+  /**
+   * Cambia la pestaña de rotación y reinicia la paginación a la primera página.
+   */
+  const cambiarTabRotacion = (tab: RotacionTab) => {
+    setRotacionTab(tab);
+    setPaginaRotacion(1);
+  };
 
   /**
    * Resuelve o gestiona una orden de reposición para un ítem en alerta crítica.
@@ -89,6 +319,12 @@ export function useAdminDashboardController() {
       stockAlerts: updatedAlerts,
     }));
 
+    // Si la página actual queda vacía tras eliminar, retrocede a la página previa
+    const maxPagina = Math.max(1, Math.ceil(updatedAlerts.length / itemsPorPaginaStock));
+    if (paginaStockCritico > maxPagina) {
+      setPaginaStockCritico(maxPagina);
+    }
+
     setAlertResolvedMsg(`Reposición solicitada para: ${alert.productName}`);
     setLoading(false);
 
@@ -100,6 +336,14 @@ export function useAdminDashboardController() {
     data,
     loading,
     alertResolvedMsg,
+    rotacionTab,
+    cambiarTabRotacion,
+    paginaStockCritico,
+    setPaginaStockCritico,
+    itemsPorPaginaStock,
+    paginaRotacion,
+    setPaginaRotacion,
+    itemsPorPaginaRotacion,
     handleRestockAlert,
   };
 }
