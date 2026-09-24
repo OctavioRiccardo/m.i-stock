@@ -594,20 +594,25 @@ export function AdminGestionInventario({ controller }: AdminGestionInventarioPro
                               <span className="text-xs text-[#657373]">
                                 {prod.unidadMedida}
                               </span>
-                              {esBajoStock && prod.activo && (
-                                <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4">
-                                  Crítico
-                                </Badge>
-                              )}
                             </div>
                             <div className="text-[11px] text-[#657373]">
                               Mínimo: {prod.stockMinimo} {prod.unidadMedida}
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant={prod.activo ? 'success' : 'destructive'} className="text-xs">
-                              {prod.activo ? 'Activo' : 'Baja'}
-                            </Badge>
+                            {!prod.activo ? (
+                              <Badge variant="destructive" className="text-xs">
+                                Baja
+                              </Badge>
+                            ) : esBajoStock ? (
+                              <Badge variant="destructive" className="text-xs">
+                                Activo / Crítico
+                              </Badge>
+                            ) : (
+                              <Badge variant="success" className="text-xs">
+                                Activo
+                              </Badge>
+                            )}
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1.5">
