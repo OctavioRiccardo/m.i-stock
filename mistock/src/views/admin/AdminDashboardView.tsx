@@ -29,7 +29,9 @@ import {
   TrendingDown,
   ChevronLeft,
   ChevronRight,
+  Receipt,
 } from 'lucide-react';
+import { MetodoPago } from '@/models/modelos_dominio/ventaModel';
 import { useAdminDashboardController } from '@/controllers/adminControllers/dashboardController';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -68,12 +70,18 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
     paginaRotacion,
     setPaginaRotacion,
     itemsPorPaginaRotacion,
+    periodoVentasTab,
+    cambiarPeriodoVentas,
+    paginaVentas,
+    setPaginaVentas,
+    itemsPorPaginaVentas,
   } = controller;
 
   // Referencias para auto-animación en tablas (transiciones suaves en paginación y reposición)
   const [stockTableBodyRef] = useAutoAnimate<HTMLTableSectionElement>({ duration: 220, easing: 'ease-out' });
   const [masVendidosTableBodyRef] = useAutoAnimate<HTMLTableSectionElement>({ duration: 220, easing: 'ease-out' });
   const [menosVendidosTableBodyRef] = useAutoAnimate<HTMLTableSectionElement>({ duration: 220, easing: 'ease-out' });
+  const [ventasTableBodyRef] = useAutoAnimate<HTMLTableSectionElement>({ duration: 220, easing: 'ease-out' });
 
   // Cálculos de Paginación para Alertas de Stock Crítico
   const totalStockAlerts = data.stockAlerts.length;
@@ -97,6 +105,39 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
     inicioRotacion,
     inicioRotacion + itemsPorPaginaRotacion
   );
+
+  // Cálculos de Paginación y Resumen para Detalle de Ventas
+  const listaActivaVentas =
+    periodoVentasTab === 'semana'
+      ? data.ventasDetalle.ventasSemana
+      : data.ventasDetalle.ventasMes;
+  const resumenActivoVentas =
+    periodoVentasTab === 'semana'
+      ? data.ventasDetalle.resumenSemana
+      : data.ventasDetalle.resumenMes;
+  const totalVentas = listaActivaVentas.length;
+  const totalPaginasVentas =
+    Math.ceil(totalVentas / itemsPorPaginaVentas) || 1;
+  const inicioVentas = (paginaVentas - 1) * itemsPorPaginaVentas;
+  const ventasPaginadas = listaActivaVentas.slice(
+    inicioVentas,
+    inicioVentas + itemsPorPaginaVentas
+  );
+
+  const getMetodoPagoBadge = (metodo: MetodoPago) => {
+    switch (metodo) {
+      case 'efectivo':
+        return <Badge variant="success" className="text-xs font-medium">Efectivo</Badge>;
+      case 'tarjeta_debito':
+        return <Badge variant="default" className="text-xs font-medium">Débito</Badge>;
+      case 'tarjeta_credito':
+        return <Badge variant="secondary" className="text-xs font-medium">Crédito</Badge>;
+      case 'transferencia':
+        return <Badge variant="outline" className="text-xs font-medium">Transferencia</Badge>;
+      default:
+        return <Badge variant="secondary" className="text-xs font-medium">Otro</Badge>;
+    }
+  };
 
   return (
     <MotionConfig reducedMotion="user">
@@ -580,6 +621,202 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                 )}
               </motion.div>
             )}
+          </AnimatePresence>
+        </CardContent>
+      </Card>
+
+      {/* Tarjeta de Detalle de Ventas: Semana y Mes */}
+      <Card>
+        <CardHeader className="flex flex-col md:flex-row md:items-center justify-between pb-4 gap-3 border-b border-[#E8E6DF]">
+          <div>
+            <div className="flex items-center gap-2">
+              <Receipt className="h-5 w-5 text-[#2A7A78]" />
+              <CardTitle className="text-base font-bold text-[#1C2424]">
+                Detalle de Ventas
+              </CardTitle>
+            </div>
+            <p className="text-xs text-[#657373] mt-1">
+              Registro pormenorizado de operaciones comerciales facturadas durante el período.
+            </p>
+          </div>
+
+          {/* Segmented Control de período con pill deslizante Motion */}
+          <div className="relative inline-flex items-center p-1 bg-[#F8F7F2] rounded-lg border border-[#E8E6DF] self-start md:self-auto">
+            <button
+              type="button"
+              onClick={() => cambiarPeriodoVentas('semana')}
+              className={`relative px-3 py-1.5 rounded-md text-xs font-semibold cursor-pointer transition-colors duration-150 z-10 ${
+                periodoVentasTab === 'semana'
+                  ? 'text-[#2A7A78]'
+                  : 'text-[#657373] hover:text-[#1C2424]'
+              }`}
+            >
+              {periodoVentasTab === 'semana' && (
+                <motion.span
+                  layoutId="ventasPeriodoIndicator"
+                  className="absolute inset-0 bg-white rounded-md shadow-xs -z-10"
+                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                />
+              )}
+              Esta Semana
+            </button>
+
+            <button
+              type="button"
+              onClick={() => cambiarPeriodoVentas('mes')}
+              className={`relative px-3 py-1.5 rounded-md text-xs font-semibold cursor-pointer transition-colors duration-150 z-10 ${
+                periodoVentasTab === 'mes'
+                  ? 'text-[#2A7A78]'
+                  : 'text-[#657373] hover:text-[#1C2424]'
+              }`}
+            >
+              {periodoVentasTab === 'mes' && (
+                <motion.span
+                  layoutId="ventasPeriodoIndicator"
+                  className="absolute inset-0 bg-white rounded-md shadow-xs -z-10"
+                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                />
+              )}
+              Este Mes
+            </button>
+          </div>
+        </CardHeader>
+
+        <CardContent className="pt-4 overflow-hidden space-y-4">
+          {/* Métricas Resumen del Período */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-3 rounded-lg border border-[#E8E6DF] bg-[#F8F7F2]/60">
+              <span className="text-[11px] font-semibold text-[#657373] uppercase tracking-wider block">
+                Total Facturado
+              </span>
+              <span className="text-lg font-bold text-[#1C2424] mt-0.5 block">
+                ${resumenActivoVentas.totalRecaudado.toLocaleString('es-AR')}
+              </span>
+            </div>
+
+            <div className="p-3 rounded-lg border border-[#E8E6DF] bg-[#F8F7F2]/60">
+              <span className="text-[11px] font-semibold text-[#657373] uppercase tracking-wider block">
+                Transacciones
+              </span>
+              <span className="text-lg font-bold text-[#1C2424] mt-0.5 block">
+                {resumenActivoVentas.cantidadVentas} ventas
+              </span>
+            </div>
+
+            <div className="p-3 rounded-lg border border-[#E8E6DF] bg-[#F8F7F2]/60">
+              <span className="text-[11px] font-semibold text-[#657373] uppercase tracking-wider block">
+                Ticket Promedio
+              </span>
+              <span className="text-lg font-bold text-[#1C2424] mt-0.5 block">
+                ${resumenActivoVentas.ticketPromedio.toLocaleString('es-AR')}
+              </span>
+            </div>
+
+            <div className="p-3 rounded-lg border border-[#E8E6DF] bg-[#F8F7F2]/60">
+              <span className="text-[11px] font-semibold text-[#657373] uppercase tracking-wider block">
+                Unidades Despachadas
+              </span>
+              <span className="text-lg font-bold text-[#1C2424] mt-0.5 block">
+                {resumenActivoVentas.unidadesTotales} un.
+              </span>
+            </div>
+          </div>
+
+          {/* Tabla de Detalle de Ventas con animación de transición */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`ventas-${periodoVentasTab}`}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+              className="space-y-3"
+            >
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Comprobante</TableHead>
+                    <TableHead>Fecha y Hora</TableHead>
+                    <TableHead>Vendedor / Caja</TableHead>
+                    <TableHead>Método de Pago</TableHead>
+                    <TableHead>Artículos</TableHead>
+                    <TableHead>Monto Total</TableHead>
+                    <TableHead className="text-right">Estado</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody ref={ventasTableBodyRef}>
+                  {ventasPaginadas.map((v) => (
+                    <TableRow key={v.id} className="transition-colors">
+                      <TableCell>
+                        <span className="font-mono font-semibold text-xs text-[#2A7A78] bg-[#E2F1F0] px-2 py-0.5 rounded">
+                          {v.codigoComprobante}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-xs text-[#657373] font-medium">
+                        {v.fechaHora}
+                      </TableCell>
+                      <TableCell className="text-sm font-semibold text-[#1C2424]">
+                        {v.vendedor}
+                      </TableCell>
+                      <TableCell>
+                        {getMetodoPagoBadge(v.metodoPago)}
+                      </TableCell>
+                      <TableCell className="text-xs text-[#657373]">
+                        {v.cantidadItems} {v.cantidadItems === 1 ? 'producto' : 'productos'}
+                      </TableCell>
+                      <TableCell className="font-bold text-sm text-[#1C2424]">
+                        ${v.total.toLocaleString('es-AR')}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant="success" className="text-xs capitalize">
+                          {v.estado}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {/* Paginación de Detalle de Ventas */}
+              {totalVentas > 0 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 px-1 border-t border-[#E8E6DF] text-xs text-[#657373]">
+                  <div>
+                    Mostrando <span className="font-semibold text-[#1C2424]">{inicioVentas + 1}</span> a{' '}
+                    <span className="font-semibold text-[#1C2424]">
+                      {Math.min(inicioVentas + itemsPorPaginaVentas, totalVentas)}
+                    </span>{' '}
+                    de <span className="font-semibold text-[#1C2424]">{totalVentas}</span> ventas ({periodoVentasTab === 'semana' ? 'esta semana' : 'este mes'})
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 px-2.5 text-xs text-[#1C2424] border-[#E8E6DF] hover:bg-[#F8F7F2] active:scale-95 transition-all duration-150 cursor-pointer"
+                      onClick={() => setPaginaVentas((p) => Math.max(p - 1, 1))}
+                      disabled={paginaVentas <= 1}
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5 mr-1" />
+                      Anterior
+                    </Button>
+                    <span className="px-2 font-medium text-[#1C2424]">
+                      {paginaVentas} / {totalPaginasVentas}
+                    </span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 px-2.5 text-xs text-[#1C2424] border-[#E8E6DF] hover:bg-[#F8F7F2] active:scale-95 transition-all duration-150 cursor-pointer"
+                      onClick={() => setPaginaVentas((p) => Math.min(p + 1, totalPaginasVentas))}
+                      disabled={paginaVentas >= totalPaginasVentas}
+                    >
+                      Siguiente
+                      <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </motion.div>
           </AnimatePresence>
         </CardContent>
       </Card>

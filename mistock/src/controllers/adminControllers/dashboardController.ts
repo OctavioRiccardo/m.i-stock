@@ -249,9 +249,248 @@ const initialMockAdminData: AdminDashboardData = {
       tendencia: 'estancada',
     },
   ],
+  ventasDetalle: {
+    resumenSemana: {
+      totalRecaudado: 385400,
+      cantidadVentas: 42,
+      ticketPromedio: 9176,
+      unidadesTotales: 156,
+    },
+    resumenMes: {
+      totalRecaudado: 1450000,
+      cantidadVentas: 168,
+      ticketPromedio: 8630,
+      unidadesTotales: 640,
+    },
+    ventasSemana: [
+      {
+        id: 'VNT-SEM-01',
+        codigoComprobante: 'VNT-1048',
+        fechaHora: 'Hoy, 18:30',
+        vendedor: 'Octavio Riccardo',
+        metodoPago: 'tarjeta_debito',
+        cantidadItems: 4,
+        total: 18500,
+        estado: 'completada',
+      },
+      {
+        id: 'VNT-SEM-02',
+        codigoComprobante: 'VNT-1047',
+        fechaHora: 'Hoy, 17:15',
+        vendedor: 'Empleado Mañana',
+        metodoPago: 'efectivo',
+        cantidadItems: 2,
+        total: 7200,
+        estado: 'completada',
+      },
+      {
+        id: 'VNT-SEM-03',
+        codigoComprobante: 'VNT-1046',
+        fechaHora: 'Hoy, 15:40',
+        vendedor: 'Empleado Mañana',
+        metodoPago: 'transferencia',
+        cantidadItems: 6,
+        total: 24600,
+        estado: 'completada',
+      },
+      {
+        id: 'VNT-SEM-04',
+        codigoComprobante: 'VNT-1045',
+        fechaHora: 'Ayer, 19:10',
+        vendedor: 'Octavio Riccardo',
+        metodoPago: 'tarjeta_credito',
+        cantidadItems: 5,
+        total: 31200,
+        estado: 'completada',
+      },
+      {
+        id: 'VNT-SEM-05',
+        codigoComprobante: 'VNT-1044',
+        fechaHora: 'Ayer, 16:50',
+        vendedor: 'Empleado Mañana',
+        metodoPago: 'efectivo',
+        cantidadItems: 1,
+        total: 4500,
+        estado: 'completada',
+      },
+      {
+        id: 'VNT-SEM-06',
+        codigoComprobante: 'VNT-1043',
+        fechaHora: 'Ayer, 12:20',
+        vendedor: 'Empleado Mañana',
+        metodoPago: 'tarjeta_debito',
+        cantidadItems: 3,
+        total: 13800,
+        estado: 'completada',
+      },
+      {
+        id: 'VNT-SEM-07',
+        codigoComprobante: 'VNT-1042',
+        fechaHora: 'Mar 23, 18:05',
+        vendedor: 'Octavio Riccardo',
+        metodoPago: 'efectivo',
+        cantidadItems: 2,
+        total: 8900,
+        estado: 'completada',
+      },
+      {
+        id: 'VNT-SEM-08',
+        codigoComprobante: 'VNT-1041',
+        fechaHora: 'Mar 23, 14:30',
+        vendedor: 'Empleado Mañana',
+        metodoPago: 'transferencia',
+        cantidadItems: 7,
+        total: 28400,
+        estado: 'completada',
+      },
+      {
+        id: 'VNT-SEM-09',
+        codigoComprobante: 'VNT-1040',
+        fechaHora: 'Lun 22, 17:45',
+        vendedor: 'Octavio Riccardo',
+        metodoPago: 'tarjeta_credito',
+        cantidadItems: 4,
+        total: 19500,
+        estado: 'completada',
+      },
+      {
+        id: 'VNT-SEM-10',
+        codigoComprobante: 'VNT-1039',
+        fechaHora: 'Lun 22, 11:15',
+        vendedor: 'Empleado Mañana',
+        metodoPago: 'efectivo',
+        cantidadItems: 3,
+        total: 11200,
+        estado: 'completada',
+      },
+    ],
+    ventasMes: [
+      {
+        id: 'VNT-MES-01',
+        codigoComprobante: 'VNT-1048',
+        fechaHora: '24 Sep, 18:30',
+        vendedor: 'Octavio Riccardo',
+        metodoPago: 'tarjeta_debito',
+        cantidadItems: 4,
+        total: 18500,
+        estado: 'completada',
+      },
+      {
+        id: 'VNT-MES-02',
+        codigoComprobante: 'VNT-1045',
+        fechaHora: '23 Sep, 19:10',
+        vendedor: 'Octavio Riccardo',
+        metodoPago: 'tarjeta_credito',
+        cantidadItems: 5,
+        total: 31200,
+        estado: 'completada',
+      },
+      {
+        id: 'VNT-MES-03',
+        codigoComprobante: 'VNT-1038',
+        fechaHora: '20 Sep, 16:00',
+        vendedor: 'Empleado Mañana',
+        metodoPago: 'transferencia',
+        cantidadItems: 8,
+        total: 42100,
+        estado: 'completada',
+      },
+      {
+        id: 'VNT-MES-04',
+        codigoComprobante: 'VNT-1032',
+        fechaHora: '18 Sep, 13:40',
+        vendedor: 'Octavio Riccardo',
+        metodoPago: 'efectivo',
+        cantidadItems: 3,
+        total: 9800,
+        estado: 'completada',
+      },
+      {
+        id: 'VNT-MES-05',
+        codigoComprobante: 'VNT-1025',
+        fechaHora: '15 Sep, 17:25',
+        vendedor: 'Empleado Mañana',
+        metodoPago: 'tarjeta_debito',
+        cantidadItems: 6,
+        total: 27500,
+        estado: 'completada',
+      },
+      {
+        id: 'VNT-MES-06',
+        codigoComprobante: 'VNT-1019',
+        fechaHora: '12 Sep, 19:00',
+        vendedor: 'Octavio Riccardo',
+        metodoPago: 'tarjeta_credito',
+        cantidadItems: 4,
+        total: 21400,
+        estado: 'completada',
+      },
+      {
+        id: 'VNT-MES-07',
+        codigoComprobante: 'VNT-1014',
+        fechaHora: '10 Sep, 11:30',
+        vendedor: 'Empleado Mañana',
+        metodoPago: 'efectivo',
+        cantidadItems: 2,
+        total: 6500,
+        estado: 'completada',
+      },
+      {
+        id: 'VNT-MES-08',
+        codigoComprobante: 'VNT-1008',
+        fechaHora: '07 Sep, 15:10',
+        vendedor: 'Octavio Riccardo',
+        metodoPago: 'transferencia',
+        cantidadItems: 9,
+        total: 51200,
+        estado: 'completada',
+      },
+      {
+        id: 'VNT-MES-09',
+        codigoComprobante: 'VNT-1003',
+        fechaHora: '04 Sep, 18:45',
+        vendedor: 'Empleado Mañana',
+        metodoPago: 'efectivo',
+        cantidadItems: 3,
+        total: 12400,
+        estado: 'completada',
+      },
+      {
+        id: 'VNT-MES-10',
+        codigoComprobante: 'VNT-0998',
+        fechaHora: '01 Sep, 10:20',
+        vendedor: 'Octavio Riccardo',
+        metodoPago: 'tarjeta_debito',
+        cantidadItems: 5,
+        total: 23800,
+        estado: 'completada',
+      },
+      {
+        id: 'VNT-MES-11',
+        codigoComprobante: 'VNT-0992',
+        fechaHora: '28 Ago, 18:00',
+        vendedor: 'Empleado Mañana',
+        metodoPago: 'efectivo',
+        cantidadItems: 2,
+        total: 8100,
+        estado: 'completada',
+      },
+      {
+        id: 'VNT-MES-12',
+        codigoComprobante: 'VNT-0985',
+        fechaHora: '26 Ago, 16:30',
+        vendedor: 'Octavio Riccardo',
+        metodoPago: 'tarjeta_credito',
+        cantidadItems: 6,
+        total: 33400,
+        estado: 'completada',
+      },
+    ],
+  },
 };
 
 export type RotacionTab = 'mas_vendidos' | 'menos_vendidos';
+export type PeriodoVentasTab = 'semana' | 'mes';
 
 /**
  * Hook Controlador para el Dashboard del Administrador.
@@ -332,6 +571,21 @@ export function useAdminDashboardController() {
     setTimeout(() => setAlertResolvedMsg(null), 3000);
   };
 
+  // Pestaña activa para el detalle de ventas ('semana' | 'mes')
+  const [periodoVentasTab, setPeriodoVentasTab] = useState<PeriodoVentasTab>('semana');
+
+  // Paginación para Detalle de Ventas
+  const [paginaVentas, setPaginaVentas] = useState<number>(1);
+  const itemsPorPaginaVentas = 5;
+
+  /**
+   * Cambia el período de ventas activo (semana o mes) y reinicia la paginación a la primera página.
+   */
+  const cambiarPeriodoVentas = (tab: PeriodoVentasTab) => {
+    setPeriodoVentasTab(tab);
+    setPaginaVentas(1);
+  };
+
   return {
     data,
     loading,
@@ -344,6 +598,11 @@ export function useAdminDashboardController() {
     paginaRotacion,
     setPaginaRotacion,
     itemsPorPaginaRotacion,
+    periodoVentasTab,
+    cambiarPeriodoVentas,
+    paginaVentas,
+    setPaginaVentas,
+    itemsPorPaginaVentas,
     handleRestockAlert,
   };
 }

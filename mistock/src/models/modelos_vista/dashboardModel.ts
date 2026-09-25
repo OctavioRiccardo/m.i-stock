@@ -131,7 +131,32 @@ export interface ProductoRankingVentas {
 }
 
 // Alias de compatibilidad
-export type ProductSalesRanking = ProductoRankingVentas;
+import { MetodoPago, EstadoVenta } from '@/models/modelos_dominio/ventaModel';
+
+export interface ResumenVentasPeriodo {
+  totalRecaudado: number;
+  cantidadVentas: number;
+  ticketPromedio: number;
+  unidadesTotales: number;
+}
+
+export interface DetalleVentaItem {
+  id: string;
+  codigoComprobante: string;
+  fechaHora: string;
+  vendedor: string;
+  metodoPago: MetodoPago;
+  cantidadItems: number;
+  total: number;
+  estado: EstadoVenta;
+}
+
+export interface VentasDetalleData {
+  resumenSemana: ResumenVentasPeriodo;
+  resumenMes: ResumenVentasPeriodo;
+  ventasSemana: DetalleVentaItem[];
+  ventasMes: DetalleVentaItem[];
+}
 
 export interface AdminDashboardData {
   monthlyRevenue: number;
@@ -142,6 +167,7 @@ export interface AdminDashboardData {
   stockAlerts: LowStockAlert[];
   productosMasVendidos: ProductoRankingVentas[];
   productosMenosVendidos: ProductoRankingVentas[];
+  ventasDetalle: VentasDetalleData;
 }
 
 
