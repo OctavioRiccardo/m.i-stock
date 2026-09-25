@@ -14,15 +14,17 @@
  */
 
 /**
- * Roles de base de datos definidos en el enum `public.user_rol`.
+ * Roles de base de datos definidos en el enum `public.user_rol` de Supabase PostgreSQL.
+ * - 'admin': Administrador con acceso total a finanzas, métricas, inventario y usuarios.
+ * - 'vendedor': Operador del punto de venta (POS / caja) y consulta de catálogo.
+ * - 'no_rol': Usuario autenticado recientemente pendiente de asignación de permisos.
  */
 export type RolUsuarioDB = 'admin' | 'vendedor' | 'no_rol';
 
 /**
- * Roles de negocio para control de acceso en la aplicación web.
- * Incluye compatibilidad con aliases operativos ('empleado', 'cajero').
+ * Rol del usuario en el sistema. Coincide exactamente 1:1 con el enum de PostgreSQL.
  */
-export type RolUsuario = RolUsuarioDB | 'empleado' | 'cajero';
+export type RolUsuario = RolUsuarioDB;
 
 /**
  * Estados de la cuenta de usuario para control de acceso administrativo.
