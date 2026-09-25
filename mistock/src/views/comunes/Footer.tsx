@@ -24,12 +24,12 @@ export function Footer() {
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#2A7A78] text-white shadow-sm">
               <Package className="h-4 w-4" />
             </div>
-            <span className="text-sm font-bold text-[#1C2424]">miStock</span>
+            <span className="text-sm font-bold text-[#1C2424]">M.I Stock</span>
           </div>
 
           {/* Copyright & Links */}
           <div className="flex flex-wrap items-center gap-4 text-xs text-[#657373]">
-            <span>&copy; {currentYear} miStock Inc. Todos los derechos reservados.</span>
+            <span>&copy; {currentYear} M.I Stock. Todos los derechos reservados.</span>
             <div className="flex gap-3">
               <a href="#" className="hover:text-[#1C2424] transition-colors">
                 Soporte

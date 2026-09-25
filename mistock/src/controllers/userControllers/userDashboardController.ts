@@ -24,18 +24,18 @@ import { UserDashboardData } from '@/models/modelos_vista/dashboardModel';
  * Permite simular transacciones comerciales y actualización de stock sin persistencia inmediata.
  */
 const initialMockUserData: UserDashboardData = {
-  dailySalesCount: 14,
-  dailyRevenue: 48500,
-  totalProductsInStock: 320,
-  recentSales: [
-    { id: 'VNT-101', time: '10:45 AM', totalAmount: 3500, itemCount: 2 },
-    { id: 'VNT-102', time: '11:15 AM', totalAmount: 12000, itemCount: 5 },
-    { id: 'VNT-103', time: '12:00 PM', totalAmount: 4800, itemCount: 1 },
+  ventasDelDia: 14,
+  recaudacionDelDia: 48500,
+  totalProductosEnStock: 320,
+  ventasRecientes: [
+    { id: 'VNT-101', hora: '10:45', montoTotal: 3500, cantidadItems: 2 },
+    { id: 'VNT-102', hora: '11:15', montoTotal: 12000, cantidadItems: 5 },
+    { id: 'VNT-103', hora: '12:00', montoTotal: 4800, cantidadItems: 1 },
   ],
-  popularProducts: [
-    { id: 'P1', name: 'Aceite de Oliva 500ml', category: 'Almacén', price: 4500, stock: 24, code: '779001' },
-    { id: 'P2', name: 'Café Molido 250g', category: 'Bebidas', price: 3200, stock: 15, code: '779002' },
-    { id: 'P3', name: 'Detergente Concentrado 1L', category: 'Limpieza', price: 2800, stock: 8, code: '779003' },
+  productosPopulares: [
+    { id: 'P1', nombre: 'Aceite de Oliva 500ml', categoria: 'Almacén', precio: 4500, stock: 24, codigo: '779001' },
+    { id: 'P2', nombre: 'Café Molido 250g', categoria: 'Bebidas', precio: 3200, stock: 15, codigo: '779002' },
+    { id: 'P3', nombre: 'Detergente Concentrado 1L', categoria: 'Limpieza', precio: 2800, stock: 8, codigo: '779003' },
   ],
 };
 
@@ -57,10 +57,10 @@ export function useUserDashboardController() {
   const [saleSuccessMessage, setSaleSuccessMessage] = useState<string | null>(null);
 
   // Filtrado reactivo en tiempo real para búsqueda instantánea en el punto de venta
-  const filteredProducts = data.popularProducts.filter(
+  const filteredProducts = data.productosPopulares.filter(
     (product) =>
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.code.includes(searchQuery)
+      product.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.codigo.includes(searchQuery)
   );
 
   /**
@@ -75,7 +75,7 @@ export function useUserDashboardController() {
    */
   const handleQuickSale = (productId: string) => {
     setLoading(true);
-    const product = data.popularProducts.find((p) => p.id === productId);
+    const product = data.productosPopulares.find((p) => p.id === productId);
 
     // Validación de existencia y existencia de stock suficiente
     if (!product || product.stock <= 0) {
@@ -84,28 +84,28 @@ export function useUserDashboardController() {
     }
 
     // Decremento reactivo de stock en el catálogo local
-    const updatedProducts = data.popularProducts.map((p) =>
+    const updatedProducts = data.productosPopulares.map((p) =>
       p.id === productId ? { ...p, stock: p.stock - 1 } : p
     );
 
     // Creación del comprobante de venta reciente
     const newSale = {
       id: `VNT-${Date.now().toString().slice(-3)}`,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      totalAmount: product.price,
-      itemCount: 1,
+      hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      montoTotal: product.precio,
+      cantidadItems: 1,
     };
 
     // Actualización atómica de los indicadores diarios del empleado
     setData((prev) => ({
       ...prev,
-      dailySalesCount: prev.dailySalesCount + 1,
-      dailyRevenue: prev.dailyRevenue + product.price,
-      popularProducts: updatedProducts,
-      recentSales: [newSale, ...prev.recentSales],
+      ventasDelDia: prev.ventasDelDia + 1,
+      recaudacionDelDia: prev.recaudacionDelDia + product.precio,
+      productosPopulares: updatedProducts,
+      ventasRecientes: [newSale, ...prev.ventasRecientes],
     }));
 
-    setSaleSuccessMessage(`Venta registrada: ${product.name} ($${product.price.toLocaleString('es-AR')})`);
+    setSaleSuccessMessage(`Venta registrada: ${product.nombre} ($${product.precio.toLocaleString('es-AR')})`);
     setLoading(false);
 
     // Limpieza automática del banner de confirmación a los 3 segundos

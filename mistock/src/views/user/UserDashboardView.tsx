@@ -90,7 +90,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
       )}
 
       {/* Quick Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div id="resumen" className="grid grid-cols-1 sm:grid-cols-3 gap-4 scroll-mt-20">
         <Card className="p-5">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-[#657373]">
@@ -101,7 +101,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
             </div>
           </div>
           <p className="text-2xl font-extrabold text-[#1C2424] tracking-tight mt-3">
-            {data.dailySalesCount}
+            {data.ventasDelDia}
           </p>
         </Card>
 
@@ -115,7 +115,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
             </div>
           </div>
           <p className="text-2xl font-extrabold text-[#1C2424] tracking-tight mt-3">
-            ${data.dailyRevenue.toLocaleString('es-AR')}
+            ${data.recaudacionDelDia.toLocaleString('es-AR')}
           </p>
         </Card>
 
@@ -129,7 +129,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
             </div>
           </div>
           <p className="text-2xl font-extrabold text-[#1C2424] tracking-tight mt-3">
-            {data.totalProductsInStock} ítems
+            {data.totalProductosEnStock} ítems
           </p>
         </Card>
       </div>
@@ -137,7 +137,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
       {/* Main Sections Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Catálogo y Registro Rápido */}
-        <div className="lg:col-span-7">
+        <div id="productos" className="lg:col-span-7 scroll-mt-20">
           <Card>
             <CardHeader className="pb-3 border-b border-[#E8E6DF]">
               <CardTitle className="text-base font-bold text-[#1C2424]">
@@ -169,13 +169,13 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                   {filteredProducts.map((prod) => (
                     <TableRow key={prod.id}>
                       <TableCell>
-                        <div className="font-semibold text-sm text-[#1C2424]">{prod.name}</div>
+                        <div className="font-semibold text-sm text-[#1C2424]">{prod.nombre}</div>
                         <div className="text-xs text-[#657373]">
-                          {prod.category} • Cod: {prod.code}
+                          {prod.categoria} • Cod: {prod.codigo}
                         </div>
                       </TableCell>
                       <TableCell className="font-bold text-[#1C2424]">
-                        ${prod.price.toLocaleString('es-AR')}
+                        ${prod.precio.toLocaleString('es-AR')}
                       </TableCell>
                       <TableCell>
                         <Badge variant={prod.stock > 10 ? 'default' : 'destructive'}>
@@ -202,7 +202,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
         </div>
 
         {/* Ventas Recientes */}
-        <div className="lg:col-span-5">
+        <div id="historial" className="lg:col-span-5 scroll-mt-20">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-[#E8E6DF]">
               <CardTitle className="text-base font-bold text-[#1C2424]">
@@ -212,7 +212,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
             </CardHeader>
 
             <CardContent className="pt-4 space-y-3">
-              {data.recentSales.map((sale) => (
+              {data.ventasRecientes.map((sale) => (
                 <div
                   key={sale.id}
                   className="flex items-center justify-between p-3 rounded-lg border border-[#E8E6DF] bg-white"
@@ -220,11 +220,11 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                   <div>
                     <p className="text-xs font-bold text-[#1C2424]">{sale.id}</p>
                     <p className="text-xs text-[#657373]">
-                      Hora: {sale.time} • {sale.itemCount} ítem(s)
+                      Hora: {sale.hora} • {sale.cantidadItems} ítem(s)
                     </p>
                   </div>
                   <span className="text-sm font-extrabold text-[#2A7A78]">
-                    ${sale.totalAmount.toLocaleString('es-AR')}
+                    ${sale.montoTotal.toLocaleString('es-AR')}
                   </span>
                 </div>
               ))}

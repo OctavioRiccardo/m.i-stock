@@ -36,14 +36,14 @@ const initialMockAdminData: AdminDashboardData = {
     { title: 'Usuarios del Sistema', value: '8 activos', status: 'neutral' },
   ],
   stockAlerts: [
-    { id: 'ALT-1', productName: 'Jabón Líquido Manos 500ml', currentStock: 3, minThreshold: 10, category: 'Limpieza' },
-    { id: 'ALT-2', productName: 'Papel Higiénico Pack x4', currentStock: 5, minThreshold: 15, category: 'Limpieza' },
-    { id: 'ALT-3', productName: 'Leche Larga Vida 1L', currentStock: 2, minThreshold: 20, category: 'Lácteos' },
-    { id: 'ALT-4', productName: 'Harina 0000 1kg', currentStock: 4, minThreshold: 12, category: 'Almacén' },
-    { id: 'ALT-5', productName: 'Aceite de Girasol 900ml', currentStock: 3, minThreshold: 15, category: 'Almacén' },
-    { id: 'ALT-6', productName: 'Azúcar Común 1kg', currentStock: 6, minThreshold: 20, category: 'Almacén' },
-    { id: 'ALT-7', productName: 'Café Molido 250g', currentStock: 2, minThreshold: 10, category: 'Infusiones' },
-    { id: 'ALT-8', productName: 'Detergente Vajilla 750ml', currentStock: 4, minThreshold: 14, category: 'Limpieza' },
+    { id: 'ALT-1', nombreProducto: 'Jabón Líquido Manos 500ml', stockActual: 3, umbralMinimo: 10, categoria: 'Limpieza' },
+    { id: 'ALT-2', nombreProducto: 'Papel Higiénico Pack x4', stockActual: 5, umbralMinimo: 15, categoria: 'Limpieza' },
+    { id: 'ALT-3', nombreProducto: 'Leche Larga Vida 1L', stockActual: 2, umbralMinimo: 20, categoria: 'Lácteos' },
+    { id: 'ALT-4', nombreProducto: 'Harina 0000 1kg', stockActual: 4, umbralMinimo: 12, categoria: 'Almacén' },
+    { id: 'ALT-5', nombreProducto: 'Aceite de Girasol 900ml', stockActual: 3, umbralMinimo: 15, categoria: 'Almacén' },
+    { id: 'ALT-6', nombreProducto: 'Azúcar Común 1kg', stockActual: 6, umbralMinimo: 20, categoria: 'Almacén' },
+    { id: 'ALT-7', nombreProducto: 'Café Molido 250g', stockActual: 2, umbralMinimo: 10, categoria: 'Infusiones' },
+    { id: 'ALT-8', nombreProducto: 'Detergente Vajilla 750ml', stockActual: 4, umbralMinimo: 14, categoria: 'Limpieza' },
   ],
   productosMasVendidos: [
     {
@@ -564,7 +564,7 @@ export function useAdminDashboardController() {
       setPaginaStockCritico(maxPagina);
     }
 
-    setAlertResolvedMsg(`Reposición solicitada para: ${alert.productName}`);
+    setAlertResolvedMsg(`Reposición solicitada para: ${alert.nombreProducto}`);
     setLoading(false);
 
     // Limpia la notificación tras 3 segundos

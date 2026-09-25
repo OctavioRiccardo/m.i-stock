@@ -1,22 +1,15 @@
-'use client';
-
 /**
  * ====================================================================
- * RUTA: /adminmetricas (Métricas y Reportes de Rendimiento)
+ * RUTA: /adminmetricas (Redirección Canónica a /admin)
  * ====================================================================
  * 
- * Rol en la Arquitectura (Next.js App Router + MVC):
- * Provee la pantalla dedicada a métricas ejecutivas, enlazando
- * `useAdminDashboardController` con `AdminDashboardView`.
+ * Rol en la Arquitectura:
+ * Redirige de forma permanente y canónica hacia `/admin`, evitando
+ * la duplicación de rutas para el panel principal de métricas y dashboard.
  */
 
-import React from 'react';
-import { useAdminDashboardController } from '@/controllers/adminControllers/dashboardController';
-import { AdminDashboardView } from '@/views/admin/AdminDashboardView';
+import { redirect } from 'next/navigation';
 
 export default function AdminMetricasPage() {
-  const controller = useAdminDashboardController();
-
-  return <AdminDashboardView controller={controller} />;
+  redirect('/admin');
 }
-

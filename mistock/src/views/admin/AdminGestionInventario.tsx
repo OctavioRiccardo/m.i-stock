@@ -7,6 +7,8 @@
  */
 
 import React, { useState } from 'react';
+import { motion, MotionConfig } from 'motion/react';
+import { useAutoAnimate } from '@formkit/auto-animate/react';
 import {
   Plus,
   Check,
@@ -24,6 +26,8 @@ import {
   Search,
   RotateCcw,
   Trash2,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { useAdminInventarioController } from '@/controllers/adminControllers/inventarioController';
 import {
@@ -93,6 +97,9 @@ export function AdminGestionInventario({ controller }: AdminGestionInventarioPro
     setBusquedaHub,
     conteosPorCategoria,
     productosFiltradosHub,
+    paginaInventario,
+    setPaginaInventario,
+    itemsPorPaginaInventario,
     loading,
     mensajeExito,
     mensajeError,
@@ -103,6 +110,19 @@ export function AdminGestionInventario({ controller }: AdminGestionInventarioPro
     modificarProducto,
     limpiarMensajes,
   } = controller;
+
+  // Auto-animaciones para tablas (transiciones suaves al filtrar, paginar o actualizar)
+  const [inventarioTableBodyRef] = useAutoAnimate<HTMLTableSectionElement>({ duration: 200, easing: 'ease-out' });
+  const [bajasTableBodyRef] = useAutoAnimate<HTMLTableSectionElement>({ duration: 200, easing: 'ease-out' });
+  const [modificarTableBodyRef] = useAutoAnimate<HTMLTableSectionElement>({ duration: 200, easing: 'ease-out' });
+
+  // Cálculos de Paginación para el Catálogo de Inventario
+  const totalPaginasInventario = Math.max(1, Math.ceil(productosFiltradosHub.length / itemsPorPaginaInventario));
+  const inicioInventario = (paginaInventario - 1) * itemsPorPaginaInventario;
+  const productosPaginadosHub = productosFiltradosHub.slice(
+    inicioInventario,
+    inicioInventario + itemsPorPaginaInventario
+  );
 
   // ==========================================
   // ESTADOS: MODAL DE NUEVA CATEGORÍA
@@ -284,7 +304,13 @@ export function AdminGestionInventario({ controller }: AdminGestionInventarioPro
   });
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <MotionConfig reducedMotion="user">
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, ease: 'easeOut' }}
+        className="max-w-7xl mx-auto space-y-6"
+      >
       {/* Alertas Globales de Notificación */}
       {mensajeExito && (
         <Alert variant="success" className="cursor-pointer shadow-sm" onClick={limpiarMensajes}>
@@ -542,8 +568,9 @@ export function AdminGestionInventario({ controller }: AdminGestionInventarioPro
                   </Button>
                 </div>
               ) : (
-                /* Tabla de Productos de la Categoría */
-                <Table>
+                <>
+                  {/* Tabla de Productos de la Categoría */}
+                  <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Código / SKU</TableHead>
@@ -555,8 +582,8 @@ export function AdminGestionInventario({ controller }: AdminGestionInventarioPro
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody>
-                    {productosFiltradosHub.map((prod) => {
+                  <TableBody ref={inventarioTableBodyRef}>
+                    {productosPaginadosHub.map((prod) => {
                       const esBajoStock = prod.stockActual <= prod.stockMinimo;
                       return (
                         <TableRow key={prod.id} className="hover:bg-[#F8F7F2]/50">
@@ -659,7 +686,48 @@ export function AdminGestionInventario({ controller }: AdminGestionInventarioPro
                     })}
                   </TableBody>
                 </Table>
-              )}
+
+                {/* Paginación del Catálogo de Inventario */}
+                {productosFiltradosHub.length > 0 && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 px-4 pb-3 border-t border-[#E8E6DF] text-xs text-[#657373]">
+                    <div>
+                      Mostrando <span className="font-semibold text-[#1C2424]">{inicioInventario + 1}</span> a{' '}
+                      <span className="font-semibold text-[#1C2424]">
+                        {Math.min(inicioInventario + itemsPorPaginaInventario, productosFiltradosHub.length)}
+                      </span>{' '}
+                      de <span className="font-semibold text-[#1C2424]">{productosFiltradosHub.length}</span> productos
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2.5 text-xs text-[#1C2424] border-[#E8E6DF] hover:bg-[#F8F7F2] active:scale-95 transition-all duration-150 cursor-pointer"
+                        onClick={() => setPaginaInventario((p) => Math.max(p - 1, 1))}
+                        disabled={paginaInventario <= 1}
+                      >
+                        <ChevronLeft className="h-3.5 w-3.5 mr-1" />
+                        Anterior
+                      </Button>
+                      <span className="px-2 font-medium text-[#1C2424]">
+                        {paginaInventario} / {totalPaginasInventario}
+                      </span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2.5 text-xs text-[#1C2424] border-[#E8E6DF] hover:bg-[#F8F7F2] active:scale-95 transition-all duration-150 cursor-pointer"
+                        onClick={() => setPaginaInventario((p) => Math.min(p + 1, totalPaginasInventario))}
+                        disabled={paginaInventario >= totalPaginasInventario}
+                      >
+                        Siguiente
+                        <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
             </CardContent>
           </Card>
         </div>
@@ -1039,7 +1107,7 @@ export function AdminGestionInventario({ controller }: AdminGestionInventarioPro
                     <TableHead className="text-right">Acción</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
+                <TableBody ref={bajasTableBodyRef}>
                   {productosFiltradosBaja.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-6 text-sm text-[#657373]">
@@ -1168,7 +1236,7 @@ export function AdminGestionInventario({ controller }: AdminGestionInventarioPro
                     <TableHead className="text-right">Acción</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
+                <TableBody ref={modificarTableBodyRef}>
                   {productosFiltradosModificar.map((prod) => (
                     <TableRow key={prod.id}>
                       <TableCell className="font-mono text-xs font-bold text-[#1C2424]">
@@ -1468,6 +1536,7 @@ export function AdminGestionInventario({ controller }: AdminGestionInventarioPro
           )}
         </DialogContent>
       </Dialog>
-    </div>
+      </motion.div>
+    </MotionConfig>
   );
 }

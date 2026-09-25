@@ -75,7 +75,7 @@ export default function AdminLayout({
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#2A7A78] text-white">
                 <ShieldCheck className="h-4 w-4" />
               </div>
-              <span className="font-bold text-sm text-[#1C2424]">miStock</span>
+              <span className="font-bold text-sm text-[#1C2424]">M.I Stock</span>
             </div>
           </div>
           <span className="rounded-full bg-[#E2F1F0] px-2 py-0.5 text-xs font-semibold text-[#2A7A78] border border-[#2A7A78]/20">

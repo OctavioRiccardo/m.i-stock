@@ -9,4 +9,6 @@
 
 export * from './dashboardController';
 export * from './inventarioController';
+export * from './inventarioGlobalController';
+export * from './usuariosController';
 

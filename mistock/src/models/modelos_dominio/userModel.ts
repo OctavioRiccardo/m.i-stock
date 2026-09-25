@@ -4,38 +4,74 @@
  * ====================================================================
  * 
  * Propósito:
- * Modela los perfiles de usuario del sistema y sus roles de autorización.
- * En la arquitectura con Supabase, esta entidad reside en la tabla pública `profiles`,
- * vinculada mediante una relación 1:1 con la tabla interna de autenticación `auth.users`.
+ * Modela los usuarios del sistema y sus roles de autorización en el negocio.
+ * Sincronizado 1:1 con la tabla `public.usuario` y el enum `public.user_rol` en Supabase PostgreSQL.
+ * 
+ * Relación con Supabase:
+ * - Tabla: `public.usuario`
+ * - Clave Primaria: `id_usuario uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE`
+ * - Roles definidos en base de datos: 'admin', 'vendedor', 'no_rol'.
  */
 
 /**
- * Roles de negocio para control de acceso basado en roles (RBAC).
- * - 'admin': Acceso total a finanzas, métricas, altas de catálogo y usuarios.
- * - 'empleado': Gestión operativa de ventas, consulta de catálogo y control de stock.
- * - 'cajero': Operaciones exclusivas de línea de cajas y emisión de tickets.
+ * Roles de base de datos definidos en el enum `public.user_rol`.
  */
-export type RolUsuario = 'admin' | 'empleado' | 'cajero';
+export type RolUsuarioDB = 'admin' | 'vendedor' | 'no_rol';
 
 /**
- * Estados de la cuenta de usuario para control de acceso.
+ * Roles de negocio para control de acceso en la aplicación web.
+ * Incluye compatibilidad con aliases operativos ('empleado', 'cajero').
+ */
+export type RolUsuario = RolUsuarioDB | 'empleado' | 'cajero';
+
+/**
+ * Estados de la cuenta de usuario para control de acceso administrativo.
  */
 export type EstadoUsuario = 'activo' | 'inactivo' | 'suspendido';
 
 /**
- * Entidad de Dominio: Perfil de Usuario.
- * Datos de identidad y privilegios del colaborador en el sistema.
+ * Representación exacta de la fila de la tabla `public.usuario` en PostgreSQL / Supabase.
+ */
+export interface UsuarioRow {
+  id_usuario: string; // uuid FK a auth.users(id)
+  nombre: string | null;
+  email: string;
+  rol: RolUsuarioDB;
+  creado_el: string;
+  actualizado_el: string;
+}
+
+/**
+ * Entidad de Dominio: Perfil de Usuario en el Frontend.
+ * Abstrae y extiende los datos del colaborador con convenciones de nomenclatura TypeScript.
  */
 export interface Usuario {
-  id: string;             // UUID vinculado directamente al identificador de `auth.users` en Supabase
-  email: string;          // Correo electrónico institucional o personal
-  nombreCompleto: string; // Nombre y apellido del operador
-  rol: RolUsuario;        // Nivel de privilegios y accesos en la plataforma
-  telefono?: string;      // Teléfono o contacto directo
-  avatarUrl?: string;     // Enlace a imagen de perfil en Supabase Storage
-  estado: EstadoUsuario;  // Habilitación para iniciar sesión en la plataforma
-  ultimoAcceso?: Date | string; // Marca temporal de la última sesión abierta
-  fechaCreacion: Date | string; // Fecha de alta del colaborador
+  id: string;                     // UUID vinculado a auth.users y public.usuario
+  email: string;                  // Correo electrónico del colaborador
+  nombre: string;                 // Nombre visible del usuario
+  nombreCompleto?: string;        // Alias de compatibilidad
+  rol: RolUsuario;                // Nivel de privilegios (admin, vendedor/empleado, no_rol)
+  telefono?: string;              // Teléfono de contacto
+  avatarUrl?: string;             // Enlace opcional a avatar en Storage
+  estado?: EstadoUsuario;         // Estado de la cuenta
+  ultimoAcceso?: Date | string;   // Timestamp de última sesión
+  fechaCreacion?: Date | string;  // Fecha de alta
+  fechaActualizacion?: Date | string;
+}
+
+/**
+ * Adaptador para transformar una fila cruda de `public.usuario` a la entidad de dominio `Usuario`.
+ */
+export function toUsuario(row: UsuarioRow): Usuario {
+  return {
+    id: row.id_usuario,
+    email: row.email,
+    nombre: row.nombre || '',
+    nombreCompleto: row.nombre || '',
+    rol: row.rol,
+    fechaCreacion: row.creado_el,
+    fechaActualizacion: row.actualizado_el,
+  };
 }
 
 /**
@@ -43,14 +79,13 @@ export interface Usuario {
  */
 export interface CrearUsuarioDTO {
   email: string;
-  nombreCompleto: string;
+  nombre: string;
+  nombreCompleto?: string;
   rol: RolUsuario;
   telefono?: string;
 }
 
 /**
- * DTO para actualizar los datos personales o de contacto del usuario logueado.
- * Protege campos sensibles e inmutables (id, email, fechaCreacion).
+ * DTO para actualizar datos del perfil en Supabase.
  */
 export type ActualizarUsuarioDTO = Partial<Omit<Usuario, 'id' | 'email' | 'fechaCreacion'>>;
-

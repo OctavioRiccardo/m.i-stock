@@ -11,6 +11,7 @@
  */
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import {
   ShoppingCart,
   Package,
@@ -51,7 +52,7 @@ export function UserSidebar({ onNavigate, className }: UserSidebarProps = {}) {
           </div>
           <div>
             <h1 className="text-base font-bold text-[#1C2424] tracking-tight leading-none">
-              miStock
+              M.I Stock
             </h1>
             <span className="text-[11px] font-medium text-[#657373]">Panel Empleado</span>
           </div>
@@ -72,7 +73,7 @@ export function UserSidebar({ onNavigate, className }: UserSidebarProps = {}) {
           const isActive = item.label === active;
 
           return (
-            <a
+            <Link
               key={item.label}
               href={item.link}
               onClick={() => {
@@ -88,30 +89,30 @@ export function UserSidebar({ onNavigate, className }: UserSidebarProps = {}) {
             >
               <Icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-white' : 'text-[#657373]')} />
               <span>{item.label}</span>
-            </a>
+            </Link>
           );
         })}
       </div>
 
       {/* Footer */}
       <div className="p-3 border-t border-[#E8E6DF] space-y-1">
-        <a
-          href="/login"
+        <Link
+          href="/admin"
           onClick={() => onNavigate?.()}
           className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[#657373] hover:bg-black/5 hover:text-[#1C2424] transition-colors"
         >
           <ArrowLeftRight className="h-4 w-4" />
-          <span>Cambiar de Rol</span>
-        </a>
+          <span>Vista de Administrador</span>
+        </Link>
 
-        <a
+        <Link
           href="/logout"
           onClick={() => onNavigate?.()}
           className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
         >
           <LogOut className="h-4 w-4" />
           <span>Cerrar Sesión</span>
-        </a>
+        </Link>
       </div>
     </nav>
   );

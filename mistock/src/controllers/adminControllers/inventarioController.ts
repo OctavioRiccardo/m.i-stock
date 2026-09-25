@@ -25,129 +25,7 @@ import { useState } from 'react';
 import { Categoria, Producto } from '@/models/modelos_dominio/productoModel';
 import { FormularioCargaProducto } from '@/models/modelos_vista/cargaProductoModel';
 
-/**
- * Catálogo inicial simulado de Categorías de productos.
- * Representa las familias comerciales en las cuales se agruparán los artículos.
- */
-const initialCategorias: Categoria[] = [
-  { id: 'cat-1', nombre: 'Almacén', descripcion: 'Comestibles secos, aceites, harinas, condimentos', activo: true },
-  { id: 'cat-2', nombre: 'Bebidas', descripcion: 'Aguas, gaseosas, jugos y aperitivos', activo: true },
-  { id: 'cat-3', nombre: 'Limpieza', descripcion: 'Artículos de higiene, detergentes y lavandina', activo: true },
-  { id: 'cat-4', nombre: 'Lácteos', descripcion: 'Leches, quesos, yogures y mantecas', activo: true },
-  { id: 'cat-5', nombre: 'Golosinas', descripcion: 'Galletitas, chocolates, alfajores y caramelos', activo: true },
-];
-
-/**
- * Inventario inicial simulado de Productos.
- * Cada producto cuenta con asociación estricta a su `categoriaId`.
- */
-const initialProductos: Producto[] = [
-  {
-    id: 'PROD-101',
-    codigo: '779001',
-    nombre: 'Aceite de Girasol 1.5L',
-    descripcion: 'Aceite puro comestible primera prensada',
-    precioCosto: 1800,
-    precioVenta: 2600,
-    stockActual: 35,
-    stockMinimo: 10,
-    categoriaId: 'cat-1',
-    categoria: initialCategorias[0],
-    unidadMedida: 'unidad',
-    activo: true,
-    fechaCreacion: new Date('2026-09-01'),
-  },
-  {
-    id: 'PROD-102',
-    codigo: '779002',
-    nombre: 'Jabón Líquido Manos 500ml',
-    descripcion: 'Antibacteriano con aloe vera',
-    precioCosto: 950,
-    precioVenta: 1600,
-    stockActual: 3,
-    stockMinimo: 10,
-    categoriaId: 'cat-3',
-    categoria: initialCategorias[2],
-    unidadMedida: 'unidad',
-    activo: true,
-    fechaCreacion: new Date('2026-09-05'),
-  },
-  {
-    id: 'PROD-103',
-    codigo: '779003',
-    nombre: 'Leche Entera Larga Vida 1L',
-    descripcion: 'Ultra pasteurizada fortificada',
-    precioCosto: 1100,
-    precioVenta: 1750,
-    stockActual: 2,
-    stockMinimo: 20,
-    categoriaId: 'cat-4',
-    categoria: initialCategorias[3],
-    unidadMedida: 'litro',
-    activo: true,
-    fechaCreacion: new Date('2026-09-10'),
-  },
-  {
-    id: 'PROD-104',
-    codigo: '779004',
-    nombre: 'Gaseosa Cola 2.25L',
-    descripcion: 'Bebida sin alcohol carbonatada original',
-    precioCosto: 1900,
-    precioVenta: 2900,
-    stockActual: 48,
-    stockMinimo: 15,
-    categoriaId: 'cat-2',
-    categoria: initialCategorias[1],
-    unidadMedida: 'unidad',
-    activo: true,
-    fechaCreacion: new Date('2026-09-12'),
-  },
-  {
-    id: 'PROD-105',
-    codigo: '779005',
-    nombre: 'Alfajor Triple Chocolate 70g',
-    descripcion: 'Relleno con dulce de leche bañado en chocolate',
-    precioCosto: 600,
-    precioVenta: 1100,
-    stockActual: 60,
-    stockMinimo: 24,
-    categoriaId: 'cat-5',
-    categoria: initialCategorias[4],
-    unidadMedida: 'unidad',
-    activo: true,
-    fechaCreacion: new Date('2026-09-15'),
-  },
-  {
-    id: 'PROD-106',
-    codigo: '779006',
-    nombre: 'Agua Mineral Sin Gas 1.5L',
-    descripcion: 'Agua de vertiente natural baja en sodio',
-    precioCosto: 850,
-    precioVenta: 1400,
-    stockActual: 30,
-    stockMinimo: 12,
-    categoriaId: 'cat-2',
-    categoria: initialCategorias[1],
-    unidadMedida: 'unidad',
-    activo: true,
-    fechaCreacion: new Date('2026-09-16'),
-  },
-  {
-    id: 'PROD-107',
-    codigo: '779007',
-    nombre: 'Lavandina Concentrada 1L',
-    descripcion: 'Máxima desinfección y limpieza profunda',
-    precioCosto: 750,
-    precioVenta: 1300,
-    stockActual: 18,
-    stockMinimo: 8,
-    categoriaId: 'cat-3',
-    categoria: initialCategorias[2],
-    unidadMedida: 'litro',
-    activo: true,
-    fechaCreacion: new Date('2026-09-16'),
-  },
-];
+import { initialCategorias, initialProductos } from '@/models/mock_data/inventarioMock';
 
 /**
  * Hook Controlador para la Gestión y Alta de Inventario.
@@ -189,6 +67,20 @@ export function useAdminInventarioController() {
   // Filtros reactivos para el catálogo por categoría en el Hub de gestión
   const [categoriaFiltroHub, setCategoriaFiltroHub] = useState<string>('todas');
   const [busquedaHub, setBusquedaHub] = useState<string>('');
+
+  // Paginación reactiva para el catálogo de inventario (8 ítems por página)
+  const [paginaInventario, setPaginaInventario] = useState<number>(1);
+  const itemsPorPaginaInventario = 8;
+
+  const handleSetCategoriaFiltroHub = (catId: string) => {
+    setCategoriaFiltroHub(catId);
+    setPaginaInventario(1);
+  };
+
+  const handleSetBusquedaHub = (term: string) => {
+    setBusquedaHub(term);
+    setPaginaInventario(1);
+  };
 
   // Conteo de artículos por cada categoría
   const conteosPorCategoria = categorias.reduce<Record<string, number>>((acc, cat) => {
@@ -445,11 +337,14 @@ export function useAdminInventarioController() {
     categorias,
     productos,
     categoriaFiltroHub,
-    setCategoriaFiltroHub,
+    setCategoriaFiltroHub: handleSetCategoriaFiltroHub,
     busquedaHub,
-    setBusquedaHub,
+    setBusquedaHub: handleSetBusquedaHub,
     conteosPorCategoria,
     productosFiltradosHub,
+    paginaInventario,
+    setPaginaInventario,
+    itemsPorPaginaInventario,
     loading,
     mensajeExito,
     mensajeError,

@@ -82,26 +82,29 @@ export interface AdminDashboard {
 // 2. Interfaces y Tipos de Compatibilidad para los Controladores
 // ====================================================================
 
-export interface QuickProduct {
+export interface ProductoRapidoPOS {
   id: string;
-  name: string;
-  category: string;
-  price: number;
+  nombre: string;
+  categoria: string;
+  precio: number;
   stock: number;
-  code: string;
+  codigo: string;
+}
+export type QuickProduct = ProductoRapidoPOS;
+
+export interface VentaRecientePOS {
+  id: string;
+  hora: string;
+  montoTotal: number;
+  cantidadItems: number;
 }
 
 export interface UserDashboardData {
-  dailySalesCount: number;
-  dailyRevenue: number;
-  totalProductsInStock: number;
-  recentSales: {
-    id: string;
-    time: string;
-    totalAmount: number;
-    itemCount: number;
-  }[];
-  popularProducts: QuickProduct[];
+  ventasDelDia: number;
+  recaudacionDelDia: number;
+  totalProductosEnStock: number;
+  ventasRecientes: VentaRecientePOS[];
+  productosPopulares: ProductoRapidoPOS[];
 }
 
 export interface AdminMetricCard {
@@ -111,13 +114,14 @@ export interface AdminMetricCard {
   status: 'positive' | 'negative' | 'neutral';
 }
 
-export interface LowStockAlert {
+export interface AlertaStockCritico {
   id: string;
-  productName: string;
-  currentStock: number;
-  minThreshold: number;
-  category: string;
+  nombreProducto: string;
+  stockActual: number;
+  umbralMinimo: number;
+  categoria: string;
 }
+export type LowStockAlert = AlertaStockCritico;
 
 export interface ProductoRankingVentas {
   id: string;

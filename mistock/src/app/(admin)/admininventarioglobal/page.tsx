@@ -2,18 +2,20 @@
 
 /**
  * ====================================================================
- * RUTA: /admininventarioglobal (Inventario Global - En Progreso)
+ * RUTA: /admininventarioglobal (Inventario Global por Categorías)
  * ====================================================================
+ * 
+ * Propósito:
+ * Página principal para la consulta, exploración y auditoría del catálogo
+ * global de productos organizado por familias de categorías.
  */
 
 import React from 'react';
-import { EnProgresoView } from '@/views/admin/EnProgresoView';
+import { useAdminInventarioGlobalController } from '@/controllers/adminControllers/inventarioGlobalController';
+import { AdminInventarioGlobalView } from '@/views/admin/AdminInventarioGlobalView';
 
 export default function AdminInventarioGlobalPage() {
-  return (
-    <EnProgresoView
-      seccion="Inventario Global"
-      icono="inventario"
-    />
-  );
+  const controller = useAdminInventarioGlobalController();
+
+  return <AdminInventarioGlobalView controller={controller} />;
 }

@@ -246,14 +246,14 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                 <TableBody ref={stockTableBodyRef}>
                   {alertasPaginadas.map((alert) => (
                     <TableRow key={alert.id} className="transition-colors">
-                      <TableCell className="font-semibold">{alert.productName}</TableCell>
+                      <TableCell className="font-semibold">{alert.nombreProducto}</TableCell>
                       <TableCell>
-                        <Badge variant="secondary">{alert.category}</Badge>
+                        <Badge variant="secondary">{alert.categoria}</Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="destructive">{alert.currentStock} un.</Badge>
+                        <Badge variant="destructive">{alert.stockActual} un.</Badge>
                       </TableCell>
-                      <TableCell className="font-medium">{alert.minThreshold} un.</TableCell>
+                      <TableCell className="font-medium">{alert.umbralMinimo} un.</TableCell>
                       <TableCell className="text-right">
                         <Button
                           size="sm"
