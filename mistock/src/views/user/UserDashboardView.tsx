@@ -30,6 +30,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useUserDashboardController } from '@/controllers/userControllers/userDashboardController';
+import { motion, AnimatePresence, MotionConfig } from 'motion/react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -85,93 +86,151 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
   const [ventaSeleccionada, setVentaSeleccionada] = useState<VentaRecientePOS | null>(null);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#1C2424] tracking-tight">
-            Ventas y Operaciones
-          </h1>
-          <p className="text-sm text-[#657373] mt-1">
-            Consulta ágil de catálogo, despacho en mostrador y registro inmediato de cobros en Efectivo.
-          </p>
+    <MotionConfig reducedMotion="user">
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, ease: 'easeOut' }}
+        className="max-w-7xl mx-auto space-y-6"
+      >
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        >
+          <div>
+            <h1 className="text-2xl font-bold text-[#1C2424] tracking-tight">
+              Ventas y Operaciones
+            </h1>
+            <p className="text-sm text-[#657373] mt-1">
+              Consulta ágil de catálogo, despacho en mostrador y registro inmediato de cobros en Efectivo.
+            </p>
+          </div>
+
+          {permitirVentaSinStock && (
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <Badge variant="warning" className="text-xs font-medium">
+                Venta sin stock habilitada
+              </Badge>
+            </div>
+          )}
+        </motion.div>
+
+        {/* Notificaciones de Operación */}
+        <AnimatePresence>
+          {saleSuccessMessage && (
+            <motion.div
+              key="alert-sale-success"
+              initial={{ opacity: 0, height: 0, y: -8 }}
+              animate={{ opacity: 1, height: 'auto', y: 0 }}
+              exit={{ opacity: 0, height: 0, y: -8 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="overflow-hidden"
+            >
+              <Alert variant="success" className="shadow-xs border-emerald-300 bg-emerald-50">
+                <Check className="h-4 w-4 text-emerald-700" />
+                <AlertTitle className="text-emerald-900 font-bold">Cobro Registrado</AlertTitle>
+                <AlertDescription className="text-emerald-800 text-xs">{saleSuccessMessage}</AlertDescription>
+              </Alert>
+            </motion.div>
+          )}
+
+          {saleErrorMessage && (
+            <motion.div
+              key="alert-sale-error"
+              initial={{ opacity: 0, height: 0, y: -8 }}
+              animate={{ opacity: 1, height: 'auto', y: 0 }}
+              exit={{ opacity: 0, height: 0, y: -8 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="overflow-hidden"
+            >
+              <Alert variant="destructive" className="shadow-xs">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle className="font-bold">Operación No Permitida</AlertTitle>
+                <AlertDescription className="text-xs">{saleErrorMessage}</AlertDescription>
+              </Alert>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Indicadores KPI del Turno */}
+        <div id="resumen" className="grid grid-cols-1 sm:grid-cols-3 gap-4 scroll-mt-20">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.04, ease: 'easeOut' }}
+            whileHover={{ y: -2, transition: { duration: 0.15 } }}
+          >
+            <Card className="p-5 border-[#E8E6DF] shadow-xs h-full transition-shadow duration-200 hover:shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wider text-[#657373]">
+                  Tickets Cobrados Hoy
+                </span>
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78]">
+                  <ShoppingCart className="h-4 w-4" />
+                </div>
+              </div>
+              <p className="text-2xl font-extrabold text-[#1C2424] tracking-tight mt-3">
+                {data.ventasDelDia}
+              </p>
+            </Card>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.08, ease: 'easeOut' }}
+            whileHover={{ y: -2, transition: { duration: 0.15 } }}
+          >
+            <Card className="p-5 border-[#E8E6DF] shadow-xs h-full transition-shadow duration-200 hover:shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wider text-[#657373]">
+                  Recaudación de la Caja
+                </span>
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78]">
+                  <DollarSign className="h-4 w-4" />
+                </div>
+              </div>
+              <p className="text-2xl font-extrabold text-[#1C2424] tracking-tight mt-3">
+                {monedaSimbolo} {data.recaudacionDelDia.toLocaleString('es-AR')}
+              </p>
+            </Card>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.12, ease: 'easeOut' }}
+            whileHover={{ y: -2, transition: { duration: 0.15 } }}
+          >
+            <Card className="p-5 border-[#E8E6DF] shadow-xs h-full transition-shadow duration-200 hover:shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wider text-[#657373]">
+                  Unidades Disponibles
+                </span>
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78]">
+                  <Package className="h-4 w-4" />
+                </div>
+              </div>
+              <p className="text-2xl font-extrabold text-[#1C2424] tracking-tight mt-3">
+                {data.totalProductosEnStock} unidades
+              </p>
+            </Card>
+          </motion.div>
         </div>
-
-        {permitirVentaSinStock && (
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <Badge variant="warning" className="text-xs font-medium">
-              Venta sin stock habilitada
-            </Badge>
-          </div>
-        )}
-      </div>
-
-      {/* Notificaciones de Operación */}
-      {saleSuccessMessage && (
-        <Alert variant="success" className="shadow-xs border-emerald-300 bg-emerald-50">
-          <Check className="h-4 w-4 text-emerald-700" />
-          <AlertTitle className="text-emerald-900 font-bold">Cobro Registrado</AlertTitle>
-          <AlertDescription className="text-emerald-800 text-xs">{saleSuccessMessage}</AlertDescription>
-        </Alert>
-      )}
-
-      {saleErrorMessage && (
-        <Alert variant="destructive" className="shadow-xs">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle className="font-bold">Operación No Permitida</AlertTitle>
-          <AlertDescription className="text-xs">{saleErrorMessage}</AlertDescription>
-        </Alert>
-      )}
-
-      {/* Indicadores KPI del Turno */}
-      <div id="resumen" className="grid grid-cols-1 sm:grid-cols-3 gap-4 scroll-mt-20">
-        <Card className="p-5 border-[#E8E6DF] shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[#657373]">
-              Tickets Cobrados Hoy
-            </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78]">
-              <ShoppingCart className="h-4 w-4" />
-            </div>
-          </div>
-          <p className="text-2xl font-extrabold text-[#1C2424] tracking-tight mt-3">
-            {data.ventasDelDia}
-          </p>
-        </Card>
-
-        <Card className="p-5 border-[#E8E6DF] shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[#657373]">
-              Recaudación de la Caja
-            </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78]">
-              <DollarSign className="h-4 w-4" />
-            </div>
-          </div>
-          <p className="text-2xl font-extrabold text-[#1C2424] tracking-tight mt-3">
-            {monedaSimbolo} {data.recaudacionDelDia.toLocaleString('es-AR')}
-          </p>
-        </Card>
-
-        <Card className="p-5 border-[#E8E6DF] shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[#657373]">
-              Unidades Disponibles
-            </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78]">
-              <Package className="h-4 w-4" />
-            </div>
-          </div>
-          <p className="text-2xl font-extrabold text-[#1C2424] tracking-tight mt-3">
-            {data.totalProductosEnStock} unidades
-          </p>
-        </Card>
-      </div>
 
       {/* Grid Principal: Catálogo y Despacho + Ventas Recientes */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Catálogo y Despacho */}
-        <div id="productos" className="lg:col-span-7 scroll-mt-20">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.32, delay: 0.16, ease: 'easeOut' }}
+          id="productos"
+          className="lg:col-span-7 scroll-mt-20"
+        >
           <Card className="border-[#E8E6DF] shadow-xs">
             <CardHeader className="pb-3 border-b border-[#E8E6DF]">
               <div className="flex items-center justify-between">
@@ -238,8 +297,11 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
 
                 {/* Pastillas / Botones Pill de Categorías Rápidas */}
                 <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-                  <button
+                  <motion.button
                     type="button"
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.96 }}
+                    transition={{ duration: 0.12 }}
                     onClick={() => setCategoriaFiltro('todas')}
                     className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all shrink-0 cursor-pointer ${
                       categoriaFiltro === 'todas'
@@ -255,15 +317,18 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                     >
                       {data.productosPopulares.length}
                     </span>
-                  </button>
+                  </motion.button>
 
                   {categorias.map((cat) => {
                     const esActiva = categoriaFiltro.toLowerCase() === cat.toLowerCase();
                     const cantidad = conteosPorCategoria[cat] || 0;
                     return (
-                      <button
+                      <motion.button
                         key={cat}
                         type="button"
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.96 }}
+                        transition={{ duration: 0.12 }}
                         onClick={() => setCategoriaFiltro(cat)}
                         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-all shrink-0 cursor-pointer ${
                           esActiva
@@ -279,7 +344,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                         >
                           {cantidad}
                         </span>
-                      </button>
+                      </motion.button>
                     );
                   })}
                 </div>
@@ -355,17 +420,19 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right">
-                              <Button
-                                size="sm"
-                                type="button"
-                                onClick={() => setProductoEfectivo(prod)}
-                                disabled={botonDeshabilitado}
-                                className="h-7 px-3 text-xs bg-[#1C2424] hover:bg-[#2A3636] text-white shadow-xs gap-1.5 cursor-pointer disabled:opacity-50 font-medium"
-                                title="Registrar venta en efectivo con cálculo de vuelto"
-                              >
-                                <Banknote className="h-3.5 w-3.5 text-emerald-400" />
-                                <span>Efectivo</span>
-                              </Button>
+                              <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.95 }} className="inline-block">
+                                <Button
+                                  size="sm"
+                                  type="button"
+                                  onClick={() => setProductoEfectivo(prod)}
+                                  disabled={botonDeshabilitado}
+                                  className="h-7 px-3 text-xs bg-[#1C2424] hover:bg-[#2A3636] text-white shadow-xs gap-1.5 cursor-pointer disabled:opacity-50 font-medium"
+                                  title="Registrar venta en efectivo con cálculo de vuelto"
+                                >
+                                  <Banknote className="h-3.5 w-3.5 text-emerald-400" />
+                                  <span>Efectivo</span>
+                                </Button>
+                              </motion.div>
                             </TableCell>
                           </TableRow>
                         );
@@ -398,40 +465,50 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                   </div>
 
                   <div className="flex items-center gap-1.5">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setPagina((p) => Math.max(p - 1, 1))}
-                      disabled={pagina <= 1}
-                      className="h-7 px-2 text-xs border-[#E8E6DF] hover:bg-[#F8F7F2] text-[#1C2424] disabled:opacity-40 cursor-pointer gap-1"
-                    >
-                      <ChevronLeft className="h-3.5 w-3.5" />
-                      <span>Anterior</span>
-                    </Button>
+                    <motion.div whileTap={{ scale: 0.95 }} className="inline-block">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setPagina((p) => Math.max(p - 1, 1))}
+                        disabled={pagina <= 1}
+                        className="h-7 px-2 text-xs border-[#E8E6DF] hover:bg-[#F8F7F2] text-[#1C2424] disabled:opacity-40 cursor-pointer gap-1"
+                      >
+                        <ChevronLeft className="h-3.5 w-3.5" />
+                        <span>Anterior</span>
+                      </Button>
+                    </motion.div>
 
                     <span className="text-xs font-semibold px-2.5 py-1 rounded bg-[#F8F7F2] text-[#1C2424] border border-[#E8E6DF]">
                       {pagina} / {totalPaginas}
                     </span>
 
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setPagina((p) => Math.min(p + 1, totalPaginas))}
-                      disabled={pagina >= totalPaginas}
-                      className="h-7 px-2 text-xs border-[#E8E6DF] hover:bg-[#F8F7F2] text-[#1C2424] disabled:opacity-40 cursor-pointer gap-1"
-                    >
-                      <span>Siguiente</span>
-                      <ChevronRight className="h-3.5 w-3.5" />
-                    </Button>
+                    <motion.div whileTap={{ scale: 0.95 }} className="inline-block">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setPagina((p) => Math.min(p + 1, totalPaginas))}
+                        disabled={pagina >= totalPaginas}
+                        className="h-7 px-2 text-xs border-[#E8E6DF] hover:bg-[#F8F7F2] text-[#1C2424] disabled:opacity-40 cursor-pointer gap-1"
+                      >
+                        <span>Siguiente</span>
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      </Button>
+                    </motion.div>
                   </div>
                 </div>
               )}
             </CardContent>
           </Card>
-        </div>
+        </motion.div>
 
         {/* Ventas Recientes */}
-        <div id="historial" className="lg:col-span-5 scroll-mt-20">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.32, delay: 0.20, ease: 'easeOut' }}
+          id="historial"
+          className="lg:col-span-5 scroll-mt-20"
+        >
           <Card className="border-[#E8E6DF] shadow-xs">
             <CardHeader className="pb-3 border-b border-[#E8E6DF]">
               <div className="flex items-center justify-between">
@@ -455,57 +532,66 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                   No hay ventas registradas en la jornada.
                 </div>
               ) : (
-                ventasRecientesPaginadas.map((sale) => {
-                  const esEfectivo = sale.metodoPago === 'efectivo';
-                  const esMercadoPago = sale.metodoPago === 'mercado_pago';
+                <AnimatePresence mode="popLayout" initial={false}>
+                  {ventasRecientesPaginadas.map((sale) => {
+                    const esEfectivo = sale.metodoPago === 'efectivo';
+                    const esMercadoPago = sale.metodoPago === 'mercado_pago';
 
-                  return (
-                    <div
-                      key={sale.id}
-                      onClick={() => setVentaSeleccionada(sale)}
-                      className="flex items-center justify-between p-3 rounded-lg border border-[#E8E6DF] bg-white hover:border-[#2A7A78] hover:bg-[#F8F7F2]/60 cursor-pointer shadow-xs transition-all group"
-                      title="Ver detalle del comprobante"
-                    >
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <p className="text-xs font-bold text-[#1C2424] group-hover:text-[#2A7A78] transition-colors">
-                            {sale.id}
+                    return (
+                      <motion.div
+                        key={sale.id}
+                        layout
+                        initial={{ opacity: 0, scale: 0.96, y: -6 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.15 } }}
+                        transition={{ duration: 0.22, ease: 'easeOut' }}
+                        whileHover={{ y: -1, scale: 1.005, transition: { duration: 0.12 } }}
+                        whileTap={{ scale: 0.99 }}
+                        onClick={() => setVentaSeleccionada(sale)}
+                        className="flex items-center justify-between p-3 rounded-lg border border-[#E8E6DF] bg-white hover:border-[#2A7A78] hover:bg-[#F8F7F2]/60 cursor-pointer shadow-xs transition-colors group"
+                        title="Ver detalle del comprobante"
+                      >
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-xs font-bold text-[#1C2424] group-hover:text-[#2A7A78] transition-colors">
+                              {sale.id}
+                            </p>
+                            {sale.metodoPago && (
+                              <Badge
+                                variant="outline"
+                                className={`text-[9px] uppercase px-1.5 py-0 font-semibold ${
+                                  esEfectivo
+                                    ? 'border-emerald-300 text-emerald-700 bg-emerald-50'
+                                    : esMercadoPago
+                                    ? 'border-[#009EE3]/50 text-[#009EE3] bg-[#009EE3]/10'
+                                    : 'border-[#E8E6DF] text-[#657373]'
+                                }`}
+                              >
+                                {esMercadoPago ? 'Mercado Pago' : sale.metodoPago.replace('_', ' ')}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-[#657373] mt-0.5 flex items-center gap-1.5">
+                            <span>Hora: {sale.hora}</span>
+                            <span>•</span>
+                            <span>{sale.cantidadItems} ítem(s)</span>
+                            <span className="text-[#2A7A78] opacity-0 group-hover:opacity-100 transition-opacity font-medium ml-1">
+                              (Ver detalle ➔)
+                            </span>
                           </p>
-                          {sale.metodoPago && (
-                            <Badge
-                              variant="outline"
-                              className={`text-[9px] uppercase px-1.5 py-0 font-semibold ${
-                                esEfectivo
-                                  ? 'border-emerald-300 text-emerald-700 bg-emerald-50'
-                                  : esMercadoPago
-                                  ? 'border-[#009EE3]/50 text-[#009EE3] bg-[#009EE3]/10'
-                                  : 'border-[#E8E6DF] text-[#657373]'
-                              }`}
-                            >
-                              {esMercadoPago ? 'Mercado Pago' : sale.metodoPago.replace('_', ' ')}
-                            </Badge>
-                          )}
                         </div>
-                        <p className="text-[11px] text-[#657373] mt-0.5 flex items-center gap-1.5">
-                          <span>Hora: {sale.hora}</span>
-                          <span>•</span>
-                          <span>{sale.cantidadItems} ítem(s)</span>
-                          <span className="text-[#2A7A78] opacity-0 group-hover:opacity-100 transition-opacity font-medium ml-1">
-                            (Ver detalle ➔)
+                        <div className="text-right">
+                          <span className="text-sm font-extrabold text-[#2A7A78] block">
+                            {monedaSimbolo} {sale.montoTotal.toLocaleString('es-AR')}
                           </span>
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-extrabold text-[#2A7A78] block">
-                          {monedaSimbolo} {sale.montoTotal.toLocaleString('es-AR')}
-                        </span>
-                        <span className="text-[10px] text-[#657373] group-hover:text-[#2A7A78] transition-colors">
-                          Ver ítems
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })
+                          <span className="text-[10px] text-[#657373] group-hover:text-[#2A7A78] transition-colors">
+                            Ver ítems
+                          </span>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
               )}
 
               {/* Barra de Paginación de Ventas Recientes */}
@@ -525,37 +611,41 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                   </div>
 
                   <div className="flex items-center gap-1.5">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setPaginaVentas((p) => Math.max(p - 1, 1))}
-                      disabled={paginaVentas <= 1}
-                      className="h-7 px-2 text-xs border-[#E8E6DF] hover:bg-[#F8F7F2] text-[#1C2424] disabled:opacity-40 cursor-pointer gap-1"
-                    >
-                      <ChevronLeft className="h-3.5 w-3.5" />
-                      <span>Anterior</span>
-                    </Button>
+                    <motion.div whileTap={{ scale: 0.95 }} className="inline-block">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setPaginaVentas((p) => Math.max(p - 1, 1))}
+                        disabled={paginaVentas <= 1}
+                        className="h-7 px-2 text-xs border-[#E8E6DF] hover:bg-[#F8F7F2] text-[#1C2424] disabled:opacity-40 cursor-pointer gap-1"
+                      >
+                        <ChevronLeft className="h-3.5 w-3.5" />
+                        <span>Anterior</span>
+                      </Button>
+                    </motion.div>
 
                     <span className="text-xs font-semibold px-2 py-0.5 rounded bg-[#F8F7F2] text-[#1C2424] border border-[#E8E6DF]">
                       {paginaVentas} / {totalPaginasVentas}
                     </span>
 
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setPaginaVentas((p) => Math.min(p + 1, totalPaginasVentas))}
-                      disabled={paginaVentas >= totalPaginasVentas}
-                      className="h-7 px-2 text-xs border-[#E8E6DF] hover:bg-[#F8F7F2] text-[#1C2424] disabled:opacity-40 cursor-pointer gap-1"
-                    >
-                      <span>Siguiente</span>
-                      <ChevronRight className="h-3.5 w-3.5" />
-                    </Button>
+                    <motion.div whileTap={{ scale: 0.95 }} className="inline-block">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setPaginaVentas((p) => Math.min(p + 1, totalPaginasVentas))}
+                        disabled={paginaVentas >= totalPaginasVentas}
+                        className="h-7 px-2 text-xs border-[#E8E6DF] hover:bg-[#F8F7F2] text-[#1C2424] disabled:opacity-40 cursor-pointer gap-1"
+                      >
+                        <span>Siguiente</span>
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      </Button>
+                    </motion.div>
                   </div>
                 </div>
               )}
             </CardContent>
           </Card>
-        </div>
+        </motion.div>
       </div>
 
       {/* Modal de Cobro en Efectivo */}
@@ -575,6 +665,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
         venta={ventaSeleccionada}
         monedaSimbolo={monedaSimbolo}
       />
-    </div>
+    </motion.div>
+  </MotionConfig>
   );
 }

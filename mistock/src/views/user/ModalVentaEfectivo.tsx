@@ -33,6 +33,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ProductoRapidoPOS } from '@/models/modelos_vista/dashboardModel';
+import { motion, AnimatePresence } from 'motion/react';
 
 export interface ModalVentaEfectivoProps {
   isOpen: boolean;
@@ -163,29 +164,27 @@ export function ModalVentaEfectivo({
             </label>
             <div className="flex items-center gap-3">
               <div className="flex items-center border border-[#E8E6DF] rounded-lg bg-white overflow-hidden shadow-xs">
-                <Button
+                <motion.button
                   type="button"
-                  size="sm"
-                  variant="ghost"
+                  whileTap={{ scale: 0.88 }}
                   onClick={decrementar}
                   disabled={cantidad <= 1}
-                  className="h-9 w-9 p-0 hover:bg-[#F8F7F2] text-[#1C2424]"
+                  className="h-9 w-9 flex items-center justify-center hover:bg-[#F8F7F2] text-[#1C2424] disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed transition-colors"
                 >
                   <Minus className="h-3.5 w-3.5" />
-                </Button>
+                </motion.button>
                 <div className="w-14 text-center text-sm font-bold text-[#1C2424] select-none">
                   {cantidad}
                 </div>
-                <Button
+                <motion.button
                   type="button"
-                  size="sm"
-                  variant="ghost"
+                  whileTap={{ scale: 0.88 }}
                   onClick={incrementar}
                   disabled={!puedeAumentar}
-                  className="h-9 w-9 p-0 hover:bg-[#F8F7F2] text-[#1C2424]"
+                  className="h-9 w-9 flex items-center justify-center hover:bg-[#F8F7F2] text-[#1C2424] disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed transition-colors"
                 >
                   <Plus className="h-3.5 w-3.5" />
-                </Button>
+                </motion.button>
               </div>
 
               <div className="flex-1 text-right">
@@ -234,39 +233,58 @@ export function ModalVentaEfectivo({
             {/* Atajos de billetes frecuentes */}
             <div className="flex flex-wrap gap-1.5 pt-1">
               {[1000, 2000, 5000, 10000, 20000].map((billete) => (
-                <button
+                <motion.button
                   key={billete}
                   type="button"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.94 }}
+                  transition={{ duration: 0.12 }}
                   onClick={() => agregarDinero(billete)}
                   className="px-2 py-0.5 rounded text-[10px] font-medium bg-[#F8F7F2] hover:bg-[#E8E6DF] text-[#1C2424] border border-[#E8E6DF] transition-colors cursor-pointer"
                 >
                   +{monedaSimbolo} {billete.toLocaleString('es-AR')}
-                </button>
+                </motion.button>
               ))}
             </div>
 
-            {/* Indicador Reactivo de Vuelto */}
-            {esMontoSuficiente ? (
-              <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-between">
-                <div className="flex items-center gap-2 text-emerald-800">
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-                  <span className="text-xs font-semibold">Vuelto a entregar al cliente:</span>
-                </div>
-                <span className="text-sm font-extrabold text-emerald-800">
-                  {monedaSimbolo} {vuelto.toLocaleString('es-AR')}
-                </span>
-              </div>
-            ) : faltante > 0 ? (
-              <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-between">
-                <div className="flex items-center gap-2 text-amber-800">
-                  <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
-                  <span className="text-xs font-semibold">Monto insuficiente. Faltan:</span>
-                </div>
-                <span className="text-sm font-extrabold text-amber-800">
-                  {monedaSimbolo} {faltante.toLocaleString('es-AR')}
-                </span>
-              </div>
-            ) : null}
+            {/* Indicador Reactivo de Vuelto con AnimatePresence */}
+            <AnimatePresence mode="wait">
+              {esMontoSuficiente ? (
+                <motion.div
+                  key="vuelto-ok"
+                  initial={{ opacity: 0, y: 4, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                  transition={{ duration: 0.18, ease: 'easeOut' }}
+                  className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-2 text-emerald-800">
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                    <span className="text-xs font-semibold">Vuelto a entregar al cliente:</span>
+                  </div>
+                  <span className="text-sm font-extrabold text-emerald-800">
+                    {monedaSimbolo} {vuelto.toLocaleString('es-AR')}
+                  </span>
+                </motion.div>
+              ) : faltante > 0 ? (
+                <motion.div
+                  key="monto-faltante"
+                  initial={{ opacity: 0, y: 4, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                  transition={{ duration: 0.18, ease: 'easeOut' }}
+                  className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-2 text-amber-800">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
+                    <span className="text-xs font-semibold">Monto insuficiente. Faltan:</span>
+                  </div>
+                  <span className="text-sm font-extrabold text-amber-800">
+                    {monedaSimbolo} {faltante.toLocaleString('es-AR')}
+                  </span>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
           </div>
 
           <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-3 border-t border-[#E8E6DF]">
@@ -278,14 +296,16 @@ export function ModalVentaEfectivo({
             >
               Cancelar
             </Button>
-            <Button
-              type="submit"
-              disabled={!esMontoSuficiente || (!permitirVentaSinStock && stockDisponible < cantidad)}
-              className="text-xs h-9 bg-emerald-700 hover:bg-emerald-800 text-white gap-1.5 font-semibold cursor-pointer disabled:opacity-50"
-            >
-              <Banknote className="h-4 w-4" />
-              <span>Confirmar Cobro en Efectivo</span>
-            </Button>
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} className="inline-block">
+              <Button
+                type="submit"
+                disabled={!esMontoSuficiente || (!permitirVentaSinStock && stockDisponible < cantidad)}
+                className="text-xs h-9 bg-emerald-700 hover:bg-emerald-800 text-white gap-1.5 font-semibold cursor-pointer disabled:opacity-50"
+              >
+                <Banknote className="h-4 w-4" />
+                <span>Confirmar Cobro en Efectivo</span>
+              </Button>
+            </motion.div>
           </DialogFooter>
         </form>
       </DialogContent>
