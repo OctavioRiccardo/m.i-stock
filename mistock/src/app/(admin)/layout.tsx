@@ -2,21 +2,21 @@
 
 /**
  * ====================================================================
- * LAYOUT DE ADMINISTRACIÓN (Responsive Admin Shell)
+ * LAYOUT DE ADMINISTRACIÓN (Responsive Admin Shell + Guardián RBAC)
  * ====================================================================
  * 
  * Propósito:
- * Proveer la estructura de layout responsivo (Dub.co design system):
- * - Sidebar de escritorio fijo a la izquierda (w-64).
- * - Drawer móvil deslizable con backdrop difuminado.
- * - Header móvil con botón hamburguesa.
- * - Contenedor principal para vistas administrativas y Footer.
+ * Proveer la estructura de layout responsivo (Dub.co design system) y
+ * proteger todas las rutas administrativas contra accesos de usuarios
+ * con rol de 'vendedor' o 'no_rol' mediante el Modal de Acceso Restringido.
  */
 
 import React, { useState } from 'react';
 import { Menu, X, ShieldCheck } from 'lucide-react';
 import { AdminSidebar } from '@/views/admin/AdminSidebar';
 import { Footer } from '@/views/comunes/Footer';
+import { useRBAC } from '@/controllers/rbacController';
+import { ModalAccesoRestringido } from '@/views/comunes/ModalAccesoRestringido';
 
 export default function AdminLayout({
   children,
@@ -24,10 +24,25 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
+  const { esAdmin, esVendedor, esSinRol, cargando, cambiarRolSimulado } = useRBAC();
 
   return (
     <div className="min-h-screen bg-[#F8F7F2] text-[#1C2424] flex">
+      {/* Guardián de Acceso RBAC: Si no es Admin, bloquea el contenido y abre el modal explicativo */}
+      {!cargando && esVendedor && (
+        <ModalAccesoRestringido
+          tipo="vendedor_en_admin"
+          onCambiarRolDev={cambiarRolSimulado}
+        />
+      )}
+
+      {!cargando && esSinRol && (
+        <ModalAccesoRestringido
+          tipo="sin_rol"
+          onCambiarRolDev={cambiarRolSimulado}
+        />
+      )}
+
       {/* Sidebar Desktop (fijo) */}
       <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:w-64">
         <AdminSidebar />
@@ -83,9 +98,15 @@ export default function AdminLayout({
           </span>
         </header>
 
-        {/* Page Content */}
+        {/* Page Content: Solo se renderiza si el usuario es Admin o está cargando */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
-          {children}
+          {cargando ? (
+            <div className="flex items-center justify-center py-20 text-[#657373] text-sm">
+              Verificando credenciales de acceso...
+            </div>
+          ) : esAdmin ? (
+            children
+          ) : null}
         </main>
 
         <Footer />

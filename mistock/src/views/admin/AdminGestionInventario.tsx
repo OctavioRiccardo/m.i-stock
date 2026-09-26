@@ -85,7 +85,7 @@ const unidadesDisponibles: { value: UnidadMedida; label: string }[] = [
   { value: 'paquete', label: 'Paquete / Pack' },
 ];
 
-export function AdminGestionInventario({ controller }: AdminGestionInventarioProps) {
+export function AdminGestionInventarioView({ controller }: AdminGestionInventarioProps) {
   const {
     seccionActiva,
     setSeccionActiva,
@@ -1540,3 +1540,7 @@ export function AdminGestionInventario({ controller }: AdminGestionInventarioPro
     </MotionConfig>
   );
 }
+
+// Alias de compatibilidad hacia atrás
+export const AdminGestionInventario = AdminGestionInventarioView;
+

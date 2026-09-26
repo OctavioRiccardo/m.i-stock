@@ -2,20 +2,23 @@
 
 /**
  * ====================================================================
- * LAYOUT DE EMPLEADO / OPERADOR (Responsive POS Shell)
+ * LAYOUT DE EMPLEADO / OPERADOR (Responsive POS Shell + RBAC Guard)
  * ====================================================================
  * 
  * Propósito:
  * Proveer la estructura de diseño adaptativo para las terminales de ventas:
  * - Sidebar de escritorio con accesos a la operativa diaria.
  * - Drawer responsivo para tablets o teléfonos en línea de cajas.
- * - Cabecera móvil y pie de página institucional.
+ * - Validación de rol para restringir acceso si el usuario no tiene rol asignado.
+ * - Integración con control de jerarquía (Admin operando en caja).
  */
 
 import React, { useState } from 'react';
 import { Menu, X, UserCheck } from 'lucide-react';
 import { UserSidebar } from '@/views/user/UserSidebar';
 import { Footer } from '@/views/comunes/Footer';
+import { useRBAC } from '@/controllers/rbacController';
+import { ModalAccesoRestringido } from '@/views/comunes/ModalAccesoRestringido';
 
 export default function UserLayout({
   children,
@@ -23,13 +26,21 @@ export default function UserLayout({
   children: React.ReactNode;
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
+  const { esAdmin, esSinRol, cargando, cambiarRolSimulado } = useRBAC();
 
   return (
     <div className="min-h-screen bg-[#F8F7F2] text-[#1C2424] flex">
+      {/* Si el usuario no tiene rol asignado, bloquea la operación de caja */}
+      {!cargando && esSinRol && (
+        <ModalAccesoRestringido
+          tipo="sin_rol"
+          onCambiarRolDev={cambiarRolSimulado}
+        />
+      )}
+
       {/* Sidebar Desktop */}
       <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:w-64">
-        <UserSidebar />
+        <UserSidebar esAdmin={esAdmin} />
       </aside>
 
       {/* Mobile Drawer Backdrop */}
@@ -55,7 +66,10 @@ export default function UserLayout({
             <X className="h-5 w-5" />
           </button>
         </div>
-        <UserSidebar onNavigate={() => setMobileMenuOpen(false)} />
+        <UserSidebar
+          esAdmin={esAdmin}
+          onNavigate={() => setMobileMenuOpen(false)}
+        />
       </aside>
 
       {/* Main Content */}
@@ -78,12 +92,18 @@ export default function UserLayout({
             </div>
           </div>
           <span className="rounded-full bg-[#E2F1F0] px-2 py-0.5 text-xs font-semibold text-[#2A7A78] border border-[#2A7A78]/20">
-            Empleado
+            {esAdmin ? 'Admin en Caja' : 'Cajero / POS'}
           </span>
         </header>
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
-          {children}
+          {cargando ? (
+            <div className="flex items-center justify-center py-20 text-[#657373] text-sm">
+              Iniciando terminal de caja...
+            </div>
+          ) : (
+            children
+          )}
         </main>
 
         <Footer />

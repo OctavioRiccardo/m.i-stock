@@ -115,7 +115,7 @@ export function AdminSidebar({ onNavigate, className }: AdminSidebarProps = {}) 
           className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[#657373] hover:bg-black/5 hover:text-[#1C2424] transition-colors"
         >
           <ArrowLeftRight className="h-4 w-4" />
-          <span>Vista de Empleado / POS</span>
+          <span>Punto de Venta / Caja</span>
         </Link>
 
         <Link

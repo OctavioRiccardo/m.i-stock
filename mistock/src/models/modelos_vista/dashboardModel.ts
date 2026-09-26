@@ -5,8 +5,8 @@
  * 
  * Propósito:
  * Define las estructuras de datos agregadas consumidas por las vistas de panel:
- * - `AdminDashboardData`: Tarjetas KPI, resumen financiero, alertas de reposición.
- * - `UserDashboardData`: Punto de venta, ventas del día, catálogo rápido de despacho.
+ * - `AdminDashboardData`: Tarjetas KPI, resumen financiero, alertas de reposición y detalle de ventas.
+ * - `UserDashboardData`: Terminal de venta POS, ventas del día, catálogo rápido de despacho.
  * 
  * Razón de Existencia en la Arquitectura:
  * Estos modelos no coinciden 1:1 con ninguna tabla de base de datos; son proyecciones
@@ -14,91 +14,40 @@
  * la velocidad de renderizado de los componentes React.
  */
 
-
-/**
- * Representación simplificada de un producto para listas rápidas en el POS.
- */
-export interface Productos {
-  id: string;
-  nombre: string;
-  categoria: string;
-  precio: number;
-  stock: number;
-  codigo: string;
-}
-
-/**
- * Resumen consolidado para la pantalla operativa del empleado.
- */
-export interface UsuarioDashboard {
-  VentasDiarias: number;
-  GananciasDiarias: number;
-  TotalProductosEnStock: number;
-  VentasRecientes: {
-    id: string;
-    hora: string;
-    totalGanado: number;
-    cantidad: number;
-  }[];
-  ProductosMasVendidos: Productos[];
-}
-
-/**
- * Tarjeta de indicador clave de rendimiento (KPI) para el administrador.
- */
-export interface AdminMetricas {
-  titulo: string;
-  valor: string;
-  cambioPorcentaje?: string;
-  estado: 'positive' | 'negative' | 'neutral';
-}
-
-/**
- * Alerta prioritaria generada cuando un producto alcanza o cae por debajo de su umbral mínimo.
- */
-export interface AlertaStockBajo {
-  id: string;
-  productoNombre: string;
-  stockActual: number;
-  UmbralMinimo: number;
-  categoria: string;
-}
-
-/**
- * Estado general consumido por el panel del Administrador.
- */
-export interface AdminDashboard {
-  GananciasMensuales: number;
-  TotalProductos: number;
-  UsuariosActivos: number;
-  AlertasStockBajo: number;
-  metricas: AdminMetricas[];
-  alertasStockBajo: AlertaStockBajo[];
-  productosMasVendidos: ProductoRankingVentas[];
-  productosMenosVendidos: ProductoRankingVentas[];
-}
+import { MetodoPago, EstadoVenta } from '@/models/modelos_dominio/ventaModel';
 
 // ====================================================================
-// 2. Interfaces y Tipos de Compatibilidad para los Controladores
+// 1. Modelos de Vista para la Terminal de Ventas (Punto de Venta / POS)
 // ====================================================================
 
+/**
+ * Representación optimizada de un producto para listas rápidas en el POS.
+ */
 export interface ProductoRapidoPOS {
   id: string;
   nombre: string;
   categoria: string;
   precio: number;
   stock: number;
+  stockMinimo?: number;
   codigo: string;
 }
 export type QuickProduct = ProductoRapidoPOS;
 
+/**
+ * Registro simplificado de una venta concretada en caja para historial inmediato.
+ */
 export interface VentaRecientePOS {
   id: string;
   hora: string;
   montoTotal: number;
   cantidadItems: number;
+  metodoPago?: MetodoPago | string;
 }
 
+/**
+ * Estado general consumido por la terminal de ventas del cajero/vendedor.
+ */
 export interface UserDashboardData {
   ventasDelDia: number;
   recaudacionDelDia: number;
@@ -107,6 +56,13 @@ export interface UserDashboardData {
   productosPopulares: ProductoRapidoPOS[];
 }
 
+// ====================================================================
+// 2. Modelos de Vista para el Panel de Administración (KPIs & Alertas)
+// ====================================================================
+
+/**
+ * Tarjeta de indicador clave de rendimiento (KPI) para el administrador.
+ */
 export interface AdminMetricCard {
   title: string;
   value: string;
@@ -114,6 +70,9 @@ export interface AdminMetricCard {
   status: 'positive' | 'negative' | 'neutral';
 }
 
+/**
+ * Alerta generada cuando las existencias de un producto caen por debajo de su umbral mínimo.
+ */
 export interface AlertaStockCritico {
   id: string;
   nombreProducto: string;
@@ -123,6 +82,9 @@ export interface AlertaStockCritico {
 }
 export type LowStockAlert = AlertaStockCritico;
 
+/**
+ * Renglón de ranking para el informe de rotación de inventario (más y menos vendidos).
+ */
 export interface ProductoRankingVentas {
   id: string;
   nombre: string;
@@ -134,9 +96,9 @@ export interface ProductoRankingVentas {
   tendencia: 'alza' | 'baja' | 'estancada';
 }
 
-// Alias de compatibilidad
-import { MetodoPago, EstadoVenta } from '@/models/modelos_dominio/ventaModel';
-
+/**
+ * Métricas consolidadas de un período de facturación (semana / mes).
+ */
 export interface ResumenVentasPeriodo {
   totalRecaudado: number;
   cantidadVentas: number;
@@ -144,6 +106,9 @@ export interface ResumenVentasPeriodo {
   unidadesTotales: number;
 }
 
+/**
+ * Detalle individual de un comprobante de venta emitido.
+ */
 export interface DetalleVentaItem {
   id: string;
   codigoComprobante: string;
@@ -155,6 +120,9 @@ export interface DetalleVentaItem {
   estado: EstadoVenta;
 }
 
+/**
+ * Bloque de datos para el panel de análisis temporal de ventas.
+ */
 export interface VentasDetalleData {
   resumenSemana: ResumenVentasPeriodo;
   resumenMes: ResumenVentasPeriodo;
@@ -162,6 +130,9 @@ export interface VentasDetalleData {
   ventasMes: DetalleVentaItem[];
 }
 
+/**
+ * Estado general consumido por el panel principal del Administrador.
+ */
 export interface AdminDashboardData {
   monthlyRevenue: number;
   totalProducts: number;
@@ -173,5 +144,3 @@ export interface AdminDashboardData {
   productosMenosVendidos: ProductoRankingVentas[];
   ventasDetalle: VentasDetalleData;
 }
-
-

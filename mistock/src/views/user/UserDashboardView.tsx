@@ -2,19 +2,16 @@
 
 /**
  * ====================================================================
- * VISTA: TERMINAL DE VENTAS Y PANEL DEL EMPLEADO (Patrón MVC - View)
+ * VISTA: TERMINAL DE VENTAS Y CAJA (POS) (Patrón MVC - View)
  * ====================================================================
  * 
  * Propósito:
- * Proporcionar una pantalla ágil y simplificada para la operación diaria en caja:
+ * Proporcionar una pantalla ágil, moderna y precisa para la operación diaria en caja:
  * - Indicadores clave de la jornada (recaudación total, cantidad de ventas).
- * - Búsqueda en tiempo real por nombre o código de barras (SKU).
- * - Botón de venta rápida de un clic con descuento inmediato de stock.
- * - Registro visual de ventas recientes para control del cajero.
- * 
- * Rol en la Arquitectura:
- * - Es la capa "V" (View) para el rol de usuario/operador.
- * - Desacoplada de la base de datos; delega toda mutación a `useUserDashboardController`.
+ * - Búsqueda en tiempo real por nombre, código de barras o categoría.
+ * - Botón de venta rápida con descuento inmediato de stock y respeto a la regla de venta sin stock.
+ * - Selección rápida del método de cobro (Efectivo, Débito, Crédito, Transferencia).
+ * - Historial visual de ventas recientes con método de cobro e importe.
  */
 
 import React from 'react';
@@ -26,8 +23,13 @@ import {
   Clock,
   Plus,
   DollarSign,
+  AlertCircle,
+  Banknote,
+  CreditCard,
+  Smartphone,
 } from 'lucide-react';
 import { useUserDashboardController } from '@/controllers/userControllers/userDashboardController';
+import { MetodoPago } from '@/models/modelos_dominio/ventaModel';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -42,16 +44,10 @@ import {
 } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-/**
- * Props para la vista del panel del empleado.
- */
 interface UserDashboardViewProps {
   controller: ReturnType<typeof useUserDashboardController>;
 }
 
-/**
- * Componente de Vista para el Punto de Venta (POS) del empleado.
- */
 export function UserDashboardView({ controller }: UserDashboardViewProps) {
   const {
     data,
@@ -59,42 +55,111 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
     setSearchQuery,
     filteredProducts,
     saleSuccessMessage,
+    saleErrorMessage,
     handleQuickSale,
+    monedaSimbolo,
+    metodoSeleccionado,
+    setMetodoSeleccionado,
+    permitirVentaSinStock,
+    config,
   } = controller;
+
+  const metodosDisponibles: Array<{ id: MetodoPago; label: string; icon: React.ElementType; habilitado: boolean }> = [
+    { id: 'efectivo', label: 'Efectivo', icon: Banknote, habilitado: config.pos.metodosPagoHabilitados.efectivo },
+    { id: 'tarjeta_debito', label: 'Débito', icon: CreditCard, habilitado: config.pos.metodosPagoHabilitados.tarjeta_debito },
+    { id: 'tarjeta_credito', label: 'Crédito', icon: CreditCard, habilitado: config.pos.metodosPagoHabilitados.tarjeta_credito },
+    { id: 'transferencia', label: 'QR / Transf.', icon: Smartphone, habilitado: config.pos.metodosPagoHabilitados.transferencia },
+  ];
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#1C2424] tracking-tight">
-            Panel del Empleado
-          </h1>
-          <p className="text-sm text-[#657373]">
-            Consulta de catálogo y registro rápido de ventas en caja.
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-[#1C2424] tracking-tight">
+              Punto de Venta (POS)
+            </h1>
+            <Badge variant="outline" className="text-[#2A7A78] border-[#2A7A78] bg-[#E2F1F0]/50 text-xs">
+              Línea de Caja
+            </Badge>
+          </div>
+          <p className="text-sm text-[#657373] mt-1">
+            Consulta ágil de catálogo, despacho en mostrador y registro inmediato de cobros.
           </p>
         </div>
 
-        <Badge variant="default" className="text-xs py-1 px-3 self-start sm:self-auto">
-          Operación Activa
-        </Badge>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          {permitirVentaSinStock && (
+            <Badge variant="warning" className="text-xs">
+              Venta sin stock habilitada
+            </Badge>
+          )}
+          <Badge variant="default" className="text-xs py-1 px-3">
+            Caja Abierta
+          </Badge>
+        </div>
       </div>
 
-      {/* Sale Success Notification */}
+      {/* Selector de Método de Cobro Activo */}
+      <Card className="border-[#E8E6DF] shadow-xs">
+        <CardContent className="p-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-[#1C2424] uppercase tracking-wider">
+                Método de Cobro en Caja:
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {metodosDisponibles
+                .filter((m) => m.habilitado)
+                .map((m) => {
+                  const Icon = m.icon;
+                  const esActivo = metodoSeleccionado === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setMetodoSeleccionado(m.id)}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                        esActivo
+                          ? 'bg-[#2A7A78] text-white shadow-xs font-semibold'
+                          : 'bg-[#F8F7F2] text-[#657373] hover:text-[#1C2424] hover:bg-[#E8E6DF]/50 border border-[#E8E6DF]'
+                      }`}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                      <span>{m.label}</span>
+                    </button>
+                  );
+                })}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Notificaciones de Operación */}
       {saleSuccessMessage && (
-        <Alert variant="success">
+        <Alert variant="success" className="shadow-xs">
           <Check className="h-4 w-4" />
-          <AlertTitle>¡Venta Exitosa!</AlertTitle>
+          <AlertTitle>Cobro Registrado</AlertTitle>
           <AlertDescription>{saleSuccessMessage}</AlertDescription>
         </Alert>
       )}
 
-      {/* Quick Metrics */}
+      {saleErrorMessage && (
+        <Alert variant="destructive" className="shadow-xs">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Operación No Permitida</AlertTitle>
+          <AlertDescription>{saleErrorMessage}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Indicadores KPI del Turno */}
       <div id="resumen" className="grid grid-cols-1 sm:grid-cols-3 gap-4 scroll-mt-20">
-        <Card className="p-5">
+        <Card className="p-5 border-[#E8E6DF] shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-[#657373]">
-              Ventas del Día
+              Tickets Cobrados Hoy
             </span>
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78]">
               <ShoppingCart className="h-4 w-4" />
@@ -105,108 +170,134 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
           </p>
         </Card>
 
-        <Card className="p-5">
+        <Card className="p-5 border-[#E8E6DF] shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-[#657373]">
-              Recaudación Hoy
+              Recaudación de la Caja
             </span>
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78]">
               <DollarSign className="h-4 w-4" />
             </div>
           </div>
           <p className="text-2xl font-extrabold text-[#1C2424] tracking-tight mt-3">
-            ${data.recaudacionDelDia.toLocaleString('es-AR')}
+            {monedaSimbolo} {data.recaudacionDelDia.toLocaleString('es-AR')}
           </p>
         </Card>
 
-        <Card className="p-5">
+        <Card className="p-5 border-[#E8E6DF] shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-[#657373]">
-              Productos en Catálogo
+              Unidades Disponibles
             </span>
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78]">
               <Package className="h-4 w-4" />
             </div>
           </div>
           <p className="text-2xl font-extrabold text-[#1C2424] tracking-tight mt-3">
-            {data.totalProductosEnStock} ítems
+            {data.totalProductosEnStock} unidades
           </p>
         </Card>
       </div>
 
-      {/* Main Sections Grid */}
+      {/* Grid Principal: Catálogo Rápido + Ventas Recientes */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Catálogo y Registro Rápido */}
         <div id="productos" className="lg:col-span-7 scroll-mt-20">
-          <Card>
+          <Card className="border-[#E8E6DF] shadow-xs">
             <CardHeader className="pb-3 border-b border-[#E8E6DF]">
-              <CardTitle className="text-base font-bold text-[#1C2424]">
-                Catálogo y Registro Rápido
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base font-bold text-[#1C2424]">
+                  Catálogo y Despacho Rápido
+                </CardTitle>
+                <Badge variant="outline" className="text-xs text-[#657373]">
+                  {filteredProducts.length} productos
+                </Badge>
+              </div>
             </CardHeader>
 
             <CardContent className="pt-4 space-y-4">
               <div className="relative">
                 <Input
-                  placeholder="Buscar por nombre o código de barra (ej. 779001)..."
+                  placeholder="Buscar por nombre, código de barra (ej. 779001) o categoría..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
+                  className="pl-9 h-9 text-xs"
                 />
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-[#657373]" />
               </div>
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Producto</TableHead>
-                    <TableHead>Precio</TableHead>
-                    <TableHead>Stock</TableHead>
-                    <TableHead className="text-right">Acción</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredProducts.map((prod) => (
-                    <TableRow key={prod.id}>
-                      <TableCell>
-                        <div className="font-semibold text-sm text-[#1C2424]">{prod.nombre}</div>
-                        <div className="text-xs text-[#657373]">
-                          {prod.categoria} • Cod: {prod.codigo}
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-bold text-[#1C2424]">
-                        ${prod.precio.toLocaleString('es-AR')}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={prod.stock > 10 ? 'default' : 'destructive'}>
-                          {prod.stock} un.
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          onClick={() => handleQuickSale(prod.id)}
-                          disabled={prod.stock <= 0}
-                          className="gap-1"
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                          <span>Vender</span>
-                        </Button>
-                      </TableCell>
+              <div className="rounded-lg border border-[#E8E6DF] overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Producto</TableHead>
+                      <TableHead className="text-xs">Precio</TableHead>
+                      <TableHead className="text-xs">Disponibilidad</TableHead>
+                      <TableHead className="text-right text-xs">Acción</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredProducts.map((prod) => {
+                      const umbral = prod.stockMinimo ?? 5;
+                      const badgeVariant =
+                        prod.stock <= 0
+                          ? 'destructive'
+                          : prod.stock <= umbral
+                          ? 'warning'
+                          : 'success';
+
+                      const badgeText =
+                        prod.stock <= 0
+                          ? 'Sin stock'
+                          : prod.stock <= umbral
+                          ? `${prod.stock} un. (Bajo)`
+                          : `${prod.stock} un.`;
+
+                      const botonDeshabilitado = prod.stock <= 0 && !permitirVentaSinStock;
+
+                      return (
+                        <TableRow key={prod.id} className="hover:bg-[#F8F7F2]/50">
+                          <TableCell>
+                            <div className="font-semibold text-xs text-[#1C2424]">{prod.nombre}</div>
+                            <div className="text-[11px] text-[#657373]">
+                              {prod.categoria} • Cód: {prod.codigo}
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-bold text-xs text-[#1C2424]">
+                            {monedaSimbolo} {prod.precio.toLocaleString('es-AR')}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={badgeVariant} className="text-[10px]">
+                              {badgeText}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              size="sm"
+                              onClick={() => handleQuickSale(prod.id)}
+                              disabled={botonDeshabilitado}
+                              className="h-7 px-2.5 text-xs bg-[#2A7A78] hover:bg-[#205E5C] text-white shadow-xs gap-1 cursor-pointer disabled:opacity-50"
+                            >
+                              <Plus className="h-3 w-3" />
+                              <span>Vender</span>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Ventas Recientes */}
         <div id="historial" className="lg:col-span-5 scroll-mt-20">
-          <Card>
+          <Card className="border-[#E8E6DF] shadow-xs">
             <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-[#E8E6DF]">
               <CardTitle className="text-base font-bold text-[#1C2424]">
-                Ventas Recientes
+                Ventas Recientes en Caja
               </CardTitle>
               <Clock className="h-4 w-4 text-[#2A7A78]" />
             </CardHeader>
@@ -215,16 +306,23 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
               {data.ventasRecientes.map((sale) => (
                 <div
                   key={sale.id}
-                  className="flex items-center justify-between p-3 rounded-lg border border-[#E8E6DF] bg-white"
+                  className="flex items-center justify-between p-3 rounded-lg border border-[#E8E6DF] bg-white hover:bg-[#F8F7F2]/40 transition-colors"
                 >
                   <div>
-                    <p className="text-xs font-bold text-[#1C2424]">{sale.id}</p>
-                    <p className="text-xs text-[#657373]">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-xs font-bold text-[#1C2424]">{sale.id}</p>
+                      {sale.metodoPago && (
+                        <Badge variant="outline" className="text-[9px] uppercase px-1.5 py-0">
+                          {sale.metodoPago.replace('_', ' ')}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-[#657373] mt-0.5">
                       Hora: {sale.hora} • {sale.cantidadItems} ítem(s)
                     </p>
                   </div>
                   <span className="text-sm font-extrabold text-[#2A7A78]">
-                    ${sale.montoTotal.toLocaleString('es-AR')}
+                    {monedaSimbolo} {sale.montoTotal.toLocaleString('es-AR')}
                   </span>
                 </div>
               ))}

@@ -37,9 +37,10 @@ const userNavData = [
 interface UserSidebarProps {
   onNavigate?: () => void;
   className?: string;
+  esAdmin?: boolean;
 }
 
-export function UserSidebar({ onNavigate, className }: UserSidebarProps = {}) {
+export function UserSidebar({ onNavigate, className, esAdmin = false }: UserSidebarProps = {}) {
   const [active, setActive] = useState('Ventas y Operación');
 
   return (
@@ -54,7 +55,7 @@ export function UserSidebar({ onNavigate, className }: UserSidebarProps = {}) {
             <h1 className="text-base font-bold text-[#1C2424] tracking-tight leading-none">
               M.I Stock
             </h1>
-            <span className="text-[11px] font-medium text-[#657373]">Panel Empleado</span>
+            <span className="text-[11px] font-medium text-[#657373]">Punto de Venta (POS)</span>
           </div>
         </div>
         <span className="rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-[#657373] border border-gray-200">
@@ -96,14 +97,17 @@ export function UserSidebar({ onNavigate, className }: UserSidebarProps = {}) {
 
       {/* Footer */}
       <div className="p-3 border-t border-[#E8E6DF] space-y-1">
-        <Link
-          href="/admin"
-          onClick={() => onNavigate?.()}
-          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[#657373] hover:bg-black/5 hover:text-[#1C2424] transition-colors"
-        >
-          <ArrowLeftRight className="h-4 w-4" />
-          <span>Vista de Administrador</span>
-        </Link>
+        {/* Solo visible si el usuario activo tiene rol de Administrador */}
+        {esAdmin && (
+          <Link
+            href="/admin"
+            onClick={() => onNavigate?.()}
+            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[#657373] hover:bg-black/5 hover:text-[#1C2424] transition-colors"
+          >
+            <ArrowLeftRight className="h-4 w-4" />
+            <span>Volver a Administración</span>
+          </Link>
+        )}
 
         <Link
           href="/logout"

@@ -115,8 +115,18 @@ export function useLoginController() {
       }
 
       if (data.session) {
-        // Navegación segura hacia el dashboard del administrador
-        router.push('/admin');
+        // Consultar el rol del usuario en public.usuario para dirigirlo a su panel correspondiente
+        const { data: usuarioData } = await supabase
+          .from('usuario')
+          .select('rol')
+          .eq('id_usuario', data.session.user.id)
+          .maybeSingle();
+
+        if (usuarioData?.rol === 'vendedor') {
+          router.push('/dashboard');
+        } else {
+          router.push('/admin');
+        }
         router.refresh();
       }
     } catch (err: unknown) {
