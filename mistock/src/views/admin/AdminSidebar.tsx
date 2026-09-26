@@ -24,7 +24,6 @@ import {
   Boxes,
   Users,
   Layers,
-  AlertTriangle,
   Settings,
   LogOut,
   ArrowLeftRight,
@@ -40,7 +39,6 @@ const adminNavData = [
   { link: '/admingestioninven', label: 'Gestión de Inventario', icon: Boxes },
   { link: '/adminusuarios', label: 'Gestión de Usuarios', icon: Users },
   { link: '/admininventarioglobal', label: 'Inventario Global', icon: Layers },
-  { link: '/adminstockcritico', label: 'Stock Crítico', icon: AlertTriangle },
   { link: '/adminconfiguracion', label: 'Configuración', icon: Settings },
 ];
 

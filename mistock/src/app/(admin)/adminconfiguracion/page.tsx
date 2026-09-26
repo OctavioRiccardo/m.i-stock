@@ -2,18 +2,20 @@
 
 /**
  * ====================================================================
- * RUTA: /adminconfiguracion (Configuración del Sistema - En Progreso)
+ * RUTA: /adminconfiguracion (Configuración General del Sistema)
  * ====================================================================
+ * 
+ * Implementación MVC:
+ * - View: AdminConfiguracionView
+ * - Controller: useAdminConfiguracionController
+ * - Model: configuracionModel
  */
 
 import React from 'react';
-import { EnProgresoView } from '@/views/admin/EnProgresoView';
+import { useAdminConfiguracionController } from '@/controllers/adminControllers/configuracionController';
+import { AdminConfiguracionView } from '@/views/admin/AdminConfiguracionView';
 
 export default function AdminConfiguracionPage() {
-  return (
-    <EnProgresoView
-      seccion="Configuración"
-      icono="configuracion"
-    />
-  );
+  const controller = useAdminConfiguracionController();
+  return <AdminConfiguracionView controller={controller} />;
 }

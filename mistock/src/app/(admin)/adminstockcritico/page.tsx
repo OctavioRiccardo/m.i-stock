@@ -1,19 +1,15 @@
-'use client';
-
 /**
  * ====================================================================
- * RUTA: /adminstockcritico (Stock Crítico - En Progreso)
+ * RUTA: /adminstockcritico (Redirección Canónica a /admin)
  * ====================================================================
+ * 
+ * Rol en la Arquitectura:
+ * Redirige hacia `/admin` donde se gestionan las alertas de stock crítico
+ * y la reposición de mercadería integrada en el dashboard.
  */
 
-import React from 'react';
-import { EnProgresoView } from '@/views/admin/EnProgresoView';
+import { redirect } from 'next/navigation';
 
 export default function AdminStockCriticoPage() {
-  return (
-    <EnProgresoView
-      seccion="Stock Crítico"
-      icono="stock"
-    />
-  );
+  redirect('/admin');
 }

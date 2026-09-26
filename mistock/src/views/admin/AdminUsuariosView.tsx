@@ -530,11 +530,11 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                                 Activo
                               </Badge>
                             ) : usr.estado === 'suspendido' ? (
-                              <Badge variant="destructive" className="text-xs bg-red-600 hover:bg-red-600">
+                              <Badge variant="destructive" className="text-xs">
                                 Suspendido
                               </Badge>
                             ) : (
-                              <Badge variant="destructive" className="text-xs bg-gray-500 hover:bg-gray-500">
+                              <Badge variant="secondary" className="text-xs">
                                 Inactivo
                               </Badge>
                             )}

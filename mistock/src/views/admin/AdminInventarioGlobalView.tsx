@@ -576,10 +576,7 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
                                 Sin Stock
                               </Badge>
                             ) : esBajoStock ? (
-                              <Badge
-                                variant="destructive"
-                                className="text-xs bg-amber-600 hover:bg-amber-600"
-                              >
+                              <Badge variant="warning" className="text-xs">
                                 Stock Crítico
                               </Badge>
                             ) : (
