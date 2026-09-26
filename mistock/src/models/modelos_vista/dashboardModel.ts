@@ -14,7 +14,7 @@
  * la velocidad de renderizado de los componentes React.
  */
 
-import { MetodoPago, EstadoVenta } from '@/models/modelos_dominio/ventaModel';
+import { MetodoPago, EstadoVenta, DetalleVenta, Pago } from '@/models/modelos_dominio/ventaModel';
 
 // ====================================================================
 // 1. Modelos de Vista para la Terminal de Ventas (Punto de Venta / POS)
@@ -35,14 +35,19 @@ export interface ProductoRapidoPOS {
 export type QuickProduct = ProductoRapidoPOS;
 
 /**
- * Registro simplificado de una venta concretada en caja para historial inmediato.
+ * Registro de una venta concretada en caja con su desglose de renglones (DetalleVenta).
  */
 export interface VentaRecientePOS {
   id: string;
   hora: string;
+  fecha?: string;
   montoTotal: number;
   cantidadItems: number;
   metodoPago?: MetodoPago | string;
+  vendedor?: string;
+  items: DetalleVenta[];
+  pagos?: Pago[];
+  estado?: EstadoVenta;
 }
 
 /**

@@ -13,10 +13,10 @@
  * - Descuento automático de stock y seguimiento de métricas diarias de caja.
  */
 
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { UserDashboardData, ProductoRapidoPOS, VentaRecientePOS } from '@/models/modelos_vista/dashboardModel';
 import { initialProductos } from '@/models/mock_data/inventarioMock';
-import { MetodoPago } from '@/models/modelos_dominio/ventaModel';
+import { MetodoPago, DetalleVenta } from '@/models/modelos_dominio/ventaModel';
 import {
   ConfiguracionCompleta,
   valoresPorDefectoConfiguracion,
@@ -38,16 +38,197 @@ const initialProductosPOS: ProductoRapidoPOS[] = initialProductos.map((p) => ({
 }));
 
 /**
- * Datos simulados iniciales para la terminal de ventas del cajero.
+ * Datos simulados iniciales para la terminal de ventas del cajero con renglones (DetalleVenta).
  */
 const initialMockUserData: UserDashboardData = {
   ventasDelDia: 14,
   recaudacionDelDia: 48500,
   totalProductosEnStock: initialProductosPOS.reduce((acc, p) => acc + p.stock, 0),
   ventasRecientes: [
-    { id: 'VNT-101', hora: '10:45', montoTotal: 3500, cantidadItems: 2, metodoPago: 'efectivo' },
-    { id: 'VNT-102', hora: '11:15', montoTotal: 12000, cantidadItems: 5, metodoPago: 'tarjeta_debito' },
-    { id: 'VNT-103', hora: '12:00', montoTotal: 4800, cantidadItems: 1, metodoPago: 'transferencia' },
+    {
+      id: 'VNT-101',
+      hora: '10:45',
+      fecha: '26/09/2026',
+      montoTotal: 3500,
+      cantidadItems: 2,
+      metodoPago: 'efectivo',
+      vendedor: 'Lucas Benítez',
+      items: [
+        {
+          id: 'DET-101-1',
+          ventaId: 'VNT-101',
+          productoId: 'prod-1',
+          nombreProducto: 'Aceite de Girasol 1.5L',
+          codigoProducto: '779001',
+          cantidad: 1,
+          precioUnitario: 2450,
+          subtotal: 2450,
+        },
+        {
+          id: 'DET-101-2',
+          ventaId: 'VNT-101',
+          productoId: 'prod-2',
+          nombreProducto: 'Fideos Guiseros 500g',
+          codigoProducto: '779002',
+          cantidad: 1,
+          precioUnitario: 1050,
+          subtotal: 1050,
+        },
+      ],
+      estado: 'completada',
+    },
+    {
+      id: 'VNT-102',
+      hora: '11:15',
+      fecha: '26/09/2026',
+      montoTotal: 12000,
+      cantidadItems: 5,
+      metodoPago: 'tarjeta_debito',
+      vendedor: 'Camila Fernández',
+      items: [
+        {
+          id: 'DET-102-1',
+          ventaId: 'VNT-102',
+          productoId: 'prod-7',
+          nombreProducto: 'Jabón Líquido Ropa 3L',
+          codigoProducto: '779007',
+          cantidad: 2,
+          precioUnitario: 4500,
+          subtotal: 9000,
+        },
+        {
+          id: 'DET-102-2',
+          ventaId: 'VNT-102',
+          productoId: 'prod-8',
+          nombreProducto: 'Lavandina Clásica 1L',
+          codigoProducto: '779008',
+          cantidad: 3,
+          precioUnitario: 1000,
+          subtotal: 3000,
+        },
+      ],
+      estado: 'completada',
+    },
+    {
+      id: 'VNT-103',
+      hora: '12:00',
+      fecha: '26/09/2026',
+      montoTotal: 4800,
+      cantidadItems: 4,
+      metodoPago: 'transferencia',
+      vendedor: 'Lucas Benítez',
+      items: [
+        {
+          id: 'DET-103-1',
+          ventaId: 'VNT-103',
+          productoId: 'prod-5',
+          nombreProducto: 'Leche Entera Larga Vida 1L',
+          codigoProducto: '779005',
+          cantidad: 4,
+          precioUnitario: 1200,
+          subtotal: 4800,
+        },
+      ],
+      estado: 'completada',
+    },
+    {
+      id: 'VNT-104',
+      hora: '13:20',
+      fecha: '26/09/2026',
+      montoTotal: 5800,
+      cantidadItems: 2,
+      metodoPago: 'efectivo',
+      vendedor: 'Mateo Rossi',
+      items: [
+        {
+          id: 'DET-104-1',
+          ventaId: 'VNT-104',
+          productoId: 'prod-4',
+          nombreProducto: 'Café Tostado Molido 250g',
+          codigoProducto: '779004',
+          cantidad: 2,
+          precioUnitario: 2900,
+          subtotal: 5800,
+        },
+      ],
+      estado: 'completada',
+    },
+    {
+      id: 'VNT-105',
+      hora: '14:10',
+      fecha: '26/09/2026',
+      montoTotal: 2700,
+      cantidadItems: 2,
+      metodoPago: 'efectivo',
+      vendedor: 'Camila Fernández',
+      items: [
+        {
+          id: 'DET-105-1',
+          ventaId: 'VNT-105',
+          productoId: 'prod-6',
+          nombreProducto: 'Galletitas Surtidas 400g',
+          codigoProducto: '779006',
+          cantidad: 2,
+          precioUnitario: 1350,
+          subtotal: 2700,
+        },
+      ],
+      estado: 'completada',
+    },
+    {
+      id: 'VNT-106',
+      hora: '15:05',
+      fecha: '26/09/2026',
+      montoTotal: 7200,
+      cantidadItems: 3,
+      metodoPago: 'tarjeta_credito',
+      vendedor: 'Lucas Benítez',
+      items: [
+        {
+          id: 'DET-106-1',
+          ventaId: 'VNT-106',
+          productoId: 'prod-9',
+          nombreProducto: 'Detergente Lavavajillas 750ml',
+          codigoProducto: '779009',
+          cantidad: 1,
+          precioUnitario: 1800,
+          subtotal: 1800,
+        },
+        {
+          id: 'DET-106-2',
+          ventaId: 'VNT-106',
+          productoId: 'prod-10',
+          nombreProducto: 'Papel Higiénico 4u',
+          codigoProducto: '779010',
+          cantidad: 2,
+          precioUnitario: 2700,
+          subtotal: 5400,
+        },
+      ],
+      estado: 'completada',
+    },
+    {
+      id: 'VNT-107',
+      hora: '16:30',
+      fecha: '26/09/2026',
+      montoTotal: 3600,
+      cantidadItems: 3,
+      metodoPago: 'efectivo',
+      vendedor: 'Mateo Rossi',
+      items: [
+        {
+          id: 'DET-107-1',
+          ventaId: 'VNT-107',
+          productoId: 'prod-11',
+          nombreProducto: 'Gaseosa Cola 1.5L',
+          codigoProducto: '779011',
+          cantidad: 3,
+          precioUnitario: 1200,
+          subtotal: 3600,
+        },
+      ],
+      estado: 'completada',
+    },
   ],
   productosPopulares: initialProductosPOS,
 };
@@ -83,22 +264,77 @@ export function useUserDashboardController() {
   const monedaSimbolo = config.negocio.monedaSimbolo || '$';
   const permitirVentaSinStock = config.pos.permitirVentaSinStock;
 
+  // Filtro por categoría y paginación
+  const [categoriaFiltro, setCategoriaFiltro] = useState<string>('todas');
+  const [pagina, setPagina] = useState<number>(1);
+  const itemsPorPagina = 6;
+
+  // Extracción dinámica de categorías disponibles
+  const categorias = useMemo(() => {
+    const cats = Array.from(new Set(data.productosPopulares.map((p) => p.categoria))).filter(Boolean);
+    return cats.sort();
+  }, [data.productosPopulares]);
+
+  // Conteo de productos por categoría
+  const conteosPorCategoria = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const p of data.productosPopulares) {
+      counts[p.categoria] = (counts[p.categoria] || 0) + 1;
+    }
+    return counts;
+  }, [data.productosPopulares]);
+
+  // Reset de página al cambiar filtros
+  useEffect(() => {
+    setPagina(1);
+  }, [searchQuery, categoriaFiltro]);
+
   // Filtrado reactivo en tiempo real para búsqueda instantánea en el punto de venta
-  const filteredProducts = data.productosPopulares.filter(
-    (product) =>
-      product.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.codigo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.categoria.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredProducts = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    const filtroCat = categoriaFiltro.toLowerCase();
+
+    return data.productosPopulares.filter((product) => {
+      const coincideTexto =
+        !query ||
+        product.nombre.toLowerCase().includes(query) ||
+        product.codigo.toLowerCase().includes(query) ||
+        product.categoria.toLowerCase().includes(query);
+
+      const coincideCategoria =
+        filtroCat === 'todas' ||
+        product.categoria.toLowerCase() === filtroCat;
+
+      return coincideTexto && coincideCategoria;
+    });
+  }, [data.productosPopulares, searchQuery, categoriaFiltro]);
+
+  // Cálculos de paginación para Catálogo
+  const totalPaginas = Math.max(1, Math.ceil(filteredProducts.length / itemsPorPagina));
+  const inicioPaginacion = (pagina - 1) * itemsPorPagina;
+  const productosPaginados = filteredProducts.slice(
+    inicioPaginacion,
+    inicioPaginacion + itemsPorPagina
+  );
+
+  // Paginación para Ventas Recientes en Caja
+  const [paginaVentas, setPaginaVentas] = useState<number>(1);
+  const itemsPorPaginaVentas = 4;
+  const totalPaginasVentas = Math.max(1, Math.ceil(data.ventasRecientes.length / itemsPorPaginaVentas));
+  const inicioPaginacionVentas = (paginaVentas - 1) * itemsPorPaginaVentas;
+  const ventasRecientesPaginadas = data.ventasRecientes.slice(
+    inicioPaginacionVentas,
+    inicioPaginacionVentas + itemsPorPaginaVentas
   );
 
   /**
-   * Procesa una venta rápida de 1 unidad del producto seleccionado:
-   * 1. Verifica disponibilidad de stock según la directiva `permitirVentaSinStock`.
-   * 2. Decrementa en 1 unidad el stock actual del producto (permite negativo solo si está habilitado).
-   * 3. Incrementa el contador de ventas del día y el total monetario recaudado.
-   * 4. Registra la transacción con timestamp local y método de pago utilizado.
+   * Registra una venta en efectivo especificando cantidad y monto recibido para cálculo de vuelto.
    */
-  const handleQuickSale = (productId: string, metodoOverride?: MetodoPago) => {
+  const registrarVentaEfectivo = (
+    productId: string,
+    cantidad: number = 1,
+    montoRecibido?: number
+  ): boolean => {
     setLoading(true);
     setSaleErrorMessage(null);
     setSaleSuccessMessage(null);
@@ -107,50 +343,185 @@ export function useUserDashboardController() {
 
     if (!product) {
       setLoading(false);
-      return;
+      return false;
     }
 
-    // Validación de existencia de stock conforme a la directiva de configuración
-    if (product.stock <= 0 && !permitirVentaSinStock) {
-      setSaleErrorMessage(`Stock agotado para "${product.nombre}". La venta sin stock está bloqueada en la configuración del sistema.`);
+    if (cantidad <= 0) {
+      setSaleErrorMessage('La cantidad a vender debe ser de al menos 1 unidad.');
+      setLoading(false);
+      setTimeout(() => setSaleErrorMessage(null), 3500);
+      return false;
+    }
+
+    if (product.stock < cantidad && !permitirVentaSinStock) {
+      setSaleErrorMessage(
+        `Stock insuficiente para "${product.nombre}". Disponible: ${product.stock} un. Solicitado: ${cantidad} un.`
+      );
       setLoading(false);
       setTimeout(() => setSaleErrorMessage(null), 4000);
-      return;
+      return false;
     }
 
-    const metodoPagoUsado = metodoOverride || metodoSeleccionado;
+    const totalVenta = product.precio * cantidad;
+    const vuelto = montoRecibido !== undefined && montoRecibido >= totalVenta ? montoRecibido - totalVenta : 0;
 
-    // Decremento reactivo de stock en el catálogo local
     const updatedProducts = data.productosPopulares.map((p) =>
-      p.id === productId ? { ...p, stock: p.stock - 1 } : p
+      p.id === productId ? { ...p, stock: p.stock - cantidad } : p
     );
 
-    // Creación del comprobante de venta reciente
-    const newSale: VentaRecientePOS = {
-      id: `VNT-${Date.now().toString().slice(-4)}`,
-      hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      montoTotal: product.precio,
-      cantidadItems: 1,
-      metodoPago: metodoPagoUsado,
+    const ventaId = `VNT-${Date.now().toString().slice(-4)}`;
+    const nuevoDetalle: DetalleVenta = {
+      id: `DET-${Date.now().toString().slice(-4)}`,
+      ventaId: ventaId,
+      productoId: product.id,
+      nombreProducto: product.nombre,
+      codigoProducto: product.codigo,
+      cantidad: cantidad,
+      precioUnitario: product.precio,
+      subtotal: totalVenta,
     };
 
-    // Actualización de indicadores diarios del cajero
+    const newSale: VentaRecientePOS = {
+      id: ventaId,
+      hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      fecha: new Date().toLocaleDateString('es-AR'),
+      montoTotal: totalVenta,
+      cantidadItems: cantidad,
+      metodoPago: 'efectivo',
+      vendedor: 'Cajero en Turno',
+      items: [nuevoDetalle],
+      pagos: [
+        {
+          id: `PAG-${Date.now().toString().slice(-4)}`,
+          ventaId: ventaId,
+          metodo: 'efectivo',
+          total: totalVenta,
+        },
+      ],
+      estado: 'completada',
+    };
+
     setData((prev) => ({
       ...prev,
       ventasDelDia: prev.ventasDelDia + 1,
-      recaudacionDelDia: prev.recaudacionDelDia + product.precio,
-      totalProductosEnStock: Math.max(0, prev.totalProductosEnStock - 1),
+      recaudacionDelDia: prev.recaudacionDelDia + totalVenta,
+      totalProductosEnStock: Math.max(0, prev.totalProductosEnStock - cantidad),
       productosPopulares: updatedProducts,
       ventasRecientes: [newSale, ...prev.ventasRecientes],
     }));
 
+    // Asegurar que la nueva venta aparezca en la primera página
+    setPaginaVentas(1);
+
+    const textoVuelto = vuelto > 0 ? ` • Vuelto entregado: ${monedaSimbolo} ${vuelto.toLocaleString('es-AR')}` : '';
     setSaleSuccessMessage(
-      `Venta cobrada: ${product.nombre} (${monedaSimbolo} ${product.precio.toLocaleString('es-AR')}) vía ${metodoPagoUsado.replace('_', ' ')}`
+      `Venta en efectivo registrada: ${cantidad}x ${product.nombre} (${monedaSimbolo} ${totalVenta.toLocaleString('es-AR')})${textoVuelto}`
     );
     setLoading(false);
+    setTimeout(() => setSaleSuccessMessage(null), 4000);
+    return true;
+  };
 
-    // Limpieza automática del banner de confirmación a los 3.5 segundos
-    setTimeout(() => setSaleSuccessMessage(null), 3500);
+  /**
+   * Registra una venta mediante Mercado Pago (QR / Transferencia).
+   */
+  const registrarVentaMercadoPago = (
+    productId: string,
+    cantidad: number = 1
+  ): boolean => {
+    setLoading(true);
+    setSaleErrorMessage(null);
+    setSaleSuccessMessage(null);
+
+    const product = data.productosPopulares.find((p) => p.id === productId);
+
+    if (!product) {
+      setLoading(false);
+      return false;
+    }
+
+    if (cantidad <= 0) {
+      setSaleErrorMessage('La cantidad a vender debe ser de al menos 1 unidad.');
+      setLoading(false);
+      setTimeout(() => setSaleErrorMessage(null), 3500);
+      return false;
+    }
+
+    if (product.stock < cantidad && !permitirVentaSinStock) {
+      setSaleErrorMessage(
+        `Stock insuficiente para "${product.nombre}". Disponible: ${product.stock} un. Solicitado: ${cantidad} un.`
+      );
+      setLoading(false);
+      setTimeout(() => setSaleErrorMessage(null), 4000);
+      return false;
+    }
+
+    const totalVenta = product.precio * cantidad;
+
+    const updatedProducts = data.productosPopulares.map((p) =>
+      p.id === productId ? { ...p, stock: p.stock - cantidad } : p
+    );
+
+    const ventaId = `VNT-${Date.now().toString().slice(-4)}`;
+    const nuevoDetalle = {
+      id: `DET-${Date.now().toString().slice(-4)}`,
+      ventaId: ventaId,
+      productoId: product.id,
+      nombreProducto: product.nombre,
+      codigoProducto: product.codigo,
+      cantidad: cantidad,
+      precioUnitario: product.precio,
+      subtotal: totalVenta,
+    };
+
+    const newSale: VentaRecientePOS = {
+      id: ventaId,
+      hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      fecha: new Date().toLocaleDateString('es-AR'),
+      montoTotal: totalVenta,
+      cantidadItems: cantidad,
+      metodoPago: 'mercado_pago',
+      vendedor: 'Cajero en Turno',
+      items: [nuevoDetalle],
+      pagos: [
+        {
+          id: `PAG-${Date.now().toString().slice(-4)}`,
+          ventaId: ventaId,
+          metodo: 'mercado_pago',
+          total: totalVenta,
+        },
+      ],
+      estado: 'completada',
+    };
+
+    setData((prev) => ({
+      ...prev,
+      ventasDelDia: prev.ventasDelDia + 1,
+      recaudacionDelDia: prev.recaudacionDelDia + totalVenta,
+      totalProductosEnStock: Math.max(0, prev.totalProductosEnStock - cantidad),
+      productosPopulares: updatedProducts,
+      ventasRecientes: [newSale, ...prev.ventasRecientes],
+    }));
+
+    setPaginaVentas(1);
+
+    setSaleSuccessMessage(
+      `Venta con Mercado Pago registrada: ${cantidad}x ${product.nombre} (${monedaSimbolo} ${totalVenta.toLocaleString('es-AR')}) • Cobro acreditado vía QR`
+    );
+    setLoading(false);
+    setTimeout(() => setSaleSuccessMessage(null), 4000);
+    return true;
+  };
+
+  /**
+   * Procesa una venta rápida de 1 unidad del producto seleccionado (compatibilidad).
+   */
+  const handleQuickSale = (productId: string, metodoOverride?: MetodoPago) => {
+    const metodo = metodoOverride || metodoSeleccionado;
+    if (metodo === 'mercado_pago') {
+      return registrarVentaMercadoPago(productId, 1);
+    }
+    return registrarVentaEfectivo(productId, 1);
   };
 
   return {
@@ -158,10 +529,28 @@ export function useUserDashboardController() {
     loading,
     searchQuery,
     setSearchQuery,
+    categoriaFiltro,
+    setCategoriaFiltro,
+    categorias,
+    conteosPorCategoria,
+    pagina,
+    setPagina,
+    totalPaginas,
+    inicioPaginacion,
+    itemsPorPagina,
     filteredProducts,
+    productosPaginados,
+    paginaVentas,
+    setPaginaVentas,
+    totalPaginasVentas,
+    inicioPaginacionVentas,
+    itemsPorPaginaVentas,
+    ventasRecientesPaginadas,
     saleSuccessMessage,
     saleErrorMessage,
     handleQuickSale,
+    registrarVentaEfectivo,
+    registrarVentaMercadoPago,
     monedaSimbolo,
     metodoSeleccionado,
     setMetodoSeleccionado,

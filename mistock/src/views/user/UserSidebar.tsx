@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils';
  * Enlaces de navegación rápida para la operativa de ventas.
  */
 const userNavData = [
-  { link: '/dashboard', label: 'Ventas y Operación', icon: ShoppingCart },
+  { link: '/dashboard', label: 'Ventas y Operaciones', icon: ShoppingCart },
   { link: '/dashboard#productos', label: 'Catálogo de Productos', icon: Package },
   { link: '/dashboard#historial', label: 'Historial del Día', icon: Receipt },
   { link: '/dashboard#resumen', label: 'Resumen de Stock', icon: ListCheck },
@@ -41,7 +41,7 @@ interface UserSidebarProps {
 }
 
 export function UserSidebar({ onNavigate, className, esAdmin = false }: UserSidebarProps = {}) {
-  const [active, setActive] = useState('Ventas y Operación');
+  const [active, setActive] = useState('Ventas y Operaciones');
 
   return (
     <nav className={cn('flex flex-col h-full bg-white border-r border-[#E8E6DF] w-64', className)}>

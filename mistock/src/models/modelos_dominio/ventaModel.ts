@@ -27,6 +27,7 @@ export type MetodoPago =
   | 'tarjeta_debito'
   | 'tarjeta_credito'
   | 'transferencia'
+  | 'mercado_pago'
   | 'otro';
 
 /**
@@ -121,9 +122,10 @@ export function toVenta(
   pagos: Pago[] = [],
   nombreVendedor?: string
 ): Venta {
-  const metodoPrincipal: MetodoPago = pagos.length > 0 && pagos[0].metodo in ['efectivo', 'tarjeta_debito', 'tarjeta_credito', 'transferencia']
-    ? (pagos[0].metodo as MetodoPago)
-    : 'efectivo';
+  const metodoPrincipal: MetodoPago =
+    pagos.length > 0 && ['efectivo', 'tarjeta_debito', 'tarjeta_credito', 'transferencia', 'mercado_pago'].includes(pagos[0].metodo)
+      ? (pagos[0].metodo as MetodoPago)
+      : 'efectivo';
 
   return {
     id: row.id_venta,

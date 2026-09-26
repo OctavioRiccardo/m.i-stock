@@ -134,6 +134,8 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
         return <Badge variant="secondary" className="text-xs font-medium">Crédito</Badge>;
       case 'transferencia':
         return <Badge variant="outline" className="text-xs font-medium">Transferencia</Badge>;
+      case 'mercado_pago':
+        return <Badge className="text-xs font-medium bg-[#009EE3] text-white hover:bg-[#0082ba]">Mercado Pago</Badge>;
       default:
         return <Badge variant="secondary" className="text-xs font-medium">Otro</Badge>;
     }
