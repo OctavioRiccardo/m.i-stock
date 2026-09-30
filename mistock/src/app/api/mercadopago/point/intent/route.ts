@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { crearIntencionPagoPoint } from '@/apis/mercadopago';
+import { crearIntencionPagoPoint } from '@/services/mercadopago';
 
 /**
  * POST /api/mercadopago/point/intent

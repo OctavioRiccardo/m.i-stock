@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   obtenerEstadoIntencionPoint,
   cancelarIntencionPagoPoint,
-} from '@/apis/mercadopago';
+} from '@/services/mercadopago';
 
 interface RouteContext {
   params: Promise<{ id: string }>;

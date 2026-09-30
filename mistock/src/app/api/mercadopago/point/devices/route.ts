@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { listarDispositivosPoint } from '@/apis/mercadopago';
+import { listarDispositivosPoint } from '@/services/mercadopago';
 
 /**
  * GET /api/mercadopago/point/devices

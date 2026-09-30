@@ -3,7 +3,7 @@ import {
   procesarWebhookPoint,
   validarFirmaWebhook,
   PointWebhookPayload,
-} from '@/apis/mercadopago';
+} from '@/services/mercadopago';
 
 /**
  * POST /api/mercadopago/webhook
