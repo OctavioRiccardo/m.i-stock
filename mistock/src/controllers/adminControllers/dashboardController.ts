@@ -487,6 +487,34 @@ const initialMockAdminData: AdminDashboardData = {
       },
     ],
   },
+  graficos: {
+    tendenciaSemana: [
+      { fecha: 'Lun', 'Recaudación Actual': 48000, 'Período Anterior': 42000 },
+      { fecha: 'Mar', 'Recaudación Actual': 56500, 'Período Anterior': 49000 },
+      { fecha: 'Mié', 'Recaudación Actual': 62000, 'Período Anterior': 54000 },
+      { fecha: 'Jue', 'Recaudación Actual': 58400, 'Período Anterior': 51000 },
+      { fecha: 'Vie', 'Recaudación Actual': 74000, 'Período Anterior': 68000 },
+      { fecha: 'Sáb', 'Recaudación Actual': 86500, 'Período Anterior': 78000 },
+    ],
+    tendenciaMes: [
+      { fecha: 'Semana 1', 'Recaudación Actual': 320000, 'Período Anterior': 290000 },
+      { fecha: 'Semana 2', 'Recaudación Actual': 385400, 'Período Anterior': 340000 },
+      { fecha: 'Semana 3', 'Recaudación Actual': 365000, 'Período Anterior': 350000 },
+      { fecha: 'Semana 4', 'Recaudación Actual': 379600, 'Período Anterior': 360000 },
+    ],
+    distribucionPagosSemana: [
+      { metodo: 'Mercado Pago (Point)', monto: 154200, porcentaje: 40 },
+      { metodo: 'Efectivo', monto: 142600, porcentaje: 37 },
+      { metodo: 'Transferencia', monto: 57800, porcentaje: 15 },
+      { metodo: 'Tarjeta Débito/Crédito', monto: 30800, porcentaje: 8 },
+    ],
+    distribucionPagosMes: [
+      { metodo: 'Mercado Pago (Point)', monto: 580000, porcentaje: 40 },
+      { metodo: 'Efectivo', monto: 536500, porcentaje: 37 },
+      { metodo: 'Transferencia', monto: 217500, porcentaje: 15 },
+      { metodo: 'Tarjeta Débito/Crédito', monto: 116000, porcentaje: 8 },
+    ],
+  },
 };
 
 export type RotacionTab = 'mas_vendidos' | 'menos_vendidos';

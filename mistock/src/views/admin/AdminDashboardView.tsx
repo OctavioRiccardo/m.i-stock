@@ -30,7 +30,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Receipt,
+  PieChart,
 } from 'lucide-react';
+import { AreaChart, DonutChart, BarList } from '@/components/tremor';
 import { MetodoPago } from '@/models/modelos_dominio/ventaModel';
 import { useAdminDashboardController } from '@/controllers/adminControllers/dashboardController';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -219,6 +221,147 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
             </motion.div>
           ))}
         </div>
+
+      {/* ==================================================================== */}
+      {/* ANALÍTICA VISUAL Y MÉTRICAS DE NEGOCIO (TREMOR RAW CHARTS)          */}
+      {/* ==================================================================== */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Gráfico 1: Evolución Temporal de Recaudación (AreaChart) */}
+        <div className="lg:col-span-8">
+          <Card className="h-full flex flex-col justify-between border-[#E8E6DF] shadow-xs">
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 gap-3 border-b border-[#E8E6DF]">
+              <div>
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-[#2A7A78]" />
+                  <CardTitle className="text-base font-bold text-[#1C2424]">
+                    Evolución de Recaudación y Tendencia
+                  </CardTitle>
+                </div>
+                <p className="text-xs text-[#657373] mt-1">
+                  Comparativa de facturación con el período anterior (Tremor AreaChart)
+                </p>
+              </div>
+
+              {/* Selector de período interactivo con Motion pill */}
+              <div className="relative inline-flex items-center p-1 bg-[#F8F7F2] rounded-lg border border-[#E8E6DF] self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => cambiarPeriodoVentas('semana')}
+                  className={`relative px-3 py-1.5 rounded-md text-xs font-semibold cursor-pointer transition-colors duration-150 z-10 ${
+                    periodoVentasTab === 'semana'
+                      ? 'text-[#2A7A78]'
+                      : 'text-[#657373] hover:text-[#1C2424]'
+                  }`}
+                >
+                  {periodoVentasTab === 'semana' && (
+                    <motion.span
+                      layoutId="areaChartPeriodIndicator"
+                      className="absolute inset-0 bg-white rounded-md shadow-xs -z-10"
+                      transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                    />
+                  )}
+                  Esta Semana
+                </button>
+                <button
+                  type="button"
+                  onClick={() => cambiarPeriodoVentas('mes')}
+                  className={`relative px-3 py-1.5 rounded-md text-xs font-semibold cursor-pointer transition-colors duration-150 z-10 ${
+                    periodoVentasTab === 'mes'
+                      ? 'text-[#2A7A78]'
+                      : 'text-[#657373] hover:text-[#1C2424]'
+                  }`}
+                >
+                  {periodoVentasTab === 'mes' && (
+                    <motion.span
+                      layoutId="areaChartPeriodIndicator"
+                      className="absolute inset-0 bg-white rounded-md shadow-xs -z-10"
+                      transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                    />
+                  )}
+                  Este Mes
+                </button>
+              </div>
+            </CardHeader>
+
+            <CardContent className="pt-4 flex-1">
+              <AreaChart
+                className="h-72"
+                data={
+                  periodoVentasTab === 'semana'
+                    ? data.graficos.tendenciaSemana
+                    : data.graficos.tendenciaMes
+                }
+                index="fecha"
+                categories={["Recaudación Actual", "Período Anterior"]}
+                colors={["emerald", "gray"]}
+                valueFormatter={(number: number) => `$${number.toLocaleString('es-AR')}`}
+                showLegend={true}
+                showGridLines={true}
+                startEndOnly={false}
+              />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Gráfico 2: Distribución por Métodos de Pago (DonutChart) */}
+        <div className="lg:col-span-4">
+          <Card className="h-full flex flex-col justify-between border-[#E8E6DF] shadow-xs">
+            <CardHeader className="pb-3 border-b border-[#E8E6DF]">
+              <div className="flex items-center gap-2">
+                <PieChart className="h-5 w-5 text-[#2A7A78]" />
+                <CardTitle className="text-base font-bold text-[#1C2424]">
+                  Métodos de Pago
+                </CardTitle>
+              </div>
+              <p className="text-xs text-[#657373] mt-1">
+                Participación por canal ({periodoVentasTab === 'semana' ? 'Esta Semana' : 'Este Mes'})
+              </p>
+            </CardHeader>
+
+            <CardContent className="pt-4 flex-1 flex flex-col justify-between">
+              <DonutChart
+                className="h-48"
+                data={
+                  periodoVentasTab === 'semana'
+                    ? data.graficos.distribucionPagosSemana
+                    : data.graficos.distribucionPagosMes
+                }
+                category="metodo"
+                value="monto"
+                valueFormatter={(number: number) => `$${number.toLocaleString('es-AR')}`}
+                colors={["blue", "emerald", "violet", "amber"]}
+              />
+
+              <div className="mt-4 space-y-2 pt-3 border-t border-[#E8E6DF]">
+                {(periodoVentasTab === 'semana'
+                  ? data.graficos.distribucionPagosSemana
+                  : data.graficos.distribucionPagosMes
+                ).map((pago, idx) => (
+                  <div key={idx} className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`w-2.5 h-2.5 rounded-full ${
+                          idx === 0
+                            ? 'bg-blue-500'
+                            : idx === 1
+                            ? 'bg-emerald-500'
+                            : idx === 2
+                            ? 'bg-violet-500'
+                            : 'bg-amber-500'
+                        }`}
+                      />
+                      <span className="text-[#657373] font-medium">{pago.metodo}</span>
+                    </div>
+                    <span className="font-bold text-[#1C2424]">
+                      ${pago.monto.toLocaleString('es-AR')} ({pago.porcentaje}%)
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       {/* Tables Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -409,8 +552,27 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
                 transition={{ duration: 0.18, ease: 'easeOut' }}
-                className="space-y-3"
+                className="space-y-4"
               >
+                {/* Ranking Visual con Tremor BarList */}
+                <div className="p-4 bg-[#F8F7F2] rounded-lg border border-[#E8E6DF]">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-bold text-[#1C2424] uppercase tracking-wider">
+                      Top 5 en Facturación Acumulada (Tremor BarList)
+                    </span>
+                    <span className="text-xs text-[#657373]">
+                      Participación directa de ventas
+                    </span>
+                  </div>
+                  <BarList
+                    data={data.productosMasVendidos.slice(0, 5).map((p) => ({
+                      name: `${p.nombre} (${p.unidadesVendidas} u.)`,
+                      value: p.montoTotal,
+                    }))}
+                    valueFormatter={(number: number) => `$${number.toLocaleString('es-AR')}`}
+                  />
+                </div>
+
                 <Table>
                   <TableHeader>
                     <TableRow>

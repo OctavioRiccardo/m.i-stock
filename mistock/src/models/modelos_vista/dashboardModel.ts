@@ -135,6 +135,25 @@ export interface VentasDetalleData {
   ventasMes: DetalleVentaItem[];
 }
 
+export interface PuntoTendenciaVentas {
+  fecha: string;
+  'Recaudación Actual': number;
+  'Período Anterior': number;
+}
+
+export interface PuntoDistribucionPago {
+  metodo: string;
+  monto: number;
+  porcentaje: number;
+}
+
+export interface GraficosMetricasData {
+  tendenciaSemana: PuntoTendenciaVentas[];
+  tendenciaMes: PuntoTendenciaVentas[];
+  distribucionPagosSemana: PuntoDistribucionPago[];
+  distribucionPagosMes: PuntoDistribucionPago[];
+}
+
 /**
  * Estado general consumido por el panel principal del Administrador.
  */
@@ -148,4 +167,5 @@ export interface AdminDashboardData {
   productosMasVendidos: ProductoRankingVentas[];
   productosMenosVendidos: ProductoRankingVentas[];
   ventasDetalle: VentasDetalleData;
+  graficos: GraficosMetricasData;
 }
