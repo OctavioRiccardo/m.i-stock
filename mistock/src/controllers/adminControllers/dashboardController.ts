@@ -30,10 +30,10 @@ const initialMockAdminData: AdminDashboardData = {
   activeUsersCount: 8,
   lowStockCount: 8,
   kpiMetrics: [
-    { title: 'Ventas del Mes', value: '$1.450.000', status: 'positive' },
-    { title: 'Productos Activos', value: '480', status: 'positive' },
-    { title: 'Stock Crítico', value: '8 ítems', status: 'negative' },
-    { title: 'Usuarios del Sistema', value: '8 activos', status: 'neutral' },
+    { title: 'Recaudación del Mes', value: '$1.450.000', changePercentage: '+12.5%', status: 'positive' },
+    { title: 'Ticket Promedio Mensual', value: '$8.630', changePercentage: '+4.2%', status: 'positive' },
+    { title: 'Operaciones Concretadas', value: '168 ventas', changePercentage: '+8.1%', status: 'positive' },
+    { title: 'Unidades Despachadas', value: '640 un.', changePercentage: '+15.3%', status: 'positive' },
   ],
   stockAlerts: [
     { id: 'ALT-1', nombreProducto: 'Jabón Líquido Manos 500ml', stockActual: 3, umbralMinimo: 10, categoria: 'Limpieza' },
@@ -514,6 +514,20 @@ const initialMockAdminData: AdminDashboardData = {
       { metodo: 'Transferencia', monto: 217500, porcentaje: 15 },
       { metodo: 'Tarjeta Débito/Crédito', monto: 116000, porcentaje: 8 },
     ],
+    barrasVentasSemana: [
+      { periodo: 'Lun', 'Monto Facturado': 48000, Operaciones: 8 },
+      { periodo: 'Mar', 'Monto Facturado': 56500, Operaciones: 10 },
+      { periodo: 'Mié', 'Monto Facturado': 62000, Operaciones: 12 },
+      { periodo: 'Jue', 'Monto Facturado': 58400, Operaciones: 9 },
+      { periodo: 'Vie', 'Monto Facturado': 74000, Operaciones: 14 },
+      { periodo: 'Sáb', 'Monto Facturado': 86500, Operaciones: 18 },
+    ],
+    barrasVentasMes: [
+      { periodo: 'Semana 1', 'Monto Facturado': 320000, Operaciones: 38 },
+      { periodo: 'Semana 2', 'Monto Facturado': 385400, Operaciones: 42 },
+      { periodo: 'Semana 3', 'Monto Facturado': 365000, Operaciones: 41 },
+      { periodo: 'Semana 4', 'Monto Facturado': 379600, Operaciones: 47 },
+    ],
   },
 };
 
@@ -543,6 +557,9 @@ export function useAdminDashboardController() {
   // Pestaña activa para la tarjeta de rotación de productos ('mas_vendidos' | 'menos_vendidos')
   const [rotacionTab, setRotacionTab] = useState<RotacionTab>('mas_vendidos');
 
+  // Filtro de categoría activa para rotación de productos ('Todas' | nombre de categoría)
+  const [categoriaRotacion, setCategoriaRotacion] = useState<string>('Todas');
+
   // Paginación para Rotación de Stock
   const [paginaRotacion, setPaginaRotacion] = useState<number>(1);
   const itemsPorPaginaRotacion = 5;
@@ -558,6 +575,14 @@ export function useAdminDashboardController() {
    */
   const cambiarTabRotacion = (tab: RotacionTab) => {
     setRotacionTab(tab);
+    setPaginaRotacion(1);
+  };
+
+  /**
+   * Cambia la categoría de rotación y reinicia la paginación a la primera página.
+   */
+  const cambiarCategoriaRotacion = (categoria: string) => {
+    setCategoriaRotacion(categoria);
     setPaginaRotacion(1);
   };
 
@@ -620,6 +645,8 @@ export function useAdminDashboardController() {
     alertResolvedMsg,
     rotacionTab,
     cambiarTabRotacion,
+    categoriaRotacion,
+    cambiarCategoriaRotacion,
     paginaStockCritico,
     setPaginaStockCritico,
     itemsPorPaginaStock,

@@ -147,11 +147,19 @@ export interface PuntoDistribucionPago {
   porcentaje: number;
 }
 
+export interface PuntoBarraVenta {
+  periodo: string;
+  'Monto Facturado': number;
+  Operaciones: number;
+}
+
 export interface GraficosMetricasData {
   tendenciaSemana: PuntoTendenciaVentas[];
   tendenciaMes: PuntoTendenciaVentas[];
   distribucionPagosSemana: PuntoDistribucionPago[];
   distribucionPagosMes: PuntoDistribucionPago[];
+  barrasVentasSemana: PuntoBarraVenta[];
+  barrasVentasMes: PuntoBarraVenta[];
 }
 
 /**
