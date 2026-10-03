@@ -19,7 +19,7 @@ import {
   MetodosPagoConfig,
   valoresPorDefectoConfiguracion,
 } from '@/models/modelos_vista/configuracionModel';
-import { initialProductos } from '@/models/mock_data/inventarioMock';
+import { inventarioService } from '@/services/inventarioService';
 
 export type PestañaConfiguracion = 'negocio' | 'pos' | 'inventario' | 'respaldos';
 
@@ -156,7 +156,7 @@ export function useAdminConfiguracionController() {
   const exportarCatalogoCSV = () => {
     try {
       const headers = ['SKU', 'Producto', 'Categoría', 'Precio Costo', 'Precio Venta', 'Stock Actual', 'Stock Mínimo', 'Unidad Medida', 'Estado'];
-      const rows = initialProductos.map((p) => [
+      const rows = inventarioService.getProductos().map((p) => [
         `"${p.codigo}"`,
         `"${p.nombre.replace(/"/g, '""')}"`,
         `"${(p.categoria?.nombre || 'General').replace(/"/g, '""')}"`,

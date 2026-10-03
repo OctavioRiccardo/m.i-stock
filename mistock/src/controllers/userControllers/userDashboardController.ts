@@ -16,6 +16,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { UserDashboardData, ProductoRapidoPOS, VentaRecientePOS } from '@/models/modelos_vista/dashboardModel';
 import { initialProductos } from '@/models/mock_data/inventarioMock';
+import { useInventarioData, inventarioService } from '@/services/inventarioService';
 import { MetodoPago, DetalleVenta } from '@/models/modelos_dominio/ventaModel';
 import {
   ConfiguracionCompleta,
@@ -234,7 +235,36 @@ const initialMockUserData: UserDashboardData = {
 };
 
 export function useUserDashboardController() {
-  const [data, setData] = useState<UserDashboardData>(initialMockUserData);
+  const { productos: storeProductos } = useInventarioData();
+
+  // Mapeo reactivo del catálogo en tiempo real sincronizado con Inventario Central
+  const productosPopulares: ProductoRapidoPOS[] = useMemo(() => {
+    return storeProductos
+      .filter((p) => p.activo)
+      .map((p) => ({
+        id: p.id,
+        nombre: p.nombre,
+        categoria: p.categoria?.nombre || 'General',
+        precio: p.precioVenta,
+        stock: p.stockActual,
+        stockMinimo: p.stockMinimo,
+        codigo: p.codigo,
+      }));
+  }, [storeProductos]);
+
+  const [ventasState, setVentasState] = useState({
+    ventasDelDia: initialMockUserData.ventasDelDia,
+    recaudacionDelDia: initialMockUserData.recaudacionDelDia,
+    ventasRecientes: initialMockUserData.ventasRecientes,
+  });
+
+  const data: UserDashboardData = useMemo(() => ({
+    ventasDelDia: ventasState.ventasDelDia,
+    recaudacionDelDia: ventasState.recaudacionDelDia,
+    totalProductosEnStock: productosPopulares.reduce((acc, p) => acc + p.stock, 0),
+    ventasRecientes: ventasState.ventasRecientes,
+    productosPopulares,
+  }), [ventasState, productosPopulares]);
   const [loading, setLoading] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [saleSuccessMessage, setSaleSuccessMessage] = useState<string | null>(null);
@@ -365,10 +395,6 @@ export function useUserDashboardController() {
     const totalVenta = product.precio * cantidad;
     const vuelto = montoRecibido !== undefined && montoRecibido >= totalVenta ? montoRecibido - totalVenta : 0;
 
-    const updatedProducts = data.productosPopulares.map((p) =>
-      p.id === productId ? { ...p, stock: p.stock - cantidad } : p
-    );
-
     const ventaId = `VNT-${Date.now().toString().slice(-4)}`;
     const nuevoDetalle: DetalleVenta = {
       id: `DET-${Date.now().toString().slice(-4)}`,
@@ -401,12 +427,13 @@ export function useUserDashboardController() {
       estado: 'completada',
     };
 
-    setData((prev) => ({
+    // Descuenta stock en el almacén central de inventario
+    inventarioService.descontarStock(productId, cantidad);
+
+    setVentasState((prev) => ({
       ...prev,
       ventasDelDia: prev.ventasDelDia + 1,
       recaudacionDelDia: prev.recaudacionDelDia + totalVenta,
-      totalProductosEnStock: Math.max(0, prev.totalProductosEnStock - cantidad),
-      productosPopulares: updatedProducts,
       ventasRecientes: [newSale, ...prev.ventasRecientes],
     }));
 
@@ -458,10 +485,6 @@ export function useUserDashboardController() {
 
     const totalVenta = product.precio * cantidad;
 
-    const updatedProducts = data.productosPopulares.map((p) =>
-      p.id === productId ? { ...p, stock: p.stock - cantidad } : p
-    );
-
     const ventaId = `VNT-${Date.now().toString().slice(-4)}`;
     const nuevoDetalle = {
       id: `DET-${Date.now().toString().slice(-4)}`,
@@ -494,12 +517,13 @@ export function useUserDashboardController() {
       estado: 'completada',
     };
 
-    setData((prev) => ({
+    // Descuenta stock en el almacén central de inventario
+    inventarioService.descontarStock(productId, cantidad);
+
+    setVentasState((prev) => ({
       ...prev,
       ventasDelDia: prev.ventasDelDia + 1,
       recaudacionDelDia: prev.recaudacionDelDia + totalVenta,
-      totalProductosEnStock: Math.max(0, prev.totalProductosEnStock - cantidad),
-      productosPopulares: updatedProducts,
       ventasRecientes: [newSale, ...prev.ventasRecientes],
     }));
 

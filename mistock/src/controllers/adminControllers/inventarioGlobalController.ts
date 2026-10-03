@@ -15,8 +15,7 @@
  */
 
 import { useState, useMemo } from 'react';
-import { Categoria, Producto } from '@/models/modelos_dominio/productoModel';
-import { initialCategorias, initialProductos } from '@/models/mock_data/inventarioMock';
+import { useInventarioData } from '@/services/inventarioService';
 
 export type FiltroEstadoStock = 'todos' | 'normal' | 'critico' | 'sin_stock';
 export type CriterioOrdenInventario =
@@ -28,8 +27,7 @@ export type CriterioOrdenInventario =
   | 'stock_desc';
 
 export function useAdminInventarioGlobalController() {
-  const [categorias] = useState<Categoria[]>(initialCategorias);
-  const [productos] = useState<Producto[]>(initialProductos);
+  const { categorias, productos } = useInventarioData();
 
   // Estados reactivos de filtrado y navegación
   const [categoriaSeleccionada, setCategoriaSeleccionadaState] = useState<string>('todas');

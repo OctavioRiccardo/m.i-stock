@@ -1,0 +1,366 @@
+'use client';
+
+/**
+ * ====================================================================
+ * SERVICIO: GESTOR DE INVENTARIO CENTRALIZADO (Single Source of Truth)
+ * ====================================================================
+ * 
+ * Propósito:
+ * Proporcionar un almacén reactivo único para categorías y productos en memoria,
+ * con persistencia opcional en localStorage del navegador.
+ * 
+ * Resuelve la inconsistencia lógica de estado aislado entre:
+ * - `inventarioController` (Alta, baja y modificación de artículos)
+ * - `inventarioGlobalController` (Auditoría, filtros globales y stock crítico)
+ * - `userDashboardController` (Terminal de venta POS y descuento de existencias)
+ * - `configuracionController` (Exportación en CSV del catálogo maestro)
+ * 
+ * Integración React 19:
+ * Utiliza `useSyncExternalStore` para suscripciones reactivas libres de desincronización
+ * y completamente compatibles con SSR en Next.js.
+ */
+
+import { useSyncExternalStore } from 'react';
+import { Categoria, Producto } from '@/models/modelos_dominio/productoModel';
+import { FormularioCargaProducto } from '@/models/modelos_vista/cargaProductoModel';
+import { initialCategorias, initialProductos } from '@/models/mock_data/inventarioMock';
+
+const INVENTARIO_STORAGE_KEY = 'mistock_inventario_data_v1';
+
+export interface InventarioSnapshot {
+  categorias: Categoria[];
+  productos: Producto[];
+}
+
+/**
+ * Snapshot inmutable para SSR (Server-Side Rendering) en Next.js.
+ */
+const SERVER_SNAPSHOT: InventarioSnapshot = Object.freeze({
+  categorias: initialCategorias,
+  productos: initialProductos,
+});
+
+/**
+ * Inicialización segura del estado en el cliente (Browser).
+ */
+function inicializarEstadoCliente(): InventarioSnapshot {
+  if (typeof window === 'undefined') {
+    return SERVER_SNAPSHOT;
+  }
+  try {
+    const raw = window.localStorage.getItem(INVENTARIO_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed.categorias) && Array.isArray(parsed.productos)) {
+        return {
+          categorias: parsed.categorias,
+          productos: parsed.productos,
+        };
+      }
+    }
+  } catch {
+    // Si falla el parseo, se utiliza el catálogo inicial por defecto
+  }
+  return {
+    categorias: initialCategorias,
+    productos: initialProductos,
+  };
+}
+
+let currentSnapshot: InventarioSnapshot = inicializarEstadoCliente();
+const listeners = new Set<() => void>();
+
+/**
+ * Notifica a los suscriptores y sincroniza con localStorage.
+ */
+function notifySubscribers() {
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.setItem(INVENTARIO_STORAGE_KEY, JSON.stringify(currentSnapshot));
+    } catch {
+      // Ignorar cuota excedida de localStorage en modo sandbox
+    }
+  }
+  listeners.forEach((listener) => listener());
+}
+
+/**
+ * Suscripción externa para useSyncExternalStore.
+ */
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+function getSnapshot(): InventarioSnapshot {
+  return currentSnapshot;
+}
+
+function getServerSnapshot(): InventarioSnapshot {
+  return SERVER_SNAPSHOT;
+}
+
+/**
+ * Hook reactivo para consumir el inventario centralizado en cualquier componente o controlador.
+ */
+export function useInventarioData(): InventarioSnapshot {
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+}
+
+/**
+ * Métodos de mutación y operaciones empresariales del Inventario.
+ */
+export const inventarioService = {
+  /**
+   * Obtiene la instantánea actual de categorías.
+   */
+  getCategorias(): Categoria[] {
+    return currentSnapshot.categorias;
+  },
+
+  /**
+   * Obtiene la instantánea actual de productos.
+   */
+  getProductos(): Producto[] {
+    return currentSnapshot.productos;
+  },
+
+  /**
+   * Registra una nueva categoría en el catálogo global.
+   */
+  agregarCategoria(nombre: string, descripcion?: string): Categoria {
+    const nuevaCat: Categoria = {
+      id: `cat-${Date.now().toString().slice(-4)}`,
+      nombre: nombre.trim(),
+      descripcion: descripcion?.trim() || '',
+      activo: true,
+      fechaCreacion: new Date(),
+    };
+
+    currentSnapshot = {
+      ...currentSnapshot,
+      categorias: [...currentSnapshot.categorias, nuevaCat],
+    };
+    notifySubscribers();
+    return nuevaCat;
+  },
+
+  /**
+   * Guarda un nuevo producto validando unicidad de código y categoría obligatoria.
+   */
+  guardarProducto(
+    datos: FormularioCargaProducto
+  ): { exito: boolean; mensaje: string; producto?: Producto } {
+    if (!datos.categoriaId || datos.categoriaId.trim() === '') {
+      return {
+        exito: false,
+        mensaje: 'El producto no puede existir sin una categoría definida.',
+      };
+    }
+
+    const categoriaSeleccionada = currentSnapshot.categorias.find((c) => c.id === datos.categoriaId);
+    if (!categoriaSeleccionada) {
+      return {
+        exito: false,
+        mensaje: 'La categoría seleccionada no es válida o no existe.',
+      };
+    }
+
+    if (!datos.nombre.trim()) {
+      return { exito: false, mensaje: 'El nombre del producto es obligatorio.' };
+    }
+
+    if (!datos.codigo.trim()) {
+      return { exito: false, mensaje: 'El código de barras o SKU es obligatorio.' };
+    }
+
+    const codigoExiste = currentSnapshot.productos.some(
+      (p) => p.codigo.toLowerCase() === datos.codigo.trim().toLowerCase()
+    );
+    if (codigoExiste) {
+      return {
+        exito: false,
+        mensaje: `Ya existe un producto con el código "${datos.codigo}". Ingrese un código único.`,
+      };
+    }
+
+    if (datos.precioVenta <= 0) {
+      return { exito: false, mensaje: 'El precio de venta debe ser mayor a 0.' };
+    }
+
+    const nuevoProducto: Producto = {
+      id: `PROD-${Date.now().toString().slice(-4)}`,
+      codigo: datos.codigo.trim(),
+      nombre: datos.nombre.trim(),
+      descripcion: datos.descripcion?.trim() || '',
+      precioCosto: Number(datos.precioCosto) || 0,
+      precioVenta: Number(datos.precioVenta),
+      stockActual: Number(datos.stockInicial) || 0,
+      stockMinimo: Number(datos.stockMinimo) || 0,
+      categoriaId: datos.categoriaId,
+      categoria: categoriaSeleccionada,
+      unidadMedida: datos.unidadMedida || 'unidad',
+      activo: true,
+      fechaCreacion: new Date(),
+    };
+
+    currentSnapshot = {
+      ...currentSnapshot,
+      productos: [nuevoProducto, ...currentSnapshot.productos],
+    };
+    notifySubscribers();
+
+    return {
+      exito: true,
+      mensaje: `Producto "${nuevoProducto.nombre}" cargado con éxito en la categoría "${categoriaSeleccionada.nombre}".`,
+      producto: nuevoProducto,
+    };
+  },
+
+  /**
+   * Da de baja lógica un producto del catálogo activo.
+   */
+  darDeBajaProducto(productoId: string, motivo?: string): { exito: boolean; mensaje: string } {
+    const producto = currentSnapshot.productos.find((p) => p.id === productoId);
+    if (!producto) {
+      return { exito: false, mensaje: 'El producto especificado no existe en el catálogo.' };
+    }
+
+    currentSnapshot = {
+      ...currentSnapshot,
+      productos: currentSnapshot.productos.map((p) =>
+        p.id === productoId ? { ...p, activo: false, fechaActualizacion: new Date() } : p
+      ),
+    };
+    notifySubscribers();
+
+    const detalleMotivo = motivo ? ` (Motivo: ${motivo.trim()})` : '';
+    return {
+      exito: true,
+      mensaje: `El producto "${producto.nombre}" (${producto.codigo}) fue dado de baja correctamente.${detalleMotivo}`,
+    };
+  },
+
+  /**
+   * Reactiva un producto previamente dado de baja en el catálogo.
+   */
+  reactivarProducto(productoId: string): { exito: boolean; mensaje: string } {
+    const producto = currentSnapshot.productos.find((p) => p.id === productoId);
+    if (!producto) {
+      return { exito: false, mensaje: 'El producto especificado no existe.' };
+    }
+
+    currentSnapshot = {
+      ...currentSnapshot,
+      productos: currentSnapshot.productos.map((p) =>
+        p.id === productoId ? { ...p, activo: true, fechaActualizacion: new Date() } : p
+      ),
+    };
+    notifySubscribers();
+
+    return {
+      exito: true,
+      mensaje: `El producto "${producto.nombre}" fue reactivado en el catálogo comercial.`,
+    };
+  },
+
+  /**
+   * Actualiza los datos de un producto asegurando integridad de claves y valores numéricos.
+   */
+  modificarProducto(
+    productoId: string,
+    datosActualizados: Partial<Producto>
+  ): { exito: boolean; mensaje: string } {
+    const producto = currentSnapshot.productos.find((p) => p.id === productoId);
+    if (!producto) {
+      return { exito: false, mensaje: 'El producto que intenta modificar no existe.' };
+    }
+
+    if (datosActualizados.precioVenta !== undefined && Number(datosActualizados.precioVenta) <= 0) {
+      return { exito: false, mensaje: 'El precio de venta debe ser superior a 0.' };
+    }
+
+    let nuevaCategoria = producto.categoria;
+    if (datosActualizados.categoriaId && datosActualizados.categoriaId !== producto.categoriaId) {
+      const cat = currentSnapshot.categorias.find((c) => c.id === datosActualizados.categoriaId);
+      if (!cat) {
+        return { exito: false, mensaje: 'La categoría seleccionada no es válida.' };
+      }
+      nuevaCategoria = cat;
+    }
+
+    if (datosActualizados.codigo && datosActualizados.codigo.trim() !== producto.codigo) {
+      const repetido = currentSnapshot.productos.some(
+        (p) => p.id !== productoId && p.codigo.toLowerCase() === datosActualizados.codigo?.trim().toLowerCase()
+      );
+      if (repetido) {
+        return {
+          exito: false,
+          mensaje: `El código "${datosActualizados.codigo}" ya pertenece a otro producto.`,
+        };
+      }
+    }
+
+    currentSnapshot = {
+      ...currentSnapshot,
+      productos: currentSnapshot.productos.map((p) => {
+        if (p.id !== productoId) return p;
+        return {
+          ...p,
+          ...datosActualizados,
+          codigo: datosActualizados.codigo ? datosActualizados.codigo.trim() : p.codigo,
+          nombre: datosActualizados.nombre ? datosActualizados.nombre.trim() : p.nombre,
+          precioCosto: datosActualizados.precioCosto !== undefined ? Number(datosActualizados.precioCosto) : p.precioCosto,
+          precioVenta: datosActualizados.precioVenta !== undefined ? Number(datosActualizados.precioVenta) : p.precioVenta,
+          stockMinimo: datosActualizados.stockMinimo !== undefined ? Number(datosActualizados.stockMinimo) : p.stockMinimo,
+          categoriaId: datosActualizados.categoriaId || p.categoriaId,
+          categoria: nuevaCategoria,
+          fechaActualizacion: new Date(),
+        };
+      }),
+    };
+    notifySubscribers();
+
+    return {
+      exito: true,
+      mensaje: `Producto "${datosActualizados.nombre || producto.nombre}" actualizado con éxito.`,
+    };
+  },
+
+  /**
+   * Descuenta stock tras una venta concretada en el punto de venta (POS).
+   * Refleja de inmediato el egreso en inventario global y catálogo de administración.
+   */
+  descontarStock(productoId: string, cantidad: number): boolean {
+    const producto = currentSnapshot.productos.find((p) => p.id === productoId);
+    if (!producto) return false;
+
+    currentSnapshot = {
+      ...currentSnapshot,
+      productos: currentSnapshot.productos.map((p) =>
+        p.id === productoId
+          ? {
+              ...p,
+              stockActual: Math.max(0, p.stockActual - cantidad),
+              fechaActualizacion: new Date(),
+            }
+          : p
+      ),
+    };
+    notifySubscribers();
+    return true;
+  },
+
+  /**
+   * Restablece el inventario a los datos semilla iniciales de inventarioMock.
+   */
+  reiniciarCatalogo(): void {
+    currentSnapshot = {
+      categorias: initialCategorias,
+      productos: initialProductos,
+    };
+    notifySubscribers();
+  },
+};

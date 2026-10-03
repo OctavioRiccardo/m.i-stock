@@ -1,15 +1,15 @@
 /**
  * ====================================================================
- * RUTA: /adminstockcritico (Redirección Canónica a /admin)
+ * RUTA: /adminstockcritico (Redirección Canónica a /admininventarioglobal)
  * ====================================================================
  * 
  * Rol en la Arquitectura:
- * Redirige hacia `/admin` donde se gestionan las alertas de stock crítico
- * y la reposición de mercadería integrada en el dashboard.
+ * Redirige hacia `/admininventarioglobal` donde se audita y gestiona el
+ * inventario unificado por familias de categorías y las alertas de stock crítico.
  */
 
 import { redirect } from 'next/navigation';
 
 export default function AdminStockCriticoPage() {
-  redirect('/admin');
+  redirect('/admininventarioglobal');
 }

@@ -166,12 +166,7 @@ export interface GraficosMetricasData {
  * Estado general consumido por el panel principal del Administrador.
  */
 export interface AdminDashboardData {
-  monthlyRevenue: number;
-  totalProducts: number;
-  activeUsersCount: number;
-  lowStockCount: number;
   kpiMetrics: AdminMetricCard[];
-  stockAlerts: LowStockAlert[];
   productosMasVendidos: ProductoRankingVentas[];
   productosMenosVendidos: ProductoRankingVentas[];
   ventasDetalle: VentasDetalleData;

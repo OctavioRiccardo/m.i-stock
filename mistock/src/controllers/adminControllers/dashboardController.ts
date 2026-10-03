@@ -25,25 +25,11 @@ import { AdminDashboardData } from '@/models/modelos_vista/dashboardModel';
  * Permiten el desarrollo y pruebas de interfaz de usuario desacopladas de la BD.
  */
 const initialMockAdminData: AdminDashboardData = {
-  monthlyRevenue: 1450000,
-  totalProducts: 480,
-  activeUsersCount: 8,
-  lowStockCount: 8,
   kpiMetrics: [
     { title: 'Recaudación del Mes', value: '$1.450.000', changePercentage: '+12.5%', status: 'positive' },
     { title: 'Ticket Promedio Mensual', value: '$8.630', changePercentage: '+4.2%', status: 'positive' },
     { title: 'Operaciones Concretadas', value: '168 ventas', changePercentage: '+8.1%', status: 'positive' },
     { title: 'Unidades Despachadas', value: '640 un.', changePercentage: '+15.3%', status: 'positive' },
-  ],
-  stockAlerts: [
-    { id: 'ALT-1', nombreProducto: 'Jabón Líquido Manos 500ml', stockActual: 3, umbralMinimo: 10, categoria: 'Limpieza' },
-    { id: 'ALT-2', nombreProducto: 'Papel Higiénico Pack x4', stockActual: 5, umbralMinimo: 15, categoria: 'Limpieza' },
-    { id: 'ALT-3', nombreProducto: 'Leche Larga Vida 1L', stockActual: 2, umbralMinimo: 20, categoria: 'Lácteos' },
-    { id: 'ALT-4', nombreProducto: 'Harina 0000 1kg', stockActual: 4, umbralMinimo: 12, categoria: 'Almacén' },
-    { id: 'ALT-5', nombreProducto: 'Aceite de Girasol 900ml', stockActual: 3, umbralMinimo: 15, categoria: 'Almacén' },
-    { id: 'ALT-6', nombreProducto: 'Azúcar Común 1kg', stockActual: 6, umbralMinimo: 20, categoria: 'Almacén' },
-    { id: 'ALT-7', nombreProducto: 'Café Molido 250g', stockActual: 2, umbralMinimo: 10, categoria: 'Infusiones' },
-    { id: 'ALT-8', nombreProducto: 'Detergente Vajilla 750ml', stockActual: 4, umbralMinimo: 14, categoria: 'Limpieza' },
   ],
   productosMasVendidos: [
     {
@@ -538,21 +524,16 @@ export type PeriodoVentasTab = 'semana' | 'mes';
  * Hook Controlador para el Dashboard del Administrador.
  * 
  * Responsabilidades:
- * 1. Proveer los KPIs operacionales y financieros consolidados.
- * 2. Gestionar la lista de alertas de stock por debajo del umbral mínimo con paginación.
- * 3. Analizar la rotación de stock (más vendidos vs menos vendidos) con paginación.
- * 4. Procesar las solicitudes de reposición / resolución de alertas críticas.
- * 5. Gestionar estados temporales de notificación visual tras acciones del usuario.
+ * 1. Proveer los KPIs operacionales y financieros consolidados de rendimiento del negocio.
+ * 2. Analizar la rotación de stock (más vendidos vs menos vendidos) con filtrado por categoría y paginación.
+ * 3. Gestionar la evolución temporal de facturación (semana vs mes) y ritmo de cobros.
+ * 4. Controlar el desglose de detalle de ventas y métodos de pago.
  * 
  * @returns {Object} Estado consolidado del panel y métodos de interacción.
  */
 export function useAdminDashboardController() {
-  // Estado principal que contiene métricas agregadas y alertas activas
-  const [data, setData] = useState<AdminDashboardData>(initialMockAdminData);
-
-  // Paginación para Alertas de Stock Crítico
-  const [paginaStockCritico, setPaginaStockCritico] = useState<number>(1);
-  const itemsPorPaginaStock = 4;
+  // Estado principal que contiene métricas agregadas y datos analíticos
+  const [data] = useState<AdminDashboardData>(initialMockAdminData);
 
   // Pestaña activa para la tarjeta de rotación de productos ('mas_vendidos' | 'menos_vendidos')
   const [rotacionTab, setRotacionTab] = useState<RotacionTab>('mas_vendidos');
@@ -565,10 +546,7 @@ export function useAdminDashboardController() {
   const itemsPorPaginaRotacion = 5;
 
   // Indicador de carga para operaciones asíncronas del dashboard
-  const [loading, setLoading] = useState<boolean>(false);
-
-  // Mensaje temporal de éxito tras resolver una alerta de stock
-  const [alertResolvedMsg, setAlertResolvedMsg] = useState<string | null>(null);
+  const [loading] = useState<boolean>(false);
 
   /**
    * Cambia la pestaña de rotación y reinicia la paginación a la primera página.
@@ -584,44 +562,6 @@ export function useAdminDashboardController() {
   const cambiarCategoriaRotacion = (categoria: string) => {
     setCategoriaRotacion(categoria);
     setPaginaRotacion(1);
-  };
-
-  /**
-   * Resuelve o gestiona una orden de reposición para un ítem en alerta crítica.
-   * Disminuye el contador de stock crítico y remueve el ítem de la lista visible.
-   * 
-   * @param {string} alertId - Identificador único de la alerta de stock.
-   */
-  const handleRestockAlert = (alertId: string) => {
-    setLoading(true);
-    const alert = data.stockAlerts.find((a) => a.id === alertId);
-
-    if (!alert) {
-      setLoading(false);
-      return;
-    }
-
-    // Filtra la alerta resuelta
-    const updatedAlerts = data.stockAlerts.filter((a) => a.id !== alertId);
-
-    // Actualiza métricas y alertas atómicamente
-    setData((prev) => ({
-      ...prev,
-      lowStockCount: prev.lowStockCount - 1,
-      stockAlerts: updatedAlerts,
-    }));
-
-    // Si la página actual queda vacía tras eliminar, retrocede a la página previa
-    const maxPagina = Math.max(1, Math.ceil(updatedAlerts.length / itemsPorPaginaStock));
-    if (paginaStockCritico > maxPagina) {
-      setPaginaStockCritico(maxPagina);
-    }
-
-    setAlertResolvedMsg(`Reposición solicitada para: ${alert.nombreProducto}`);
-    setLoading(false);
-
-    // Limpia la notificación tras 3 segundos
-    setTimeout(() => setAlertResolvedMsg(null), 3000);
   };
 
   // Pestaña activa para el detalle de ventas ('semana' | 'mes')
@@ -642,14 +582,10 @@ export function useAdminDashboardController() {
   return {
     data,
     loading,
-    alertResolvedMsg,
     rotacionTab,
     cambiarTabRotacion,
     categoriaRotacion,
     cambiarCategoriaRotacion,
-    paginaStockCritico,
-    setPaginaStockCritico,
-    itemsPorPaginaStock,
     paginaRotacion,
     setPaginaRotacion,
     itemsPorPaginaRotacion,
@@ -658,6 +594,5 @@ export function useAdminDashboardController() {
     paginaVentas,
     setPaginaVentas,
     itemsPorPaginaVentas,
-    handleRestockAlert,
   };
 }

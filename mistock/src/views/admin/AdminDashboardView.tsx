@@ -22,7 +22,6 @@ import { motion, AnimatePresence, MotionConfig } from 'motion/react';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
 import {
   BarChart3,
-  Check,
   TrendingUp,
   ChevronLeft,
   ChevronRight,
@@ -47,7 +46,6 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface AdminDashboardViewProps {
   controller: ReturnType<typeof useAdminDashboardController>;
@@ -56,7 +54,6 @@ interface AdminDashboardViewProps {
 export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
   const {
     data,
-    alertResolvedMsg,
     rotacionTab,
     cambiarTabRotacion,
     categoriaRotacion,
@@ -203,24 +200,6 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
           </div>
         </motion.div>
 
-        {/* Notificación tras acciones */}
-        <AnimatePresence>
-          {alertResolvedMsg && (
-            <motion.div
-              initial={{ opacity: 0, height: 0, y: -8 }}
-              animate={{ opacity: 1, height: 'auto', y: 0 }}
-              exit={{ opacity: 0, height: 0, y: -8 }}
-              transition={{ duration: 0.25, ease: 'easeOut' }}
-              className="overflow-hidden"
-            >
-              <Alert variant="success">
-                <Check className="h-4 w-4" />
-                <AlertTitle>Acción Registrada</AlertTitle>
-                <AlertDescription>{alertResolvedMsg}</AlertDescription>
-              </Alert>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* ==================================================================== */}
         {/* 1. TARJETAS KPI DE RENDIMIENTO FINANCIERO Y MENSUAL                  */}
