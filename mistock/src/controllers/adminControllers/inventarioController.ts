@@ -26,6 +26,7 @@ import { FormularioCargaProducto } from '@/models/modelos_vista/cargaProductoMod
 import { useInventarioData, inventarioService } from '@/services/inventarioService';
 
 export type SeccionInventario = 'menu' | 'alta' | 'baja' | 'modificar';
+export type FiltroNivelStock = 'todos' | 'critico' | 'bajo' | 'agotado' | 'optimo';
 
 /**
  * Hook Controlador para la Gestión y Alta de Inventario.
@@ -39,6 +40,7 @@ export type SeccionInventario = 'menu' | 'alta' | 'baja' | 'modificar';
  * 5. Dar de baja lógica o reactivar productos existentes.
  * 6. Modificar datos de productos existentes (precios, existencias, descripción, categoría).
  * 7. Gestionar mensajes de retroalimentación temporal (éxito/error).
+ * 8. Proveer diagnósticos de stock crítico/bajo y filtros de existencias para compras y reposición.
  * 
  * @returns {Object} Estado del inventario, navegación y métodos de mutación.
  */
@@ -49,8 +51,9 @@ export function useAdminInventarioController() {
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
   const [mensajeError, setMensajeError] = useState<string | null>(null);
 
-  // Filtros reactivos para el catálogo por categoría en el Hub de gestión
+  // Filtros reactivos para el catálogo por categoría y nivel de stock en el Hub de gestión
   const [categoriaFiltroHub, setCategoriaFiltroHub] = useState<string>('todas');
+  const [filtroStockHub, setFiltroStockHub] = useState<FiltroNivelStock>('todos');
   const [busquedaHub, setBusquedaHub] = useState<string>('');
 
   // Paginación reactiva para el catálogo de inventario (8 ítems por página)
@@ -62,9 +65,33 @@ export function useAdminInventarioController() {
     setPaginaInventario(1);
   };
 
+  const handleSetFiltroStockHub = (nivel: FiltroNivelStock) => {
+    setFiltroStockHub(nivel);
+    setPaginaInventario(1);
+  };
+
   const handleSetBusquedaHub = (term: string) => {
     setBusquedaHub(term);
     setPaginaInventario(1);
+  };
+
+  const limpiarFiltrosHub = () => {
+    setCategoriaFiltroHub('todas');
+    setFiltroStockHub('todos');
+    setBusquedaHub('');
+    setPaginaInventario(1);
+  };
+
+  // Métricas diagnósticas de existencias y salud del stock
+  const metricasStockHub = {
+    total: productos.length,
+    activos: productos.filter((p) => p.activo).length,
+    criticos: productos.filter((p) => p.activo && p.stockActual <= p.stockMinimo).length,
+    bajasUnidades: productos.filter(
+      (p) => p.activo && p.stockActual > 0 && p.stockActual <= p.stockMinimo * 1.5
+    ).length,
+    agotados: productos.filter((p) => p.activo && p.stockActual === 0).length,
+    optimos: productos.filter((p) => p.activo && p.stockActual > p.stockMinimo).length,
   };
 
   // Conteo de artículos por cada categoría
@@ -73,16 +100,33 @@ export function useAdminInventarioController() {
     return acc;
   }, {});
 
-  // Artículos filtrados según la categoría activa y búsqueda textual
+  // Artículos filtrados según categoría activa, nivel de existencias y búsqueda textual
   const productosFiltradosHub = productos.filter((p) => {
-    const coincideCategoria = categoriaFiltroHub === 'todas' || p.categoriaId === categoriaFiltroHub;
+    // 1. Filtro por categoría
+    const coincideCategoria =
+      categoriaFiltroHub === 'todas' || p.categoriaId === categoriaFiltroHub;
+
+    // 2. Filtro por nivel de stock
+    let coincideStock = true;
+    if (filtroStockHub === 'critico') {
+      coincideStock = p.stockActual <= p.stockMinimo;
+    } else if (filtroStockHub === 'bajo') {
+      coincideStock = p.stockActual > 0 && p.stockActual <= p.stockMinimo * 1.5;
+    } else if (filtroStockHub === 'agotado') {
+      coincideStock = p.stockActual === 0;
+    } else if (filtroStockHub === 'optimo') {
+      coincideStock = p.stockActual > p.stockMinimo;
+    }
+
+    // 3. Búsqueda textual por código, nombre o descripción
     const busq = busquedaHub.trim().toLowerCase();
     const coincideTexto =
       !busq ||
       p.nombre.toLowerCase().includes(busq) ||
       p.codigo.toLowerCase().includes(busq) ||
       (p.descripcion && p.descripcion.toLowerCase().includes(busq));
-    return coincideCategoria && coincideTexto;
+
+    return coincideCategoria && coincideStock && coincideTexto;
   });
 
   /**
@@ -185,6 +229,10 @@ export function useAdminInventarioController() {
     paginaInventario,
     setPaginaInventario,
     itemsPorPaginaInventario,
+    filtroStockHub,
+    setFiltroStockHub: handleSetFiltroStockHub,
+    metricasStockHub,
+    limpiarFiltrosHub,
     loading,
     mensajeExito,
     mensajeError,

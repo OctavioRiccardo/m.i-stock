@@ -28,8 +28,16 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
+  AlertTriangle,
+  Filter,
+  Boxes,
+  PackageCheck,
+  X,
 } from 'lucide-react';
-import { useAdminInventarioController } from '@/controllers/adminControllers/inventarioController';
+import {
+  useAdminInventarioController,
+  FiltroNivelStock,
+} from '@/controllers/adminControllers/inventarioController';
 import {
   FormularioCargaProducto,
   valoresInicialesCargaProducto,
@@ -93,10 +101,14 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
     productos,
     categoriaFiltroHub,
     setCategoriaFiltroHub,
+    filtroStockHub,
+    setFiltroStockHub,
     busquedaHub,
     setBusquedaHub,
     conteosPorCategoria,
     productosFiltradosHub,
+    metricasStockHub,
+    limpiarFiltrosHub,
     paginaInventario,
     setPaginaInventario,
     itemsPorPaginaInventario,
@@ -173,6 +185,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
     unidadMedida: UnidadMedida;
     precioCosto: number;
     precioVenta: number;
+    stockActual: number;
     stockMinimo: number;
     descripcion: string;
   }>({
@@ -182,6 +195,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
     unidadMedida: 'unidad',
     precioCosto: 0,
     precioVenta: 0,
+    stockActual: 0,
     stockMinimo: 0,
     descripcion: '',
   });
@@ -264,6 +278,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
       unidadMedida: prod.unidadMedida || 'unidad',
       precioCosto: prod.precioCosto,
       precioVenta: prod.precioVenta,
+      stockActual: prod.stockActual,
       stockMinimo: prod.stockMinimo,
       descripcion: prod.descripcion || '',
     });
@@ -422,7 +437,172 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
           </div>
 
           {/* ====================================================================
-              LISTADO Y FILTRO DE PRODUCTOS POR CATEGORÍA
+              DIAGNÓSTICO Y CONTROL DE SALUD DEL INVENTARIO
+              ==================================================================== */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h2 className="text-base font-bold text-[#1C2424] flex items-center gap-2">
+                  <Boxes className="h-4 w-4 text-[#2A7A78]" />
+                  Diagnóstico y Control de Stock
+                </h2>
+                <p className="text-xs text-[#657373]">
+                  Monitoreo de existencias en tiempo real, alertas de desabastecimiento y cálculo de reposición.
+                </p>
+              </div>
+
+              {filtroStockHub !== 'todos' && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFiltroStockHub('todos')}
+                  className="h-8 text-xs border-[#E8E6DF] text-[#657373] hover:text-[#1C2424]"
+                >
+                  <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                  Restablecer filtro de stock
+                </Button>
+              )}
+            </div>
+
+            {/* Banner de Alerta Crítica si hay artículos en riesgo */}
+            {metricasStockHub.criticos > 0 && (
+              <div className="rounded-xl border border-rose-200 bg-rose-50/70 p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-rose-100 text-rose-600 mt-0.5">
+                    <AlertTriangle className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-rose-900">
+                      Atención: {metricasStockHub.criticos} {metricasStockHub.criticos === 1 ? 'producto requiere' : 'productos requieren'} revisión inmediata por stock crítico
+                    </h3>
+                    <p className="text-xs text-rose-700 mt-0.5">
+                      Las existencias físicas están iguales o por debajo del umbral mínimo configurado. Filtra para priorizar órdenes de compra o reponer unidades.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-8 text-xs font-medium bg-rose-600 hover:bg-rose-700 text-white"
+                    onClick={() => setFiltroStockHub('critico')}
+                  >
+                    Ver críticos ({metricasStockHub.criticos})
+                  </Button>
+                  {filtroStockHub === 'critico' && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs bg-white text-rose-700 border-rose-300 hover:bg-rose-50"
+                      onClick={() => setFiltroStockHub('todos')}
+                    >
+                      Mostrar todos
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Grid de Métricas de Salud de Stock */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+              {/* Crítico */}
+              <button
+                type="button"
+                onClick={() => setFiltroStockHub(filtroStockHub === 'critico' ? 'todos' : 'critico')}
+                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                  filtroStockHub === 'critico'
+                    ? 'border-rose-500 bg-rose-50/80 shadow-xs ring-2 ring-rose-500/20'
+                    : 'border-[#E8E6DF] bg-white hover:border-rose-300 hover:bg-rose-50/30'
+                }`}
+              >
+                <div className="flex items-center justify-between text-xs text-[#657373]">
+                  <span className="font-medium text-rose-700">Stock Crítico</span>
+                  <AlertTriangle className="h-3.5 w-3.5 text-rose-600" />
+                </div>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="text-2xl font-bold text-rose-700">{metricasStockHub.criticos}</span>
+                  <span className="text-[11px] text-[#657373]">≤ stock mínimo</span>
+                </div>
+                <p className="text-[11px] text-rose-600/90 mt-1">
+                  {filtroStockHub === 'critico' ? 'Filtro activo' : 'Clic para filtrar'}
+                </p>
+              </button>
+
+              {/* Bajas Unidades */}
+              <button
+                type="button"
+                onClick={() => setFiltroStockHub(filtroStockHub === 'bajo' ? 'todos' : 'bajo')}
+                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                  filtroStockHub === 'bajo'
+                    ? 'border-amber-500 bg-amber-50/80 shadow-xs ring-2 ring-amber-500/20'
+                    : 'border-[#E8E6DF] bg-white hover:border-amber-300 hover:bg-amber-50/30'
+                }`}
+              >
+                <div className="flex items-center justify-between text-xs text-[#657373]">
+                  <span className="font-medium text-amber-700">Bajas Unidades</span>
+                  <AlertCircle className="h-3.5 w-3.5 text-amber-600" />
+                </div>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="text-2xl font-bold text-amber-700">{metricasStockHub.bajasUnidades}</span>
+                  <span className="text-[11px] text-[#657373]">≤ 1.5x mínimo</span>
+                </div>
+                <p className="text-[11px] text-amber-600/90 mt-1">
+                  {filtroStockHub === 'bajo' ? 'Filtro activo' : 'Clic para filtrar'}
+                </p>
+              </button>
+
+              {/* Agotados */}
+              <button
+                type="button"
+                onClick={() => setFiltroStockHub(filtroStockHub === 'agotado' ? 'todos' : 'agotado')}
+                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                  filtroStockHub === 'agotado'
+                    ? 'border-red-600 bg-red-50/80 shadow-xs ring-2 ring-red-600/20'
+                    : 'border-[#E8E6DF] bg-white hover:border-red-300 hover:bg-red-50/30'
+                }`}
+              >
+                <div className="flex items-center justify-between text-xs text-[#657373]">
+                  <span className="font-medium text-red-700">Sin Existencias</span>
+                  <Archive className="h-3.5 w-3.5 text-red-600" />
+                </div>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="text-2xl font-bold text-red-700">{metricasStockHub.agotados}</span>
+                  <span className="text-[11px] text-[#657373]">0 unidades</span>
+                </div>
+                <p className="text-[11px] text-red-600/90 mt-1">
+                  {filtroStockHub === 'agotado' ? 'Filtro activo' : 'Clic para filtrar'}
+                </p>
+              </button>
+
+              {/* Óptimo */}
+              <button
+                type="button"
+                onClick={() => setFiltroStockHub(filtroStockHub === 'optimo' ? 'todos' : 'optimo')}
+                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                  filtroStockHub === 'optimo'
+                    ? 'border-[#2A7A78] bg-[#E2F1F0]/50 shadow-xs ring-2 ring-[#2A7A78]/20'
+                    : 'border-[#E8E6DF] bg-white hover:border-[#2A7A78]/40 hover:bg-[#E2F1F0]/20'
+                }`}
+              >
+                <div className="flex items-center justify-between text-xs text-[#657373]">
+                  <span className="font-medium text-[#2A7A78]">Stock Óptimo</span>
+                  <PackageCheck className="h-3.5 w-3.5 text-[#2A7A78]" />
+                </div>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="text-2xl font-bold text-[#2A7A78]">{metricasStockHub.optimos}</span>
+                  <span className="text-[11px] text-[#657373]">&gt; mínimo</span>
+                </div>
+                <p className="text-[11px] text-[#2A7A78]/90 mt-1">
+                  {filtroStockHub === 'optimo' ? 'Filtro activo' : 'Clic para filtrar'}
+                </p>
+              </button>
+            </div>
+          </div>
+
+          {/* ====================================================================
+              LISTADO Y FILTRO DE PRODUCTOS POR CATEGORÍA Y EXISTENCIAS
               ==================================================================== */}
           <Card className="border-[#E8E6DF] shadow-sm">
             <CardHeader className="pb-4 border-b border-[#E8E6DF] space-y-4">
@@ -430,7 +610,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                 <div>
                   <div className="flex items-center gap-2">
                     <CardTitle className="text-base font-bold text-[#1C2424]">
-                      Listado de Productos por Categoría
+                      Listado de Productos del Inventario
                     </CardTitle>
                     <Badge variant="default" className="text-xs">
                       {productosFiltradosHub.length}{' '}
@@ -438,14 +618,14 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                     </Badge>
                   </div>
                   <p className="text-xs text-[#657373] mt-1">
-                    Selecciona una categoría para listar los productos asociados y consultar sus existencias.
+                    Administra existencias físicas, umbrales de alerta y estado operativo por categoría.
                   </p>
                 </div>
 
-                {/* Controles de Filtrado: Selector de Categoría y Buscador */}
+                {/* Controles de Filtrado: Selector de Categoría, Nivel de Stock, Buscador y Reset */}
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
                   {/* Selector Dropdown de Categoría */}
-                  <div className="w-full sm:w-60">
+                  <div className="w-full sm:w-52">
                     <Select
                       value={categoriaFiltroHub}
                       onValueChange={(val) => setCategoriaFiltroHub(val)}
@@ -466,21 +646,66 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                     </Select>
                   </div>
 
+                  {/* Selector Dropdown de Nivel de Stock */}
+                  <div className="w-full sm:w-48">
+                    <Select
+                      value={filtroStockHub}
+                      onValueChange={(val) => setFiltroStockHub(val as FiltroNivelStock)}
+                    >
+                      <SelectTrigger className="h-9 text-xs">
+                        <SelectValue placeholder="Nivel de stock" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Todos los niveles ({productos.length})</SelectItem>
+                        <SelectItem value="critico">
+                          Crítico / Reponer ({metricasStockHub.criticos})
+                        </SelectItem>
+                        <SelectItem value="bajo">
+                          Bajas unidades ({metricasStockHub.bajasUnidades})
+                        </SelectItem>
+                        <SelectItem value="agotado">
+                          Agotados ({metricasStockHub.agotados})
+                        </SelectItem>
+                        <SelectItem value="optimo">
+                          Óptimo ({metricasStockHub.optimos})
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   {/* Campo de búsqueda opcional */}
-                  <div className="relative w-full sm:w-48">
+                  <div className="relative w-full sm:w-44">
                     <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-[#657373]" />
                     <Input
-                      placeholder="Buscar por SKU o nombre..."
+                      placeholder="Buscar SKU o nombre..."
                       value={busquedaHub}
                       onChange={(e) => setBusquedaHub(e.target.value)}
                       className="h-9 pl-8 text-xs"
                     />
                   </div>
+
+                  {/* Botón Restablecer Filtros si hay alguno activo */}
+                  {(categoriaFiltroHub !== 'todas' || filtroStockHub !== 'todos' || busquedaHub.trim() !== '') && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={limpiarFiltrosHub}
+                      className="h-9 text-xs text-[#657373] hover:text-[#1C2424] px-2.5"
+                      title="Restablecer todos los filtros"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                      Limpiar
+                    </Button>
+                  )}
                 </div>
               </div>
 
               {/* Botones Pill de Selección Rápida de Categorías */}
               <div className="flex items-center gap-1.5 overflow-x-auto pt-1 pb-1">
+                <span className="text-[11px] font-semibold text-[#657373] uppercase tracking-wider mr-1 shrink-0">
+                  Categoría:
+                </span>
                 <button
                   type="button"
                   onClick={() => setCategoriaFiltroHub('todas')}
@@ -530,42 +755,115 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                   );
                 })}
               </div>
+
+              {/* Barra de Filtros Rápidos de Nivel de Stock */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pt-2 border-t border-[#E8E6DF]/60">
+                <span className="text-[11px] font-semibold text-[#657373] uppercase tracking-wider mr-1 flex items-center gap-1 shrink-0">
+                  <Filter className="h-3 w-3" />
+                  Estado Stock:
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setFiltroStockHub('todos')}
+                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
+                    filtroStockHub === 'todos'
+                      ? 'bg-[#1C2424] text-white shadow-xs'
+                      : 'bg-[#F8F7F2] text-[#657373] hover:bg-[#E8E6DF]'
+                  }`}
+                >
+                  Todos ({productos.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFiltroStockHub('critico')}
+                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
+                    filtroStockHub === 'critico'
+                      ? 'bg-rose-600 text-white shadow-xs'
+                      : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200/60'
+                  }`}
+                >
+                  <AlertTriangle className="h-3 w-3" />
+                  Críticos ({metricasStockHub.criticos})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFiltroStockHub('bajo')}
+                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
+                    filtroStockHub === 'bajo'
+                      ? 'bg-amber-600 text-white shadow-xs'
+                      : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200/60'
+                  }`}
+                >
+                  <AlertCircle className="h-3 w-3" />
+                  Bajas unidades ({metricasStockHub.bajasUnidades})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFiltroStockHub('agotado')}
+                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
+                    filtroStockHub === 'agotado'
+                      ? 'bg-red-700 text-white shadow-xs'
+                      : 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200/60'
+                  }`}
+                >
+                  Agotados ({metricasStockHub.agotados})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFiltroStockHub('optimo')}
+                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
+                    filtroStockHub === 'optimo'
+                      ? 'bg-[#2A7A78] text-white shadow-xs'
+                      : 'bg-[#E2F1F0] text-[#2A7A78] hover:bg-[#cbeae8]'
+                  }`}
+                >
+                  <PackageCheck className="h-3 w-3" />
+                  Óptimos ({metricasStockHub.optimos})
+                </button>
+              </div>
             </CardHeader>
 
             <CardContent className="p-0">
               {productosFiltradosHub.length === 0 ? (
-                /* Estado cuando no hay productos registrados en la categoría seleccionada */
+                /* Estado cuando no hay productos registrados o coincidentes con los filtros */
                 <div className="py-12 text-center flex flex-col items-center justify-center space-y-3 px-4">
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#F8F7F2] text-[#657373]">
                     <Search className="h-6 w-6" />
                   </div>
                   <div className="max-w-md">
                     <p className="font-semibold text-sm text-[#1C2424]">
-                      No se encontraron productos
+                      No se encontraron productos coincidentes
                     </p>
                     <p className="text-xs text-[#657373] mt-1">
-                      {categoriaFiltroHub !== 'todas'
-                        ? `Aún no hay artículos registrados bajo la categoría "${
-                            categorias.find((c) => c.id === categoriaFiltroHub)?.nombre || 'seleccionada'
-                          }".`
-                        : 'No hay artículos que coincidan con los términos de búsqueda.'}
+                      No hay artículos que coincidan con la categoría, el nivel de stock o la búsqueda textual aplicada.
                     </p>
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="mt-2 text-xs border-[#2A7A78] text-[#2A7A78] hover:bg-[#E2F1F0]"
-                    onClick={() => {
-                      if (categoriaFiltroHub !== 'todas') {
-                        setFieldValue('categoriaId', categoriaFiltroHub);
-                      }
-                      setSeccionActiva('alta');
-                    }}
-                  >
-                    <PackagePlus className="h-3.5 w-3.5 mr-1.5" />
-                    Cargar producto en esta categoría
-                  </Button>
+                  <div className="flex items-center gap-2 pt-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="text-xs"
+                      onClick={limpiarFiltrosHub}
+                    >
+                      <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                      Restablecer filtros
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="text-xs bg-[#2A7A78] text-white hover:bg-[#2A7A78]/90"
+                      onClick={() => {
+                        if (categoriaFiltroHub !== 'todas') {
+                          setFieldValue('categoriaId', categoriaFiltroHub);
+                        }
+                        setSeccionActiva('alta');
+                      }}
+                    >
+                      <PackagePlus className="h-3.5 w-3.5 mr-1.5" />
+                      Cargar producto nuevo
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <>
@@ -584,7 +882,11 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                   </TableHeader>
                   <TableBody ref={inventarioTableBodyRef}>
                     {productosPaginadosHub.map((prod) => {
-                      const esBajoStock = prod.stockActual <= prod.stockMinimo;
+                      const esAgotado = prod.stockActual === 0;
+                      const esCritico = prod.stockActual <= prod.stockMinimo;
+                      const esBajo = !esCritico && prod.stockActual <= prod.stockMinimo * 1.5;
+                      const deficit = Math.max(0, prod.stockMinimo - prod.stockActual);
+
                       return (
                         <TableRow key={prod.id} className="hover:bg-[#F8F7F2]/50">
                           <TableCell className="font-mono text-xs font-bold text-[#1C2424]">
@@ -614,30 +916,59 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                             )}
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-semibold text-sm text-[#1C2424]">
-                                {prod.stockActual}
-                              </span>
-                              <span className="text-xs text-[#657373]">
-                                {prod.unidadMedida}
-                              </span>
-                            </div>
-                            <div className="text-[11px] text-[#657373]">
-                              Mínimo: {prod.stockMinimo} {prod.unidadMedida}
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1.5">
+                                <span
+                                  className={`text-sm font-bold ${
+                                    esAgotado
+                                      ? 'text-red-700'
+                                      : esCritico
+                                      ? 'text-rose-600'
+                                      : esBajo
+                                      ? 'text-amber-600'
+                                      : 'text-[#1C2424]'
+                                  }`}
+                                >
+                                  {prod.stockActual}
+                                </span>
+                                <span className="text-xs text-[#657373]">
+                                  {prod.unidadMedida}
+                                </span>
+                              </div>
+                              <div className="text-[11px] text-[#657373]">
+                                Mínimo: {prod.stockMinimo} {prod.unidadMedida}
+                              </div>
+                              {deficit > 0 && prod.activo && (
+                                <div className="inline-flex items-center gap-1 text-[10px] font-semibold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
+                                  <AlertTriangle className="h-2.5 w-2.5" />
+                                  Déficit: {deficit} {prod.unidadMedida}
+                                </div>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell>
                             {!prod.activo ? (
                               <Badge variant="destructive" className="text-xs">
-                                Baja
+                                Inactivo / Baja
                               </Badge>
-                            ) : esBajoStock ? (
-                              <Badge variant="destructive" className="text-xs">
-                                Activo / Crítico
+                            ) : esAgotado ? (
+                              <Badge variant="destructive" className="text-xs bg-red-700 hover:bg-red-800">
+                                Agotado
+                              </Badge>
+                            ) : esCritico ? (
+                              <Badge variant="destructive" className="text-xs bg-rose-600 hover:bg-rose-700 flex items-center gap-1 w-fit">
+                                <AlertTriangle className="h-3 w-3" />
+                                Crítico / Reponer
+                              </Badge>
+                            ) : esBajo ? (
+                              <Badge variant="warning" className="text-xs flex items-center gap-1 w-fit">
+                                <AlertCircle className="h-3 w-3" />
+                                Bajas unidades
                               </Badge>
                             ) : (
-                              <Badge variant="success" className="text-xs">
-                                Activo
+                              <Badge variant="success" className="text-xs flex items-center gap-1 w-fit">
+                                <PackageCheck className="h-3 w-3" />
+                                Óptimo
                               </Badge>
                             )}
                           </TableCell>
@@ -649,10 +980,10 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                                 variant="outline"
                                 className="h-7 text-xs px-2 text-[#2A7A78] hover:bg-[#E2F1F0]"
                                 onClick={() => handleAbrirEdicion(prod)}
-                                title="Modificar este producto"
+                                title="Modificar datos o reponer existencias físicas"
                               >
                                 <FileEdit className="h-3.5 w-3.5 mr-1" />
-                                Modificar
+                                Reponer / Editar
                               </Button>
                               {prod.activo ? (
                                 <Button
@@ -1232,6 +1563,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                     <TableHead>Categoría</TableHead>
                     <TableHead>Costo ($)</TableHead>
                     <TableHead>Venta ($)</TableHead>
+                    <TableHead>Stock Actual</TableHead>
                     <TableHead>Stock Mínimo</TableHead>
                     <TableHead className="text-right">Acción</TableHead>
                   </TableRow>
@@ -1256,6 +1588,18 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                       </TableCell>
                       <TableCell className="font-bold text-[#1C2424]">
                         ${prod.precioVenta.toLocaleString('es-AR')}
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          className={`font-semibold text-sm ${
+                            prod.stockActual <= prod.stockMinimo
+                              ? 'text-rose-600 font-bold'
+                              : 'text-[#1C2424]'
+                          }`}
+                        >
+                          {prod.stockActual}
+                        </span>{' '}
+                        <span className="text-xs text-[#657373]">{prod.unidadMedida}</span>
                       </TableCell>
                       <TableCell className="text-[#657373]">
                         {prod.stockMinimo} {prod.unidadMedida}
@@ -1473,6 +1817,21 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                     value={formEdicion.precioVenta}
                     onChange={(e) =>
                       setFormEdicion((prev) => ({ ...prev, precioVenta: parseFloat(e.target.value) || 0 }))
+                    }
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-[#1C2424] uppercase tracking-wider">
+                    Stock Físico Actual *
+                  </label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={formEdicion.stockActual}
+                    onChange={(e) =>
+                      setFormEdicion((prev) => ({ ...prev, stockActual: parseInt(e.target.value) || 0 }))
                     }
                     required
                   />
