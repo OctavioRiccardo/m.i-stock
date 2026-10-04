@@ -32,6 +32,7 @@ import {
   Filter,
   Boxes,
   PackageCheck,
+  PackageSearch,
   X,
 } from 'lucide-react';
 import {
@@ -176,7 +177,20 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
   // ESTADOS: SECCIÓN MODIFICAR
   // ==========================================
   const [busquedaModificar, setBusquedaModificar] = useState('');
+  const [categoriaFiltroModificar, setCategoriaFiltroModificar] = useState('todas');
+  const [filtroStockModificar, setFiltroStockModificar] = useState<FiltroNivelStock>('todos');
+  const [filtroEstadoModificar, setFiltroEstadoModificar] = useState<'todos' | 'activos' | 'inactivos'>('activos');
+  const [paginaModificar, setPaginaModificar] = useState(1);
+  const itemsPorPaginaModificar = 8;
   const [modalEditarOpened, setModalEditarOpened] = useState(false);
+
+  const limpiarFiltrosModificar = () => {
+    setBusquedaModificar('');
+    setCategoriaFiltroModificar('todas');
+    setFiltroStockModificar('todos');
+    setFiltroEstadoModificar('activos');
+    setPaginaModificar(1);
+  };
   const [productoAEditar, setProductoAEditar] = useState<Producto | null>(null);
   const [formEdicion, setFormEdicion] = useState<{
     nombre: string;
@@ -310,13 +324,68 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
     return coincideTexto;
   });
 
+  // Métricas diagnósticas específicas para el catálogo de modificación
+  const metricasModificar = {
+    total: productos.length,
+    activos: productos.filter((p) => p.activo).length,
+    criticos: productos.filter((p) => p.activo && p.stockActual <= p.stockMinimo).length,
+    bajasUnidades: productos.filter(
+      (p) => p.activo && p.stockActual > 0 && p.stockActual <= p.stockMinimo * 1.5
+    ).length,
+    agotados: productos.filter((p) => p.activo && p.stockActual === 0).length,
+    optimos: productos.filter((p) => p.activo && p.stockActual > p.stockMinimo).length,
+  };
+
+  const conteosPorCategoriaModificar = categorias.reduce<Record<string, number>>((acc, cat) => {
+    acc[cat.id] = productos.filter((p) => {
+      if (filtroEstadoModificar === 'activos' && !p.activo) return false;
+      if (filtroEstadoModificar === 'inactivos' && p.activo) return false;
+      return p.categoriaId === cat.id;
+    }).length;
+    return acc;
+  }, {});
+
   const productosFiltradosModificar = productos.filter((p) => {
-    return (
-      p.nombre.toLowerCase().includes(busquedaModificar.toLowerCase()) ||
-      p.codigo.toLowerCase().includes(busquedaModificar.toLowerCase()) ||
-      (p.categoria?.nombre || '').toLowerCase().includes(busquedaModificar.toLowerCase())
-    );
+    // 1. Filtro por estado activo / inactivo
+    if (filtroEstadoModificar === 'activos' && !p.activo) return false;
+    if (filtroEstadoModificar === 'inactivos' && p.activo) return false;
+
+    // 2. Filtro por categoría
+    if (categoriaFiltroModificar !== 'todas' && p.categoriaId !== categoriaFiltroModificar) {
+      return false;
+    }
+
+    // 3. Filtro por nivel de stock
+    if (filtroStockModificar === 'critico') {
+      if (p.stockActual > p.stockMinimo) return false;
+    } else if (filtroStockModificar === 'bajo') {
+      if (!(p.stockActual > 0 && p.stockActual <= p.stockMinimo * 1.5)) return false;
+    } else if (filtroStockModificar === 'agotado') {
+      if (p.stockActual !== 0) return false;
+    } else if (filtroStockModificar === 'optimo') {
+      if (p.stockActual <= p.stockMinimo) return false;
+    }
+
+    // 4. Búsqueda por texto (SKU, nombre, descripción o categoría)
+    const busq = busquedaModificar.trim().toLowerCase();
+    if (busq) {
+      const coincide =
+        p.codigo.toLowerCase().includes(busq) ||
+        p.nombre.toLowerCase().includes(busq) ||
+        (p.descripcion && p.descripcion.toLowerCase().includes(busq)) ||
+        (p.categoria?.nombre && p.categoria.nombre.toLowerCase().includes(busq));
+      if (!coincide) return false;
+    }
+
+    return true;
   });
+
+  const totalPaginasModificar = Math.max(1, Math.ceil(productosFiltradosModificar.length / itemsPorPaginaModificar));
+  const inicioModificar = (paginaModificar - 1) * itemsPorPaginaModificar;
+  const productosPaginadosModificar = productosFiltradosModificar.slice(
+    inicioModificar,
+    inicioModificar + itemsPorPaginaModificar
+  );
 
   return (
     <MotionConfig reducedMotion="user">
@@ -1530,96 +1599,513 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                 Modificar Producto Existente
               </h1>
               <p className="text-sm text-[#657373]">
-                Selecciona un artículo para actualizar precios de venta, costos, existencias mínimas o descripciones.
+                Selecciona un artículo para actualizar precios de venta, costos, existencias físicas, umbrales mínimos o descripciones.
               </p>
             </div>
+
+            {(categoriaFiltroModificar !== 'todas' ||
+              filtroStockModificar !== 'todos' ||
+              filtroEstadoModificar !== 'activos' ||
+              busquedaModificar.trim() !== '') && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={limpiarFiltrosModificar}
+                className="h-8 text-xs border-[#E8E6DF] text-[#657373] hover:text-[#1C2424]"
+              >
+                <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                Restablecer todos los filtros
+              </Button>
+            )}
           </div>
 
-          {/* Buscador */}
-          <Card className="p-4">
-            <div className="relative w-full sm:w-96">
-              <Input
-                placeholder="Buscar por código, nombre o categoría..."
-                value={busquedaModificar}
-                onChange={(e) => setBusquedaModificar(e.target.value)}
-                className="pl-9"
-              />
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-[#657373]" />
-            </div>
-          </Card>
+          {/* Grid de Métricas de Salud de Stock (Click-to-Filter) */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+            {/* Crítico */}
+            <button
+              type="button"
+              onClick={() => {
+                setFiltroStockModificar(filtroStockModificar === 'critico' ? 'todos' : 'critico');
+                setPaginaModificar(1);
+              }}
+              className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                filtroStockModificar === 'critico'
+                  ? 'border-rose-500 bg-rose-50/80 shadow-xs ring-2 ring-rose-500/20'
+                  : 'border-[#E8E6DF] bg-white hover:border-rose-300 hover:bg-rose-50/30'
+              }`}
+            >
+              <div className="flex items-center justify-between text-xs text-[#657373]">
+                <span className="font-medium text-rose-700">Stock Crítico</span>
+                <AlertTriangle className="h-3.5 w-3.5 text-rose-600" />
+              </div>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-rose-700">{metricasModificar.criticos}</span>
+                <span className="text-[11px] text-[#657373]">&le; mínimo</span>
+              </div>
+              <p className="text-[11px] text-rose-600/90 mt-1">
+                {filtroStockModificar === 'critico' ? 'Filtro activo' : 'Clic para filtrar'}
+              </p>
+            </button>
 
-          {/* Tabla de Selección para Editar */}
-          <Card>
-            <CardHeader className="pb-3 border-b border-[#E8E6DF]">
-              <CardTitle className="text-base font-bold text-[#1C2424]">
-                Catálogo de Artículos ({productosFiltradosModificar.length})
-              </CardTitle>
+            {/* Bajas Unidades */}
+            <button
+              type="button"
+              onClick={() => {
+                setFiltroStockModificar(filtroStockModificar === 'bajo' ? 'todos' : 'bajo');
+                setPaginaModificar(1);
+              }}
+              className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                filtroStockModificar === 'bajo'
+                  ? 'border-amber-500 bg-amber-50/80 shadow-xs ring-2 ring-amber-500/20'
+                  : 'border-[#E8E6DF] bg-white hover:border-amber-300 hover:bg-amber-50/30'
+              }`}
+            >
+              <div className="flex items-center justify-between text-xs text-[#657373]">
+                <span className="font-medium text-amber-700">Bajas Unidades</span>
+                <TrendingDown className="h-3.5 w-3.5 text-amber-600" />
+              </div>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-amber-700">{metricasModificar.bajasUnidades}</span>
+                <span className="text-[11px] text-[#657373]">&le; 1.5&times; mín</span>
+              </div>
+              <p className="text-[11px] text-amber-600/90 mt-1">
+                {filtroStockModificar === 'bajo' ? 'Filtro activo' : 'Clic para filtrar'}
+              </p>
+            </button>
+
+            {/* Agotados */}
+            <button
+              type="button"
+              onClick={() => {
+                setFiltroStockModificar(filtroStockModificar === 'agotado' ? 'todos' : 'agotado');
+                setPaginaModificar(1);
+              }}
+              className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                filtroStockModificar === 'agotado'
+                  ? 'border-red-600 bg-red-50/80 shadow-xs ring-2 ring-red-600/20'
+                  : 'border-[#E8E6DF] bg-white hover:border-red-300 hover:bg-red-50/30'
+              }`}
+            >
+              <div className="flex items-center justify-between text-xs text-[#657373]">
+                <span className="font-medium text-red-700">Sin Existencias</span>
+                <Archive className="h-3.5 w-3.5 text-red-600" />
+              </div>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-red-700">{metricasModificar.agotados}</span>
+                <span className="text-[11px] text-[#657373]">0 unidades</span>
+              </div>
+              <p className="text-[11px] text-red-600/90 mt-1">
+                {filtroStockModificar === 'agotado' ? 'Filtro activo' : 'Clic para filtrar'}
+              </p>
+            </button>
+
+            {/* Óptimo */}
+            <button
+              type="button"
+              onClick={() => {
+                setFiltroStockModificar(filtroStockModificar === 'optimo' ? 'todos' : 'optimo');
+                setPaginaModificar(1);
+              }}
+              className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                filtroStockModificar === 'optimo'
+                  ? 'border-[#2A7A78] bg-[#E2F1F0]/50 shadow-xs ring-2 ring-[#2A7A78]/20'
+                  : 'border-[#E8E6DF] bg-white hover:border-[#2A7A78]/40 hover:bg-[#E2F1F0]/20'
+              }`}
+            >
+              <div className="flex items-center justify-between text-xs text-[#657373]">
+                <span className="font-medium text-[#2A7A78]">Stock Óptimo</span>
+                <PackageCheck className="h-3.5 w-3.5 text-[#2A7A78]" />
+              </div>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-[#2A7A78]">{metricasModificar.optimos}</span>
+                <span className="text-[11px] text-[#657373]">&gt; mínimo</span>
+              </div>
+              <p className="text-[11px] text-[#2A7A78]/90 mt-1">
+                {filtroStockModificar === 'optimo' ? 'Filtro activo' : 'Clic para filtrar'}
+              </p>
+            </button>
+          </div>
+
+          {/* Card Principal con Filtros y Tabla */}
+          <Card className="border-[#E8E6DF] shadow-sm">
+            <CardHeader className="pb-4 border-b border-[#E8E6DF] space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-base font-bold text-[#1C2424]">
+                      Catálogo para Modificación
+                    </CardTitle>
+                    <Badge variant="default" className="text-xs">
+                      {productosFiltradosModificar.length}{' '}
+                      {productosFiltradosModificar.length === 1 ? 'artículo' : 'artículos'}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-[#657373] mt-1">
+                    Filtra por categoría, estado de existencias o busca un producto puntual para abrir el editor.
+                  </p>
+                </div>
+
+                {/* Controles de Filtrado: Dropdown de Categoría, Nivel de Stock, Estado Comercial, Buscador y Reset */}
+                <div className="flex flex-wrap items-center gap-2.5">
+                  {/* Selector de Categoría */}
+                  <div className="w-full sm:w-48">
+                    <Select
+                      value={categoriaFiltroModificar}
+                      onValueChange={(val) => {
+                        setCategoriaFiltroModificar(val);
+                        setPaginaModificar(1);
+                      }}
+                    >
+                      <SelectTrigger className="h-9 text-xs">
+                        <SelectValue placeholder="Todas las categorías" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todas">
+                          Todas las categorías ({productos.length})
+                        </SelectItem>
+                        {categorias.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.nombre} ({conteosPorCategoriaModificar[c.id] || 0})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Selector de Nivel de Stock */}
+                  <div className="w-full sm:w-44">
+                    <Select
+                      value={filtroStockModificar}
+                      onValueChange={(val) => {
+                        setFiltroStockModificar(val as FiltroNivelStock);
+                        setPaginaModificar(1);
+                      }}
+                    >
+                      <SelectTrigger className="h-9 text-xs">
+                        <SelectValue placeholder="Nivel de stock" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Todos los niveles ({productos.length})</SelectItem>
+                        <SelectItem value="critico">
+                          Crítico / Reponer ({metricasModificar.criticos})
+                        </SelectItem>
+                        <SelectItem value="bajo">
+                          Bajas unidades ({metricasModificar.bajasUnidades})
+                        </SelectItem>
+                        <SelectItem value="agotado">
+                          Agotados ({metricasModificar.agotados})
+                        </SelectItem>
+                        <SelectItem value="optimo">
+                          Óptimo ({metricasModificar.optimos})
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Selector de Estado Comercial */}
+                  <div className="w-full sm:w-36">
+                    <Select
+                      value={filtroEstadoModificar}
+                      onValueChange={(val) => {
+                        setFiltroEstadoModificar(val as 'todos' | 'activos' | 'inactivos');
+                        setPaginaModificar(1);
+                      }}
+                    >
+                      <SelectTrigger className="h-9 text-xs">
+                        <SelectValue placeholder="Estado" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="activos">Solo Activos ({metricasModificar.activos})</SelectItem>
+                        <SelectItem value="inactivos">Inactivos ({productos.length - metricasModificar.activos})</SelectItem>
+                        <SelectItem value="todos">Todos ({productos.length})</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Campo de Búsqueda */}
+                  <div className="relative w-full sm:w-48">
+                    <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-[#657373]" />
+                    <Input
+                      placeholder="Buscar SKU o nombre..."
+                      value={busquedaModificar}
+                      onChange={(e) => {
+                        setBusquedaModificar(e.target.value);
+                        setPaginaModificar(1);
+                      }}
+                      className="h-9 pl-8 text-xs"
+                    />
+                  </div>
+
+                  {/* Botón Restablecer */}
+                  {(categoriaFiltroModificar !== 'todas' ||
+                    filtroStockModificar !== 'todos' ||
+                    filtroEstadoModificar !== 'activos' ||
+                    busquedaModificar.trim() !== '') && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={limpiarFiltrosModificar}
+                      className="h-9 text-xs text-[#657373] hover:text-[#1C2424] px-2.5"
+                      title="Restablecer filtros"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                      Limpiar
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Botones Pill de Acceso Rápido por Categoría */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pt-1 pb-1">
+                <span className="text-[11px] font-semibold text-[#657373] uppercase tracking-wider mr-1 shrink-0">
+                  Categoría:
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCategoriaFiltroModificar('todas');
+                    setPaginaModificar(1);
+                  }}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all shrink-0 cursor-pointer ${
+                    categoriaFiltroModificar === 'todas'
+                      ? 'bg-[#2A7A78] text-white shadow-xs'
+                      : 'bg-[#F8F7F2] text-[#657373] hover:bg-[#E8E6DF] hover:text-[#1C2424] border border-[#E8E6DF]'
+                  }`}
+                >
+                  <span>Todas</span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                      categoriaFiltroModificar === 'todas'
+                        ? 'bg-white/20 text-white'
+                        : 'bg-[#E8E6DF] text-[#657373]'
+                    }`}
+                  >
+                    {productos.length}
+                  </span>
+                </button>
+                {categorias.map((cat) => {
+                  const activa = categoriaFiltroModificar === cat.id;
+                  const cantidad = conteosPorCategoriaModificar[cat.id] || 0;
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => {
+                        setCategoriaFiltroModificar(cat.id);
+                        setPaginaModificar(1);
+                      }}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all shrink-0 cursor-pointer ${
+                        activa
+                          ? 'bg-[#2A7A78] text-white shadow-xs'
+                          : 'bg-[#F8F7F2] text-[#657373] hover:bg-[#E8E6DF] hover:text-[#1C2424] border border-[#E8E6DF]'
+                      }`}
+                    >
+                      <span>{cat.nombre}</span>
+                      <span
+                        className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                          activa ? 'bg-white/20 text-white' : 'bg-[#E8E6DF] text-[#657373]'
+                        }`}
+                      >
+                        {cantidad}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Código</TableHead>
-                    <TableHead>Producto</TableHead>
-                    <TableHead>Categoría</TableHead>
-                    <TableHead>Costo ($)</TableHead>
-                    <TableHead>Venta ($)</TableHead>
-                    <TableHead>Stock Actual</TableHead>
-                    <TableHead>Stock Mínimo</TableHead>
-                    <TableHead className="text-right">Acción</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody ref={modificarTableBodyRef}>
-                  {productosFiltradosModificar.map((prod) => (
-                    <TableRow key={prod.id}>
-                      <TableCell className="font-mono text-xs font-bold text-[#1C2424]">
-                        {prod.codigo}
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-semibold text-sm text-[#1C2424]">{prod.nombre}</div>
-                        {prod.descripcion && (
-                          <div className="text-xs text-[#657373] line-clamp-1">{prod.descripcion}</div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="default">{prod.categoria?.nombre || 'General'}</Badge>
-                      </TableCell>
-                      <TableCell className="text-[#657373]">
-                        ${prod.precioCosto.toLocaleString('es-AR')}
-                      </TableCell>
-                      <TableCell className="font-bold text-[#1C2424]">
-                        ${prod.precioVenta.toLocaleString('es-AR')}
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          className={`font-semibold text-sm ${
-                            prod.stockActual <= prod.stockMinimo
-                              ? 'text-rose-600 font-bold'
-                              : 'text-[#1C2424]'
-                          }`}
-                        >
-                          {prod.stockActual}
-                        </span>{' '}
-                        <span className="text-xs text-[#657373]">{prod.unidadMedida}</span>
-                      </TableCell>
-                      <TableCell className="text-[#657373]">
-                        {prod.stockMinimo} {prod.unidadMedida}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleAbrirEdicion(prod)}
-                          className="gap-1.5"
-                        >
-                          <FileEdit className="h-3.5 w-3.5" />
-                          <span>Editar</span>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+
+            <CardContent className="p-0">
+              {productosFiltradosModificar.length === 0 ? (
+                <div className="py-12 px-4 text-center space-y-3">
+                  <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#F8F7F2] text-[#657373] border border-[#E8E6DF]">
+                    <PackageSearch className="h-6 w-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="font-semibold text-sm text-[#1C2424]">
+                      No se encontraron productos para modificar
+                    </p>
+                    <p className="text-xs text-[#657373] max-w-sm mx-auto">
+                      Ningún artículo coincide con los criterios de búsqueda o filtros de categoría y stock seleccionados.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="text-xs"
+                    onClick={limpiarFiltrosModificar}
+                  >
+                    <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                    Restablecer filtros
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Código / SKU</TableHead>
+                        <TableHead>Producto</TableHead>
+                        <TableHead>Categoría</TableHead>
+                        <TableHead>Costo ($)</TableHead>
+                        <TableHead>Venta ($)</TableHead>
+                        <TableHead>Stock Actual</TableHead>
+                        <TableHead>Stock Mínimo</TableHead>
+                        <TableHead>Estado</TableHead>
+                        <TableHead className="text-right">Acción</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody ref={modificarTableBodyRef}>
+                      {productosPaginadosModificar.map((prod) => {
+                        const esAgotado = prod.stockActual === 0;
+                        const esCritico = prod.stockActual <= prod.stockMinimo;
+                        const esBajo = !esCritico && prod.stockActual <= prod.stockMinimo * 1.5;
+                        const deficit = Math.max(0, prod.stockMinimo - prod.stockActual);
+
+                        return (
+                          <TableRow key={prod.id} className="hover:bg-[#F8F7F2]/50">
+                            <TableCell className="font-mono text-xs font-bold text-[#1C2424]">
+                              {prod.codigo}
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <p className="font-semibold text-sm text-[#1C2424]">{prod.nombre}</p>
+                                {prod.descripcion && (
+                                  <p className="text-xs text-[#657373] line-clamp-1">{prod.descripcion}</p>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="default" className="text-xs">
+                                {prod.categoria?.nombre || 'General'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs text-[#657373]">
+                              ${prod.precioCosto.toLocaleString('es-AR')}
+                            </TableCell>
+                            <TableCell className="text-sm font-bold text-[#1C2424]">
+                              ${prod.precioVenta.toLocaleString('es-AR')}
+                            </TableCell>
+                            <TableCell>
+                              <div className="space-y-0.5">
+                                <div className="flex items-baseline gap-1.5">
+                                  <span
+                                    className={`font-semibold text-sm ${
+                                      esAgotado
+                                        ? 'text-red-700 font-extrabold'
+                                        : esCritico
+                                        ? 'text-rose-600 font-bold'
+                                        : esBajo
+                                        ? 'text-amber-700 font-bold'
+                                        : 'text-[#1C2424]'
+                                    }`}
+                                  >
+                                    {prod.stockActual}
+                                  </span>
+                                  <span className="text-xs text-[#657373]">
+                                    {prod.unidadMedida}
+                                  </span>
+                                </div>
+                                {deficit > 0 && prod.activo && (
+                                  <div className="inline-flex items-center gap-1 text-[10px] font-semibold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
+                                    <AlertTriangle className="h-2.5 w-2.5" />
+                                    Déficit: {deficit}
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-xs text-[#657373]">
+                              {prod.stockMinimo} {prod.unidadMedida}
+                            </TableCell>
+                            <TableCell>
+                              {!prod.activo ? (
+                                <Badge variant="secondary" className="text-xs text-[#657373] bg-[#F8F7F2] border-[#E8E6DF]">
+                                  Inactivo
+                                </Badge>
+                              ) : esAgotado ? (
+                                <Badge variant="destructive" className="text-xs flex items-center gap-1 w-fit border-red-300 bg-red-100/90 text-red-800">
+                                  <Archive className="h-3 w-3 text-red-700" />
+                                  Agotado
+                                </Badge>
+                              ) : esCritico ? (
+                                <Badge variant="destructive" className="text-xs flex items-center gap-1 w-fit border-rose-200 bg-rose-50 text-rose-700">
+                                  <AlertTriangle className="h-3 w-3 text-rose-600" />
+                                  Crítico
+                                </Badge>
+                              ) : esBajo ? (
+                                <Badge variant="warning" className="text-xs flex items-center gap-1 w-fit">
+                                  <AlertCircle className="h-3 w-3" />
+                                  Bajas unidades
+                                </Badge>
+                              ) : (
+                                <Badge variant="success" className="text-xs flex items-center gap-1 w-fit">
+                                  <PackageCheck className="h-3 w-3" />
+                                  Óptimo
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => handleAbrirEdicion(prod)}
+                                className="h-8 gap-1.5 text-xs text-[#1C2424] hover:bg-[#E8E6DF]"
+                              >
+                                <FileEdit className="h-3.5 w-3.5 text-[#2A7A78]" />
+                                <span>Editar</span>
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+
+                  {/* Paginación */}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t border-[#E8E6DF] bg-[#F8F7F2]/30">
+                    <p className="text-xs text-[#657373]">
+                      Mostrando del{' '}
+                      <strong>{inicioModificar + 1}</strong> al{' '}
+                      <strong>
+                        {Math.min(inicioModificar + itemsPorPaginaModificar, productosFiltradosModificar.length)}
+                      </strong>{' '}
+                      de <strong>{productosFiltradosModificar.length}</strong> artículos
+                    </p>
+
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-8 text-xs gap-1 border-[#E8E6DF]"
+                        disabled={paginaModificar === 1}
+                        onClick={() => setPaginaModificar((prev) => Math.max(1, prev - 1))}
+                      >
+                        <ChevronLeft className="h-3.5 w-3.5" />
+                        <span>Anterior</span>
+                      </Button>
+
+                      <span className="text-xs text-[#657373] px-2 font-medium">
+                        Página {paginaModificar} de {totalPaginasModificar}
+                      </span>
+
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-8 text-xs gap-1 border-[#E8E6DF]"
+                        disabled={paginaModificar >= totalPaginasModificar}
+                        onClick={() => setPaginaModificar((prev) => Math.min(totalPaginasModificar, prev + 1))}
+                      >
+                        <span>Siguiente</span>
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
