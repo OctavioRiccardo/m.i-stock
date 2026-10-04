@@ -948,16 +948,17 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                           </TableCell>
                           <TableCell>
                             {!prod.activo ? (
-                              <Badge variant="destructive" className="text-xs">
+                              <Badge variant="secondary" className="text-xs text-[#657373] bg-[#F8F7F2] border-[#E8E6DF]">
                                 Inactivo / Baja
                               </Badge>
                             ) : esAgotado ? (
-                              <Badge variant="destructive" className="text-xs bg-red-700 hover:bg-red-800">
+                              <Badge variant="destructive" className="text-xs flex items-center gap-1 w-fit border-red-300 bg-red-100/90 text-red-800">
+                                <Archive className="h-3 w-3 text-red-700" />
                                 Agotado
                               </Badge>
                             ) : esCritico ? (
-                              <Badge variant="destructive" className="text-xs bg-rose-600 hover:bg-rose-700 flex items-center gap-1 w-fit">
-                                <AlertTriangle className="h-3 w-3" />
+                              <Badge variant="destructive" className="text-xs flex items-center gap-1 w-fit border-rose-200 bg-rose-50 text-rose-700">
+                                <AlertTriangle className="h-3 w-3 text-rose-600" />
                                 Crítico / Reponer
                               </Badge>
                             ) : esBajo ? (
