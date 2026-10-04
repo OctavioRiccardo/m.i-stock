@@ -8,45 +8,23 @@
  * Propósito:
  * Administrar la parametrización del negocio, datos de facturación para el POS,
  * métodos de cobro habilitados, umbrales de stock y exportación de respaldos.
+ * Conectado reactivamente con `configuracionService` como Single Source of Truth.
  */
 
 import { useState } from 'react';
 import {
-  ConfiguracionCompleta,
   ConfiguracionNegocio,
   ConfiguracionPOS,
   ConfiguracionInventario,
   MetodosPagoConfig,
-  valoresPorDefectoConfiguracion,
 } from '@/models/modelos_vista/configuracionModel';
+import { configuracionService, useConfiguracionData } from '@/services/configuracionService';
 import { inventarioService } from '@/services/inventarioService';
 
 export type PestañaConfiguracion = 'negocio' | 'pos' | 'inventario' | 'respaldos';
 
-const STORAGE_KEY = 'mistock_configuracion_v1';
-
 export function useAdminConfiguracionController() {
-  const [config, setConfig] = useState<ConfiguracionCompleta>(() => {
-    if (typeof window === 'undefined') {
-      return valoresPorDefectoConfiguracion;
-    }
-    try {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        return {
-          ...valoresPorDefectoConfiguracion,
-          ...parsed,
-          negocio: { ...valoresPorDefectoConfiguracion.negocio, ...(parsed.negocio || {}) },
-          pos: { ...valoresPorDefectoConfiguracion.pos, ...(parsed.pos || {}) },
-          inventario: { ...valoresPorDefectoConfiguracion.inventario, ...(parsed.inventario || {}) },
-        };
-      }
-    } catch {
-      // Fallback a valores por defecto silenciosamente
-    }
-    return valoresPorDefectoConfiguracion;
-  });
+  const config = useConfiguracionData();
   const [pestañaActiva, setPestañaActiva] = useState<PestañaConfiguracion>('negocio');
   const [guardando, setGuardando] = useState<boolean>(false);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
@@ -61,61 +39,32 @@ export function useAdminConfiguracionController() {
    * Actualiza los datos comerciales de la empresa y del ticket.
    */
   const actualizarNegocio = (datos: Partial<ConfiguracionNegocio>) => {
-    setConfig((prev) => ({
-      ...prev,
-      negocio: { ...prev.negocio, ...datos },
-    }));
+    configuracionService.actualizarNegocio(datos);
   };
 
   /**
-   * Actualiza los parámetros de operación de caja.
+   * Actualiza los parámetros de operación de caja y hardware.
    */
   const actualizarPOS = (datos: Partial<ConfiguracionPOS>) => {
-    setConfig((prev) => ({
-      ...prev,
-      pos: { ...prev.pos, ...datos },
-    }));
+    configuracionService.actualizarPOS(datos);
   };
 
   /**
-   * Alterna un método de pago habilitado (ej: débito, crédito, QR).
+   * Alterna un método de pago habilitado (ej: débito, crédito, QR, mercado pago).
    */
   const toggleMetodoPago = (metodo: keyof MetodosPagoConfig) => {
-    setConfig((prev) => {
-      const actual = prev.pos.metodosPagoHabilitados[metodo];
-      // Regla: No permitir deshabilitar todos los métodos a la vez
-      const habilitados = Object.values({
-        ...prev.pos.metodosPagoHabilitados,
-        [metodo]: !actual,
-      }).filter(Boolean).length;
-
-      if (habilitados === 0) {
-        setMensajeError('Debe quedar al menos un método de cobro habilitado para la caja.');
-        setTimeout(() => setMensajeError(null), 3500);
-        return prev;
-      }
-
-      return {
-        ...prev,
-        pos: {
-          ...prev.pos,
-          metodosPagoHabilitados: {
-            ...prev.pos.metodosPagoHabilitados,
-            [metodo]: !actual,
-          },
-        },
-      };
-    });
+    const res = configuracionService.toggleMetodoPago(metodo);
+    if (!res.exito && res.mensaje) {
+      setMensajeError(res.mensaje);
+      setTimeout(() => setMensajeError(null), 3500);
+    }
   };
 
   /**
    * Actualiza las directivas y umbrales de inventario.
    */
   const actualizarInventario = (datos: Partial<ConfiguracionInventario>) => {
-    setConfig((prev) => ({
-      ...prev,
-      inventario: { ...prev.inventario, ...datos },
-    }));
+    configuracionService.actualizarInventario(datos);
   };
 
   /**
@@ -126,9 +75,9 @@ export function useAdminConfiguracionController() {
     setMensajeError(null);
 
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+      configuracionService.guardarConfiguracion(config);
       setGuardando(false);
-      setMensajeExito('Configuración guardada exitosamente.');
+      setMensajeExito('Configuración guardada exitosamente y sincronizada en tiempo real con el mostrador.');
       setTimeout(() => setMensajeExito(null), 3500);
     } catch {
       setGuardando(false);
@@ -140,12 +89,7 @@ export function useAdminConfiguracionController() {
    * Restablece todos los parámetros a los valores por defecto de fábrica.
    */
   const restablecerPorDefecto = () => {
-    setConfig(valoresPorDefectoConfiguracion);
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // Ignore
-    }
+    configuracionService.restablecerPorDefecto();
     setMensajeExito('Se restablecieron los valores predeterminados de fábrica.');
     setTimeout(() => setMensajeExito(null), 3500);
   };

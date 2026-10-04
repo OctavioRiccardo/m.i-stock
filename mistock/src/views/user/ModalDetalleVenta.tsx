@@ -45,10 +45,7 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { VentaRecientePOS } from '@/models/modelos_vista/dashboardModel';
-import {
-  ConfiguracionNegocio,
-  valoresPorDefectoConfiguracion,
-} from '@/models/modelos_vista/configuracionModel';
+import { useConfiguracionData } from '@/services/configuracionService';
 import { motion, AnimatePresence } from 'motion/react';
 
 export interface ModalDetalleVentaProps {
@@ -65,29 +62,8 @@ export function ModalDetalleVenta({
   monedaSimbolo,
 }: ModalDetalleVentaProps) {
   const [vistaActiva, setVistaActiva] = useState<'detalles' | 'ticket'>('detalles');
-  const [configNegocio, setConfigNegocio] = useState<ConfiguracionNegocio>(
-    valoresPorDefectoConfiguracion.negocio
-  );
-
-  // Cargar configuración comercial guardada por el administrador en localStorage
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = window.localStorage.getItem('mistock_configuracion_v1');
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (parsed?.negocio) {
-            setConfigNegocio({
-              ...valoresPorDefectoConfiguracion.negocio,
-              ...parsed.negocio,
-            });
-          }
-        }
-      } catch {
-        // Fallback silencioso a valores por defecto
-      }
-    }
-  }, [isOpen]);
+  const configGlobal = useConfiguracionData();
+  const configNegocio = configGlobal.negocio;
 
   // Restablecer a vista 'detalles' cada vez que se abre una venta
   useEffect(() => {

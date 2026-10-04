@@ -47,6 +47,10 @@ import {
   useAdminConfiguracionController,
   PestañaConfiguracion,
 } from '@/controllers/adminControllers/configuracionController';
+import {
+  CondicionIva,
+  AnchoPapelTicket,
+} from '@/models/modelos_vista/configuracionModel';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -304,8 +308,8 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="sm:col-span-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
                       <label className="block text-xs font-semibold text-[#1C2424] mb-1">
                         CUIT / Identificación Fiscal
                       </label>
@@ -316,7 +320,21 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                         className="h-9 text-xs"
                       />
                     </div>
-                    <div className="sm:col-span-1">
+                    <div>
+                      <label className="block text-xs font-semibold text-[#1C2424] mb-1">
+                        Condición Tributaria (IVA)
+                      </label>
+                      <select
+                        value={config.negocio.condicionIva || 'monotributo'}
+                        onChange={(e) => actualizarNegocio({ condicionIva: e.target.value as CondicionIva })}
+                        className="flex h-9 w-full rounded-md border border-[#E8E6DF] bg-white px-3 py-1 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#2A7A78] text-[#1C2424]"
+                      >
+                        <option value="monotributo">Responsable Monotributo</option>
+                        <option value="responsable_inscripto">Responsable Inscripto</option>
+                        <option value="consumidor_final">Consumidor Final</option>
+                      </select>
+                    </div>
+                    <div>
                       <label className="block text-xs font-semibold text-[#1C2424] mb-1">
                         Símbolo Moneda
                       </label>
@@ -327,7 +345,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                         className="h-9 text-xs"
                       />
                     </div>
-                    <div className="sm:col-span-1">
+                    <div>
                       <label className="block text-xs font-semibold text-[#1C2424] mb-1">
                         Código ISO
                       </label>
@@ -596,7 +614,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                     <div className="flex items-center gap-2">
                       <Receipt className="h-4 w-4 text-[#2A7A78]" />
                       <CardTitle className="text-xs font-bold uppercase tracking-wider text-[#1C2424]">
-                        Simulador de Ticket Térmico (80mm)
+                        Simulador de Ticket Térmico ({config.pos.anchoPapelTicket || '80mm'})
                       </CardTitle>
                     </div>
                     <Badge variant="outline" className="text-[10px] text-emerald-700 border-emerald-300 bg-emerald-50">
@@ -610,7 +628,11 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
 
                 <CardContent className="p-4 bg-[#F2F1EA]/40">
                   {/* Papel Térmico Simulado */}
-                  <div className="bg-white border border-[#D5D3C8] shadow-md rounded-md p-5 font-mono text-[11px] text-[#2C3539] max-w-sm mx-auto leading-relaxed">
+                  <div className={`bg-white border border-[#D5D3C8] shadow-md rounded-md font-mono mx-auto leading-relaxed transition-all duration-200 ${
+                    config.pos.anchoPapelTicket === '58mm'
+                      ? 'max-w-[270px] p-3 text-[10px]'
+                      : 'max-w-sm p-5 text-[11px]'
+                  } text-[#2C3539]`}>
                     {/* Header */}
                     <div className="text-center space-y-1 pb-3 border-b border-dashed border-[#A0A8A8]">
                       <p className="font-bold text-sm tracking-wide text-[#111827] uppercase">
@@ -624,6 +646,13 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                           CUIT: {config.negocio.cuit}
                         </p>
                       )}
+                      <p className="text-[10px] text-[#4B5563] uppercase">
+                        {config.negocio.condicionIva === 'responsable_inscripto'
+                          ? 'IVA Responsable Inscripto'
+                          : config.negocio.condicionIva === 'consumidor_final'
+                          ? 'Consumidor Final'
+                          : 'Responsable Monotributo'}
+                      </p>
                       {config.negocio.direccion && (
                         <p className="text-[10px] text-[#4B5563]">
                           {config.negocio.direccion}
@@ -674,6 +703,10 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                       <div className="flex justify-between">
                         <span>FECHA Y HORA:</span>
                         <span>25/09/2026 18:45</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>CAJA / TERMINAL:</span>
+                        <span className="font-semibold">Caja #{config.pos.numeroCaja || 1}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>CAJERO:</span>
@@ -787,7 +820,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                 </p>
               </CardHeader>
               <CardContent className="p-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                   {/* Tarjeta 1: Efectivo */}
                   <div
                     className={`p-4 rounded-xl border transition-all ${
@@ -939,7 +972,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                     <div className="mt-3">
                       <p className="font-bold text-xs text-[#1C2424]">Transferencia / QR</p>
                       <p className="text-[11px] text-[#657373] mt-0.5">
-                        Billeteras virtuales (Mercado Pago, MODO, Cuenta DNI) y transferencias.
+                        Billeteras virtuales (MODO, Cuenta DNI, BNA+) y transferencias bancarias.
                       </p>
                     </div>
                     <div className="mt-3">
@@ -948,6 +981,47 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                         className="text-[10px]"
                       >
                         {config.pos.metodosPagoHabilitados.transferencia ? 'Habilitado' : 'Deshabilitado'}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {/* Tarjeta 5: Mercado Pago */}
+                  <div
+                    className={`p-4 rounded-xl border transition-all ${
+                      config.pos.metodosPagoHabilitados.mercado_pago
+                        ? 'border-[#2A7A78] bg-[#E2F1F0]/25'
+                        : 'border-[#E8E6DF] bg-[#F8F7F2]/40 opacity-75'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div
+                        className={`flex h-9 w-9 items-center justify-center rounded-lg ${
+                          config.pos.metodosPagoHabilitados.mercado_pago
+                            ? 'bg-sky-100 text-sky-700'
+                            : 'bg-gray-100 text-gray-500'
+                        }`}
+                      >
+                        <QrCode className="h-5 w-5" />
+                      </div>
+                      <SwitchToggle
+                        id="toggle-mercadopago"
+                        checked={config.pos.metodosPagoHabilitados.mercado_pago}
+                        onChange={() => toggleMetodoPago('mercado_pago')}
+                        label="Habilitar Mercado Pago"
+                      />
+                    </div>
+                    <div className="mt-3">
+                      <p className="font-bold text-xs text-[#1C2424]">Mercado Pago</p>
+                      <p className="text-[11px] text-[#657373] mt-0.5">
+                        Cobros integrados vía QR dinámico, Point Smart o checkout digital.
+                      </p>
+                    </div>
+                    <div className="mt-3">
+                      <Badge
+                        variant={config.pos.metodosPagoHabilitados.mercado_pago ? 'success' : 'secondary'}
+                        className="text-[10px]"
+                      >
+                        {config.pos.metodosPagoHabilitados.mercado_pago ? 'Habilitado' : 'Deshabilitado'}
                       </Badge>
                     </div>
                   </div>
@@ -1091,6 +1165,71 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                       />
                     </div>
                   </div>
+
+                  <div className="border-t border-[#E8E6DF] pt-4">
+                    {/* Switch: Impresión Automática de Ticket */}
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <Printer className="h-4 w-4 text-[#2A7A78]" />
+                          <p className="text-xs font-semibold text-[#1C2424]">
+                            Impresión Automática de Ticket al Cobrar
+                          </p>
+                        </div>
+                        <p className="text-xs text-[#657373] mt-1">
+                          Abre automáticamente el diálogo de impresión al confirmar cada venta en la terminal de mostrador.
+                        </p>
+                      </div>
+                      <SwitchToggle
+                        id="toggle-auto-imprimir"
+                        checked={config.pos.autoImprimirTicket}
+                        onChange={(val) => actualizarPOS({ autoImprimirTicket: val })}
+                        label="Impresión automática de ticket"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="border-t border-[#E8E6DF] pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Receipt className="h-4 w-4 text-[#2A7A78]" />
+                        <label className="text-xs font-semibold text-[#1C2424]">
+                          Ancho de Papel de Ticket
+                        </label>
+                      </div>
+                      <select
+                        value={config.pos.anchoPapelTicket || '80mm'}
+                        onChange={(e) => actualizarPOS({ anchoPapelTicket: e.target.value as AnchoPapelTicket })}
+                        className="flex h-9 w-full rounded-md border border-[#E8E6DF] bg-white px-3 py-1 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#2A7A78] text-[#1C2424]"
+                      >
+                        <option value="80mm">80 mm (Estándar Térmico POS)</option>
+                        <option value="58mm">58 mm (Mini Térmico / Bluetooth)</option>
+                      </select>
+                      <p className="text-[10px] text-[#657373] mt-1">
+                        Ajusta el margen y tamaño tipográfico del comprobante.
+                      </p>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <HardDrive className="h-4 w-4 text-[#2A7A78]" />
+                        <label className="text-xs font-semibold text-[#1C2424]">
+                          Número de Terminal / Caja
+                        </label>
+                      </div>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="99"
+                        value={config.pos.numeroCaja || 1}
+                        onChange={(e) => actualizarPOS({ numeroCaja: Math.max(1, Number(e.target.value)) })}
+                        className="h-9 text-xs"
+                      />
+                      <p className="text-[10px] text-[#657373] mt-1">
+                        Número de punto o puesto físico asignado a esta máquina.
+                      </p>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -1190,22 +1329,22 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                 </div>
 
                 <div className="border-t border-[#E8E6DF] pt-4">
-                  {/* Switch: Requerir categoría estricta */}
+                  {/* Integridad Relacional: Categoría obligatoria en DB */}
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className="text-xs font-semibold text-[#1C2424]">
-                        Categorización Obligatoria Estricta
-                      </p>
+                      <div className="flex items-center gap-1.5">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                        <p className="text-xs font-semibold text-[#1C2424]">
+                          Categorización Obligatoria (Integridad Relacional)
+                        </p>
+                      </div>
                       <p className="text-xs text-[#657373] mt-1">
-                        Exige obligatoriamente seleccionar una categoría válida antes de permitir guardar cualquier artículo.
+                        Garantizado a nivel de base de datos PostgreSQL (clave foránea NOT NULL). Todo producto requiere pertenecer a una categoría activa.
                       </p>
                     </div>
-                    <SwitchToggle
-                      id="toggle-cat-estricta"
-                      checked={config.inventario.requerirCategoriaEstricta}
-                      onChange={(val) => actualizarInventario({ requerirCategoriaEstricta: val })}
-                      label="Categorización obligatoria"
-                    />
+                    <Badge variant="outline" className="text-[10px] text-emerald-700 border-emerald-300 bg-emerald-50 shrink-0">
+                      Activo por DB
+                    </Badge>
                   </div>
                 </div>
 
@@ -1222,7 +1361,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                     </div>
                     <SwitchToggle
                       id="toggle-vencimientos"
-                      checked={config.inventario.controlarVencimientos}
+                      checked={Boolean(config.inventario.controlarVencimientos)}
                       onChange={(val) => actualizarInventario({ controlarVencimientos: val })}
                       label="Control de vencimientos"
                     />

@@ -18,12 +18,7 @@ import { UserDashboardData, ProductoRapidoPOS, VentaRecientePOS } from '@/models
 import { initialProductos } from '@/models/mock_data/inventarioMock';
 import { useInventarioData, inventarioService } from '@/services/inventarioService';
 import { MetodoPago, DetalleVenta } from '@/models/modelos_dominio/ventaModel';
-import {
-  ConfiguracionCompleta,
-  valoresPorDefectoConfiguracion,
-} from '@/models/modelos_vista/configuracionModel';
-
-const CONFIG_STORAGE_KEY = 'mistock_configuracion_v1';
+import { useConfiguracionData } from '@/services/configuracionService';
 
 /**
  * Mapeo de artículos del catálogo maestro para listas rápidas en el mostrador.
@@ -271,25 +266,8 @@ export function useUserDashboardController() {
   const [saleErrorMessage, setSaleErrorMessage] = useState<string | null>(null);
   const [metodoSeleccionado, setMetodoSeleccionado] = useState<MetodoPago>('efectivo');
 
-  // Lectura lazy de configuración global guardada por el Administrador
-  const [config] = useState<ConfiguracionCompleta>(() => {
-    if (typeof window === 'undefined') return valoresPorDefectoConfiguracion;
-    try {
-      const stored = window.localStorage.getItem(CONFIG_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        return {
-          ...valoresPorDefectoConfiguracion,
-          ...parsed,
-          negocio: { ...valoresPorDefectoConfiguracion.negocio, ...(parsed.negocio || {}) },
-          pos: { ...valoresPorDefectoConfiguracion.pos, ...(parsed.pos || {}) },
-        };
-      }
-    } catch {
-      // Fallback
-    }
-    return valoresPorDefectoConfiguracion;
-  });
+  // Suscripción reactiva en tiempo real a la configuración central del negocio
+  const config = useConfiguracionData();
 
   const monedaSimbolo = config.negocio.monedaSimbolo || '$';
   const permitirVentaSinStock = config.pos.permitirVentaSinStock;

@@ -5,10 +5,12 @@
  * 
  * Propósito:
  * Define las estructuras de datos para la parametrización del negocio,
- * reglas de venta en caja (POS), alertas de inventario y respaldos.
+ * reglas operativas de venta en caja (POS), alertas de inventario y respaldos.
  */
 
 export type ModoComprobante = 'no_fiscal' | 'factura_afip';
+export type CondicionIva = 'monotributo' | 'responsable_inscripto' | 'consumidor_final';
+export type AnchoPapelTicket = '80mm' | '58mm';
 
 export interface ConfiguracionNegocio {
   nombreComercial: string;
@@ -19,6 +21,7 @@ export interface ConfiguracionNegocio {
   emailContacto: string;
   monedaSimbolo: string;
   monedaCodigo: string;
+  condicionIva: CondicionIva;
   mensajeEncabezadoTicket: string;
   mensajePieTicket: string;
   // Parámetros de Validez Legal y Fiscal
@@ -33,20 +36,24 @@ export interface MetodosPagoConfig {
   tarjeta_debito: boolean;
   tarjeta_credito: boolean;
   transferencia: boolean;
+  mercado_pago: boolean;
 }
 
 export interface ConfiguracionPOS {
+  numeroCaja: number;
   metodosPagoHabilitados: MetodosPagoConfig;
   permitirVentaSinStock: boolean;
   limiteDescuentoVendedor: number; // Porcentaje máximo (ej: 10)
   sonidoConfirmacionVenta: boolean;
   modoEscanerRapido: boolean;
+  autoImprimirTicket: boolean;
+  anchoPapelTicket: AnchoPapelTicket;
 }
 
 export interface ConfiguracionInventario {
   umbralMinimoPorDefecto: number;
   alertarMargenNegativo: boolean;
-  requerirCategoriaEstricta: boolean;
+  requerirCategoriaEstricta?: boolean;
   controlarVencimientos: boolean;
 }
 
@@ -74,6 +81,7 @@ export const valoresPorDefectoConfiguracion: ConfiguracionCompleta = {
     emailContacto: 'contacto@mistock.com',
     monedaSimbolo: '$',
     monedaCodigo: 'ARS',
+    condicionIva: 'monotributo',
     mensajeEncabezadoTicket: 'Comprobante de Venta - Línea de Cajas',
     mensajePieTicket: '¡Muchas gracias por su compra! Conserve su ticket para cambios.',
     modoComprobante: 'no_fiscal',
@@ -82,16 +90,20 @@ export const valoresPorDefectoConfiguracion: ConfiguracionCompleta = {
     puntoVenta: 1,
   },
   pos: {
+    numeroCaja: 1,
     metodosPagoHabilitados: {
       efectivo: true,
       tarjeta_debito: true,
       tarjeta_credito: true,
       transferencia: true,
+      mercado_pago: true,
     },
     permitirVentaSinStock: false,
     limiteDescuentoVendedor: 10,
     sonidoConfirmacionVenta: true,
     modoEscanerRapido: true,
+    autoImprimirTicket: false,
+    anchoPapelTicket: '80mm',
   },
   inventario: {
     umbralMinimoPorDefecto: 5,
