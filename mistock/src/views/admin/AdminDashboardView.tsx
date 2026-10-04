@@ -31,6 +31,12 @@ import {
   ShoppingBag,
   Boxes,
   AlertCircle,
+  Search,
+  Filter,
+  RotateCcw,
+  Users,
+  CreditCard,
+  X,
 } from 'lucide-react';
 import {
   Area,
@@ -52,11 +58,19 @@ import {
   ChartLegendContent,
   type ChartConfig,
 } from '@/components/ui/chart';
-import { MetodoPago } from '@/models/modelos_dominio/ventaModel';
+import { MetodoPago, EstadoVenta } from '@/models/modelos_dominio/ventaModel';
 import { useAdminDashboardController } from '@/controllers/adminControllers/dashboardController';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Table,
   TableHeader,
@@ -149,6 +163,15 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
     paginaVentas,
     setPaginaVentas,
     itemsPorPaginaVentas,
+    filtroVendedorVentas,
+    cambiarFiltroVendedorVentas,
+    filtroMetodoPagoVentas,
+    cambiarFiltroMetodoPagoVentas,
+    filtroEstadoVentas,
+    cambiarFiltroEstadoVentas,
+    busquedaVentas,
+    cambiarBusquedaVentas,
+    limpiarFiltrosVentas,
   } = controller;
 
   // Referencias para auto-animación en tablas
@@ -207,7 +230,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
     return listaFiltradaRotacion.reduce((acc, p) => acc + (p.stockActual * 1950), 0);
   }, [listaFiltradaRotacion]);
 
-  // Cálculos de Paginación y Resumen para Detalle de Ventas
+  // Cálculos de Paginación, Filtrado y Resumen para Detalle de Ventas
   const listaActivaVentas =
     periodoVentasTab === 'semana'
       ? data.ventasDetalle.ventasSemana
@@ -216,11 +239,85 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
     periodoVentasTab === 'semana'
       ? data.ventasDetalle.resumenSemana
       : data.ventasDetalle.resumenMes;
-  const totalVentas = listaActivaVentas.length;
+
+  // Lista de vendedores únicos presentes en las transacciones del período
+  const vendedoresDisponibles = React.useMemo(() => {
+    const set = new Set<string>();
+    listaActivaVentas.forEach((v) => {
+      if (v.vendedor) set.add(v.vendedor);
+    });
+    return ['Todos', ...Array.from(set).sort()];
+  }, [listaActivaVentas]);
+
+  // Filtrado multivariado de ventas: Vendedor, Método de Pago, Estado y Búsqueda
+  const listaFiltradaVentas = React.useMemo(() => {
+    return listaActivaVentas.filter((v) => {
+      // 1. Filtro por vendedor / usuario
+      if (filtroVendedorVentas !== 'Todos' && v.vendedor !== filtroVendedorVentas) {
+        return false;
+      }
+      // 2. Filtro por método de pago
+      if (filtroMetodoPagoVentas !== 'Todos' && v.metodoPago !== filtroMetodoPagoVentas) {
+        return false;
+      }
+      // 3. Filtro por estado de transacción
+      if (filtroEstadoVentas !== 'Todos' && v.estado !== filtroEstadoVentas) {
+        return false;
+      }
+      // 4. Búsqueda por texto (código de comprobante o nombre de vendedor)
+      if (busquedaVentas.trim()) {
+        const query = busquedaVentas.toLowerCase().trim();
+        const coincideComprobante = v.codigoComprobante.toLowerCase().includes(query);
+        const coincideVendedor = v.vendedor.toLowerCase().includes(query);
+        if (!coincideComprobante && !coincideVendedor) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [
+    listaActivaVentas,
+    filtroVendedorVentas,
+    filtroMetodoPagoVentas,
+    filtroEstadoVentas,
+    busquedaVentas,
+  ]);
+
+  const hayFiltrosVentasActivos =
+    filtroVendedorVentas !== 'Todos' ||
+    filtroMetodoPagoVentas !== 'Todos' ||
+    filtroEstadoVentas !== 'Todos' ||
+    busquedaVentas.trim() !== '';
+
+  // Resumen dinámico adaptado al subconjunto filtrado
+  const resumenFiltradoVentas = React.useMemo(() => {
+    if (!hayFiltrosVentasActivos) {
+      return resumenActivoVentas;
+    }
+    const totalRecaudado = listaFiltradaVentas.reduce(
+      (acc, v) => acc + (v.estado !== 'cancelada' ? v.total : 0),
+      0
+    );
+    const cantidadVentas = listaFiltradaVentas.length;
+    const ticketPromedio =
+      cantidadVentas > 0 ? Math.round(totalRecaudado / cantidadVentas) : 0;
+    const unidadesTotales = listaFiltradaVentas.reduce(
+      (acc, v) => acc + (v.estado !== 'cancelada' ? v.cantidadItems : 0),
+      0
+    );
+    return {
+      totalRecaudado,
+      cantidadVentas,
+      ticketPromedio,
+      unidadesTotales,
+    };
+  }, [hayFiltrosVentasActivos, resumenActivoVentas, listaFiltradaVentas]);
+
+  const totalVentas = listaFiltradaVentas.length;
   const totalPaginasVentas =
     Math.ceil(totalVentas / itemsPorPaginaVentas) || 1;
   const inicioVentas = (paginaVentas - 1) * itemsPorPaginaVentas;
-  const ventasPaginadas = listaActivaVentas.slice(
+  const ventasPaginadas = listaFiltradaVentas.slice(
     inicioVentas,
     inicioVentas + itemsPorPaginaVentas
   );
@@ -253,6 +350,33 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
         return <Badge className="text-xs font-medium bg-[#009EE3] text-white hover:bg-[#0082ba]">Mercado Pago</Badge>;
       default:
         return <Badge variant="secondary" className="text-xs font-medium">Otro</Badge>;
+    }
+  };
+
+  const getEstadoBadge = (estado: EstadoVenta) => {
+    switch (estado) {
+      case 'completada':
+        return <Badge variant="success" className="text-xs font-medium capitalize">Completada</Badge>;
+      case 'pendiente':
+        return (
+          <Badge
+            variant="outline"
+            className="text-xs font-medium capitalize bg-amber-50 text-amber-700 border-amber-300"
+          >
+            Pendiente
+          </Badge>
+        );
+      case 'cancelada':
+        return (
+          <Badge
+            variant="outline"
+            className="text-xs font-medium capitalize bg-rose-50 text-rose-700 border-rose-300"
+          >
+            Cancelada
+          </Badge>
+        );
+      default:
+        return <Badge variant="secondary" className="text-xs font-medium capitalize">{estado}</Badge>;
     }
   };
 
@@ -1128,14 +1252,21 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
           </CardHeader>
 
           <CardContent className="pt-4 overflow-hidden space-y-5">
-            {/* Métricas Resumen del Período */}
+            {/* Métricas Resumen del Período / Filtro */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="p-3 rounded-lg border border-[#E8E6DF] bg-[#F8F7F2]/60">
-                <span className="text-[11px] font-semibold text-[#657373] uppercase tracking-wider block">
-                  Total Facturado
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-[#657373] uppercase tracking-wider block">
+                    Total Facturado
+                  </span>
+                  {hayFiltrosVentasActivos && (
+                    <span className="text-[10px] font-semibold py-0.5 px-1.5 rounded-full border border-[#2A7A78]/30 text-[#2A7A78] bg-[#E2F1F0]">
+                      Filtrado
+                    </span>
+                  )}
+                </div>
                 <span className="text-lg font-bold text-[#1C2424] mt-0.5 block">
-                  ${resumenActivoVentas.totalRecaudado.toLocaleString('es-AR')}
+                  ${resumenFiltradoVentas.totalRecaudado.toLocaleString('es-AR')}
                 </span>
               </div>
 
@@ -1144,7 +1275,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                   Transacciones
                 </span>
                 <span className="text-lg font-bold text-[#1C2424] mt-0.5 block">
-                  {resumenActivoVentas.cantidadVentas} ventas
+                  {resumenFiltradoVentas.cantidadVentas} ventas
                 </span>
               </div>
 
@@ -1153,7 +1284,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                   Ticket Promedio
                 </span>
                 <span className="text-lg font-bold text-[#1C2424] mt-0.5 block">
-                  ${resumenActivoVentas.ticketPromedio.toLocaleString('es-AR')}
+                  ${resumenFiltradoVentas.ticketPromedio.toLocaleString('es-AR')}
                 </span>
               </div>
 
@@ -1162,7 +1293,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                   Unidades Despachadas
                 </span>
                 <span className="text-lg font-bold text-[#1C2424] mt-0.5 block">
-                  {resumenActivoVentas.unidadesTotales} un.
+                  {resumenFiltradoVentas.unidadesTotales} un.
                 </span>
               </div>
             </div>
@@ -1223,10 +1354,160 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
               </ChartContainer>
             </div>
 
+            {/* Barra de Filtros Interactivos para la Tabla de Ventas */}
+            <div className="p-3 bg-[#F8F7F2]/80 rounded-xl border border-[#E8E6DF] space-y-2.5">
+              <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5">
+                {/* 1. Input de Búsqueda Rápida */}
+                <div className="relative flex-1 min-w-[220px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#657373]" />
+                  <Input
+                    type="text"
+                    placeholder="Buscar por comprobante o vendedor..."
+                    value={busquedaVentas}
+                    onChange={(e) => cambiarBusquedaVentas(e.target.value)}
+                    className="pl-9 pr-8 h-9 text-xs bg-white border-[#E8E6DF] focus:border-[#2A7A78] focus:ring-[#2A7A78]/20"
+                  />
+                  {busquedaVentas && (
+                    <button
+                      type="button"
+                      onClick={() => cambiarBusquedaVentas('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#657373] hover:text-[#1C2424] cursor-pointer"
+                      title="Borrar búsqueda"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* 2. Selectores de Filtro: Vendedor, Método de Pago, Estado */}
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Selector Vendedor */}
+                  <div className="w-full sm:w-44">
+                    <Select
+                      value={filtroVendedorVentas}
+                      onValueChange={cambiarFiltroVendedorVentas}
+                    >
+                      <SelectTrigger className="h-9 text-xs bg-white border-[#E8E6DF]">
+                        <div className="flex items-center gap-1.5 truncate">
+                          <Users className="h-3.5 w-3.5 text-[#2A7A78] shrink-0" />
+                          <span className="truncate">
+                            {filtroVendedorVentas === 'Todos'
+                              ? 'Todos los vendedores'
+                              : filtroVendedorVentas}
+                          </span>
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {vendedoresDisponibles.map((v) => (
+                          <SelectItem key={v} value={v} className="text-xs">
+                            {v === 'Todos' ? 'Todos los vendedores' : v}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Selector Método de Pago */}
+                  <div className="w-full sm:w-40">
+                    <Select
+                      value={filtroMetodoPagoVentas}
+                      onValueChange={cambiarFiltroMetodoPagoVentas}
+                    >
+                      <SelectTrigger className="h-9 text-xs bg-white border-[#E8E6DF]">
+                        <div className="flex items-center gap-1.5 truncate">
+                          <CreditCard className="h-3.5 w-3.5 text-[#2A7A78] shrink-0" />
+                          <span className="truncate">
+                            {filtroMetodoPagoVentas === 'Todos'
+                              ? 'Todos los pagos'
+                              : filtroMetodoPagoVentas === 'efectivo'
+                              ? 'Efectivo'
+                              : filtroMetodoPagoVentas === 'tarjeta_debito'
+                              ? 'Tarjeta Débito'
+                              : filtroMetodoPagoVentas === 'tarjeta_credito'
+                              ? 'Tarjeta Crédito'
+                              : filtroMetodoPagoVentas === 'transferencia'
+                              ? 'Transferencia'
+                              : filtroMetodoPagoVentas === 'mercado_pago'
+                              ? 'Mercado Pago'
+                              : filtroMetodoPagoVentas}
+                          </span>
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Todos" className="text-xs">Todos los pagos</SelectItem>
+                        <SelectItem value="efectivo" className="text-xs">Efectivo</SelectItem>
+                        <SelectItem value="tarjeta_debito" className="text-xs">Tarjeta Débito</SelectItem>
+                        <SelectItem value="tarjeta_credito" className="text-xs">Tarjeta Crédito</SelectItem>
+                        <SelectItem value="transferencia" className="text-xs">Transferencia</SelectItem>
+                        <SelectItem value="mercado_pago" className="text-xs">Mercado Pago</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Selector Estado */}
+                  <div className="w-full sm:w-36">
+                    <Select
+                      value={filtroEstadoVentas}
+                      onValueChange={cambiarFiltroEstadoVentas}
+                    >
+                      <SelectTrigger className="h-9 text-xs bg-white border-[#E8E6DF]">
+                        <div className="flex items-center gap-1.5 truncate">
+                          <Filter className="h-3.5 w-3.5 text-[#2A7A78] shrink-0" />
+                          <span className="truncate">
+                            {filtroEstadoVentas === 'Todos'
+                              ? 'Todos los estados'
+                              : filtroEstadoVentas === 'completada'
+                              ? 'Completadas'
+                              : filtroEstadoVentas === 'pendiente'
+                              ? 'Pendientes'
+                              : 'Canceladas'}
+                          </span>
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Todos" className="text-xs">Todos los estados</SelectItem>
+                        <SelectItem value="completada" className="text-xs">Completadas</SelectItem>
+                        <SelectItem value="pendiente" className="text-xs">Pendientes</SelectItem>
+                        <SelectItem value="cancelada" className="text-xs">Canceladas</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Botón Reset de Filtros */}
+                  {hayFiltrosVentasActivos && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={limpiarFiltrosVentas}
+                      className="h-9 px-3 text-xs text-[#657373] hover:text-[#1C2424] border-[#E8E6DF] hover:bg-white active:scale-95 transition-all duration-150 cursor-pointer"
+                      title="Restablecer todos los filtros"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                      Limpiar
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Indicador de Filtros Activos */}
+              {hayFiltrosVentasActivos && (
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs pt-1 px-1 border-t border-[#E8E6DF]/70 text-[#657373] gap-1">
+                  <span>
+                    Filtros aplicados: <strong className="text-[#1C2424]">{totalVentas}</strong> operaciones encontradas de{' '}
+                    <strong className="text-[#1C2424]">{listaActivaVentas.length}</strong> registradas en el período.
+                  </span>
+                  <span className="text-[11px] text-[#2A7A78] font-medium">
+                    Métricas del panel recalculadas
+                  </span>
+                </div>
+              )}
+            </div>
+
             {/* Tabla de Detalle de Ventas con animación de transición */}
             <AnimatePresence mode="wait">
               <motion.div
-                key={`ventas-${periodoVentasTab}`}
+                key={`ventas-${periodoVentasTab}-${filtroVendedorVentas}-${filtroMetodoPagoVentas}-${filtroEstadoVentas}`}
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
@@ -1247,35 +1528,58 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                       </TableRow>
                     </TableHeader>
                     <TableBody ref={ventasTableBodyRef}>
-                      {ventasPaginadas.map((v) => (
-                        <TableRow key={v.id} className="transition-colors">
-                          <TableCell>
-                            <span className="font-mono font-semibold text-xs text-[#2A7A78] bg-[#E2F1F0] px-2 py-0.5 rounded">
-                              {v.codigoComprobante}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-xs text-[#657373] font-medium">
-                            {v.fechaHora}
-                          </TableCell>
-                          <TableCell className="text-sm font-semibold text-[#1C2424]">
-                            {v.vendedor}
-                          </TableCell>
-                          <TableCell>
-                            {getMetodoPagoBadge(v.metodoPago)}
-                          </TableCell>
-                          <TableCell className="text-xs text-[#657373]">
-                            {v.cantidadItems} {v.cantidadItems === 1 ? 'producto' : 'productos'}
-                          </TableCell>
-                          <TableCell className="font-bold text-sm text-[#1C2424]">
-                            ${v.total.toLocaleString('es-AR')}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Badge variant="success" className="text-xs capitalize">
-                              {v.estado}
-                            </Badge>
+                      {ventasPaginadas.length > 0 ? (
+                        ventasPaginadas.map((v) => (
+                          <TableRow key={v.id} className="transition-colors">
+                            <TableCell>
+                              <span className="font-mono font-semibold text-xs text-[#2A7A78] bg-[#E2F1F0] px-2 py-0.5 rounded">
+                                {v.codigoComprobante}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-xs text-[#657373] font-medium">
+                              {v.fechaHora}
+                            </TableCell>
+                            <TableCell className="text-sm font-semibold text-[#1C2424]">
+                              {v.vendedor}
+                            </TableCell>
+                            <TableCell>
+                              {getMetodoPagoBadge(v.metodoPago)}
+                            </TableCell>
+                            <TableCell className="text-xs text-[#657373]">
+                              {v.cantidadItems} {v.cantidadItems === 1 ? 'producto' : 'productos'}
+                            </TableCell>
+                            <TableCell className="font-bold text-sm text-[#1C2424]">
+                              ${v.total.toLocaleString('es-AR')}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {getEstadoBadge(v.estado)}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={7} className="h-32 text-center text-[#657373]">
+                            <div className="flex flex-col items-center justify-center gap-2 py-4">
+                              <Filter className="h-6 w-6 text-[#94A3B8]" />
+                              <p className="text-sm font-semibold text-[#1C2424]">
+                                No se encontraron transacciones
+                              </p>
+                              <p className="text-xs text-[#657373]">
+                                Ninguna venta coincide con los criterios de filtrado seleccionados.
+                              </p>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={limpiarFiltrosVentas}
+                                className="h-7 px-3 text-xs mt-1 border-[#E8E6DF] hover:bg-[#F8F7F2] cursor-pointer"
+                              >
+                                Restablecer filtros
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
-                      ))}
+                      )}
                     </TableBody>
                   </Table>
                 </div>
@@ -1288,7 +1592,10 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                       <span className="font-semibold text-[#1C2424]">
                         {Math.min(inicioVentas + itemsPorPaginaVentas, totalVentas)}
                       </span>{' '}
-                      de <span className="font-semibold text-[#1C2424]">{totalVentas}</span> ventas ({periodoVentasTab === 'semana' ? 'esta semana' : 'este mes'})
+                      de <span className="font-semibold text-[#1C2424]">{totalVentas}</span> ventas{' '}
+                      {hayFiltrosVentasActivos
+                        ? `(filtradas de ${listaActivaVentas.length})`
+                        : `(${periodoVentasTab === 'semana' ? 'esta semana' : 'este mes'})`}
                     </div>
                     <div className="flex items-center gap-1.5">
                       <Button

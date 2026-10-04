@@ -349,6 +349,36 @@ const initialMockAdminData: AdminDashboardData = {
         total: 11200,
         estado: 'completada',
       },
+      {
+        id: 'VNT-SEM-11',
+        codigoComprobante: 'VNT-1038',
+        fechaHora: 'Dom 21, 19:40',
+        vendedor: 'Valeria Gómez',
+        metodoPago: 'mercado_pago',
+        cantidadItems: 5,
+        total: 16800,
+        estado: 'completada',
+      },
+      {
+        id: 'VNT-SEM-12',
+        codigoComprobante: 'VNT-1037',
+        fechaHora: 'Dom 21, 16:15',
+        vendedor: 'Valeria Gómez',
+        metodoPago: 'efectivo',
+        cantidadItems: 2,
+        total: 5400,
+        estado: 'completada',
+      },
+      {
+        id: 'VNT-SEM-13',
+        codigoComprobante: 'VNT-1036',
+        fechaHora: 'Dom 21, 12:30',
+        vendedor: 'Empleado Mañana',
+        metodoPago: 'tarjeta_debito',
+        cantidadItems: 3,
+        total: 9700,
+        estado: 'cancelada',
+      },
     ],
     ventasMes: [
       {
@@ -471,6 +501,26 @@ const initialMockAdminData: AdminDashboardData = {
         total: 33400,
         estado: 'completada',
       },
+      {
+        id: 'VNT-MES-13',
+        codigoComprobante: 'VNT-0980',
+        fechaHora: '25 Ago, 18:20',
+        vendedor: 'Valeria Gómez',
+        metodoPago: 'mercado_pago',
+        cantidadItems: 4,
+        total: 19800,
+        estado: 'completada',
+      },
+      {
+        id: 'VNT-MES-14',
+        codigoComprobante: 'VNT-0975',
+        fechaHora: '23 Ago, 12:10',
+        vendedor: 'Valeria Gómez',
+        metodoPago: 'efectivo',
+        cantidadItems: 3,
+        total: 7600,
+        estado: 'completada',
+      },
     ],
   },
   graficos: {
@@ -571,11 +621,60 @@ export function useAdminDashboardController() {
   const [paginaVentas, setPaginaVentas] = useState<number>(1);
   const itemsPorPaginaVentas = 5;
 
+  // Filtros interactivos para la tabla de Detalle de Ventas
+  const [filtroVendedorVentas, setFiltroVendedorVentas] = useState<string>('Todos');
+  const [filtroMetodoPagoVentas, setFiltroMetodoPagoVentas] = useState<string>('Todos');
+  const [filtroEstadoVentas, setFiltroEstadoVentas] = useState<string>('Todos');
+  const [busquedaVentas, setBusquedaVentas] = useState<string>('');
+
   /**
    * Cambia el período de ventas activo (semana o mes) y reinicia la paginación a la primera página.
    */
   const cambiarPeriodoVentas = (tab: PeriodoVentasTab) => {
     setPeriodoVentasTab(tab);
+    setPaginaVentas(1);
+  };
+
+  /**
+   * Cambia el vendedor filtrado y reinicia la paginación a la primera página.
+   */
+  const cambiarFiltroVendedorVentas = (vendedor: string) => {
+    setFiltroVendedorVentas(vendedor);
+    setPaginaVentas(1);
+  };
+
+  /**
+   * Cambia el método de pago filtrado y reinicia la paginación a la primera página.
+   */
+  const cambiarFiltroMetodoPagoVentas = (metodo: string) => {
+    setFiltroMetodoPagoVentas(metodo);
+    setPaginaVentas(1);
+  };
+
+  /**
+   * Cambia el estado de venta filtrado y reinicia la paginación a la primera página.
+   */
+  const cambiarFiltroEstadoVentas = (estado: string) => {
+    setFiltroEstadoVentas(estado);
+    setPaginaVentas(1);
+  };
+
+  /**
+   * Actualiza el término de búsqueda rápida y reinicia la paginación a la primera página.
+   */
+  const cambiarBusquedaVentas = (busqueda: string) => {
+    setBusquedaVentas(busqueda);
+    setPaginaVentas(1);
+  };
+
+  /**
+   * Restablece todos los filtros de la tabla de ventas a sus valores por defecto.
+   */
+  const limpiarFiltrosVentas = () => {
+    setFiltroVendedorVentas('Todos');
+    setFiltroMetodoPagoVentas('Todos');
+    setFiltroEstadoVentas('Todos');
+    setBusquedaVentas('');
     setPaginaVentas(1);
   };
 
@@ -594,5 +693,14 @@ export function useAdminDashboardController() {
     paginaVentas,
     setPaginaVentas,
     itemsPorPaginaVentas,
+    filtroVendedorVentas,
+    cambiarFiltroVendedorVentas,
+    filtroMetodoPagoVentas,
+    cambiarFiltroMetodoPagoVentas,
+    filtroEstadoVentas,
+    cambiarFiltroEstadoVentas,
+    busquedaVentas,
+    cambiarBusquedaVentas,
+    limpiarFiltrosVentas,
   };
 }
