@@ -7,3 +7,4 @@ export * from './dialog';
 export * from './table';
 export * from './alert';
 export * from './select';
+export * from './chart';

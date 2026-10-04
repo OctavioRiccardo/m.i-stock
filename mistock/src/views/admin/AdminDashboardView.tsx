@@ -8,7 +8,7 @@
  * Propósito:
  * Renderizar el panel analítico ejecutivo de M.I Stock focalizado en el
  * rendimiento comercial, recaudación mensual, rotación de artículos y
- * comportamiento transaccional con componentes interactivos Tremor.
+ * comportamiento transaccional con componentes shadcn/ui Charts (Recharts).
  * 
  * Rol en la Arquitectura:
  * - Es la capa "V" (View).
@@ -26,13 +26,32 @@ import {
   ChevronLeft,
   ChevronRight,
   Receipt,
-  PieChart,
+  PieChart as PieChartIcon,
   DollarSign,
   ShoppingBag,
   Boxes,
   AlertCircle,
 } from 'lucide-react';
-import { AreaChart, DonutChart, BarChart } from '@/components/tremor';
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  Pie,
+  PieChart,
+  Cell,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+} from 'recharts';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+  type ChartConfig,
+} from '@/components/ui/chart';
 import { MetodoPago } from '@/models/modelos_dominio/ventaModel';
 import { useAdminDashboardController } from '@/controllers/adminControllers/dashboardController';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -46,6 +65,70 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
+
+/**
+ * Configuraciones tipadas de shadcn/ui Charts para cada visualización
+ */
+const areaChartConfig = {
+  'Recaudación Actual': {
+    label: 'Recaudación Actual',
+    color: '#2A7A78',
+  },
+  'Período Anterior': {
+    label: 'Período Anterior',
+    color: '#94A3B8',
+  },
+} satisfies ChartConfig;
+
+const metodosPagoChartConfig = {
+  monto: {
+    label: 'Monto Recaudado',
+  },
+  'Mercado Pago (Point)': {
+    label: 'Mercado Pago (Point)',
+    color: '#009EE3',
+  },
+  'Efectivo': {
+    label: 'Efectivo',
+    color: '#2A7A78',
+  },
+  'Transferencia': {
+    label: 'Transferencia',
+    color: '#F59E0B',
+  },
+  'Tarjeta Débito/Crédito': {
+    label: 'Tarjeta Débito/Crédito',
+    color: '#6366F1',
+  },
+} satisfies ChartConfig;
+
+const COLORES_METODOS: Record<string, string> = {
+  'Mercado Pago (Point)': '#009EE3',
+  'Efectivo': '#2A7A78',
+  'Transferencia': '#F59E0B',
+  'Tarjeta Débito/Crédito': '#6366F1',
+};
+
+const rotacionMasVendidosChartConfig = {
+  Facturación: {
+    label: 'Facturación',
+    color: '#2A7A78',
+  },
+} satisfies ChartConfig;
+
+const rotacionMenosVendidosChartConfig = {
+  Facturación: {
+    label: 'Facturación',
+    color: '#F59E0B',
+  },
+} satisfies ChartConfig;
+
+const ritmoVentasChartConfig = {
+  'Monto Facturado': {
+    label: 'Monto Facturado',
+    color: '#2A7A78',
+  },
+} satisfies ChartConfig;
 
 interface AdminDashboardViewProps {
   controller: ReturnType<typeof useAdminDashboardController>;
@@ -247,7 +330,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
         </div>
 
         {/* ==================================================================== */}
-        {/* 2. ANALÍTICA VISUAL: EVOLUCIÓN TEMPORAL & MÉTODOS DE PAGO (TREMOR)  */}
+        {/* 2. ANALÍTICA VISUAL: EVOLUCIÓN TEMPORAL & MÉTODOS DE PAGO (SHADCN/UI) */}
         {/* ==================================================================== */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Gráfico 1: Evolución Temporal de Recaudación (AreaChart) */}
@@ -308,21 +391,82 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
               </CardHeader>
 
               <CardContent className="pt-4 flex-1">
-                <AreaChart
-                  className="h-72"
-                  data={
-                    periodoVentasTab === 'semana'
-                      ? data.graficos.tendenciaSemana
-                      : data.graficos.tendenciaMes
-                  }
-                  index="fecha"
-                  categories={["Recaudación Actual", "Período Anterior"]}
-                  colors={["emerald", "gray"]}
-                  valueFormatter={(number: number) => `$${number.toLocaleString('es-AR')}`}
-                  showLegend={true}
-                  showGridLines={true}
-                  startEndOnly={false}
-                />
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={`areachart-${periodoVentasTab}`}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="w-full h-full"
+                  >
+                    <ChartContainer
+                      config={areaChartConfig}
+                      className="h-72 w-full aspect-auto"
+                    >
+                      <AreaChart
+                        data={
+                          periodoVentasTab === 'semana'
+                            ? data.graficos.tendenciaSemana
+                            : data.graficos.tendenciaMes
+                        }
+                        margin={{ top: 12, right: 12, left: 0, bottom: 0 }}
+                      >
+                        <defs>
+                          <linearGradient id="fillActual" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#2A7A78" stopOpacity={0.35} />
+                            <stop offset="95%" stopColor="#2A7A78" stopOpacity={0.0} />
+                          </linearGradient>
+                          <linearGradient id="fillAnterior" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#94A3B8" stopOpacity={0.2} />
+                            <stop offset="95%" stopColor="#94A3B8" stopOpacity={0.0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E8E6DF" />
+                        <XAxis
+                          dataKey="fecha"
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={8}
+                          tick={{ fill: '#657373', fontSize: 11 }}
+                        />
+                        <YAxis
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={8}
+                          tick={{ fill: '#657373', fontSize: 11 }}
+                          tickFormatter={(value) => `$${(value / 1000).toLocaleString('es-AR')}k`}
+                        />
+                        <ChartTooltip
+                          cursor={{ stroke: '#2A7A78', strokeWidth: 1, strokeDasharray: '4 4' }}
+                          content={
+                            <ChartTooltipContent
+                              formatter={(value) => `$${Number(value).toLocaleString('es-AR')}`}
+                            />
+                          }
+                        />
+                        <ChartLegend content={<ChartLegendContent />} />
+                        <Area
+                          type="monotone"
+                          dataKey="Período Anterior"
+                          stroke="#94A3B8"
+                          strokeWidth={1.5}
+                          strokeDasharray="4 4"
+                          fillOpacity={1}
+                          fill="url(#fillAnterior)"
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="Recaudación Actual"
+                          stroke="#2A7A78"
+                          strokeWidth={2}
+                          fillOpacity={1}
+                          fill="url(#fillActual)"
+                        />
+                      </AreaChart>
+                    </ChartContainer>
+                  </motion.div>
+                </AnimatePresence>
               </CardContent>
             </Card>
           </div>
@@ -332,7 +476,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
             <Card className="h-full flex flex-col justify-between border-[#E8E6DF] shadow-xs bg-white">
               <CardHeader className="pb-3 border-b border-[#E8E6DF]">
                 <div className="flex items-center gap-2">
-                  <PieChart className="h-5 w-5 text-[#2A7A78]" />
+                  <PieChartIcon className="h-5 w-5 text-[#2A7A78]" />
                   <CardTitle className="text-base font-bold text-[#1C2424]">
                     Métodos de Pago
                   </CardTitle>
@@ -344,18 +488,64 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
 
               <CardContent className="pt-4 flex-1 flex flex-col justify-between">
                 <div className="flex-1 flex items-center justify-center py-2 w-full">
-                  <DonutChart
-                    className="h-48 w-48 mx-auto"
-                    data={
-                      periodoVentasTab === 'semana'
-                        ? data.graficos.distribucionPagosSemana
-                        : data.graficos.distribucionPagosMes
-                    }
-                    category="metodo"
-                    value="monto"
-                    valueFormatter={(number: number) => `$${number.toLocaleString('es-AR')}`}
-                    colors={["blue", "emerald", "violet", "amber"]}
-                  />
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={`donut-${periodoVentasTab}`}
+                      initial={{ opacity: 0, scale: 0.96 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.96 }}
+                      transition={{ duration: 0.2 }}
+                      className="w-full flex justify-center"
+                    >
+                      <ChartContainer
+                        config={metodosPagoChartConfig}
+                        className="mx-auto aspect-square max-h-[200px] w-full"
+                      >
+                        <PieChart>
+                          <ChartTooltip
+                            cursor={false}
+                            content={
+                              <ChartTooltipContent
+                                hideLabel
+                                formatter={(value, name) => (
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-[#1C2424]">{name}:</span>
+                                    <span className="font-bold text-[#2A7A78]">
+                                      ${Number(value).toLocaleString('es-AR')}
+                                    </span>
+                                  </div>
+                                )}
+                              />
+                            }
+                          />
+                          <Pie
+                            data={
+                              periodoVentasTab === 'semana'
+                                ? data.graficos.distribucionPagosSemana
+                                : data.graficos.distribucionPagosMes
+                            }
+                            dataKey="monto"
+                            nameKey="metodo"
+                            innerRadius={48}
+                            outerRadius={75}
+                            paddingAngle={3}
+                            strokeWidth={2}
+                            stroke="#ffffff"
+                          >
+                            {(periodoVentasTab === 'semana'
+                              ? data.graficos.distribucionPagosSemana
+                              : data.graficos.distribucionPagosMes
+                            ).map((entry, index) => (
+                              <Cell
+                                key={`cell-${index}`}
+                                fill={COLORES_METODOS[entry.metodo] || '#2A7A78'}
+                              />
+                            ))}
+                          </Pie>
+                        </PieChart>
+                      </ChartContainer>
+                    </motion.div>
+                  </AnimatePresence>
                 </div>
 
                 <div className="mt-4 space-y-2 pt-3 border-t border-[#E8E6DF]">
@@ -509,20 +699,52 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                     </div>
 
                     {productosGraficoRotacion.length > 0 ? (
-                      <BarChart
-                        className="h-56 mt-2"
-                        data={productosGraficoRotacion.map((p) => ({
-                          producto: p.nombre,
-                          "Facturación": p.montoTotal,
-                        }))}
-                        index="producto"
-                        categories={["Facturación"]}
-                        colors={["emerald"]}
-                        valueFormatter={(number: number) => `$${number.toLocaleString('es-AR')}`}
-                        showLegend={false}
-                        showGridLines={true}
-                        yAxisWidth={80}
-                      />
+                      <ChartContainer
+                        config={rotacionMasVendidosChartConfig}
+                        className="h-56 w-full aspect-auto mt-2"
+                      >
+                        <BarChart
+                          data={productosGraficoRotacion.map((p) => ({
+                            producto: p.nombre,
+                            Facturación: p.montoTotal,
+                          }))}
+                          margin={{ top: 10, right: 10, left: 0, bottom: 20 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E8E6DF" />
+                          <XAxis
+                            dataKey="producto"
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                            tick={{ fill: '#657373', fontSize: 11 }}
+                            interval={0}
+                            tickFormatter={(val: string) =>
+                              val.length > 14 ? `${val.substring(0, 12)}...` : val
+                            }
+                          />
+                          <YAxis
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                            tick={{ fill: '#657373', fontSize: 11 }}
+                            tickFormatter={(val) => `$${(val / 1000).toLocaleString('es-AR')}k`}
+                          />
+                          <ChartTooltip
+                            cursor={{ fill: '#F3F4F6', opacity: 0.5 }}
+                            content={
+                              <ChartTooltipContent
+                                formatter={(value) => `$${Number(value).toLocaleString('es-AR')}`}
+                              />
+                            }
+                          />
+                          <Bar
+                            dataKey="Facturación"
+                            fill="#2A7A78"
+                            radius={[4, 4, 0, 0]}
+                            maxBarSize={45}
+                          />
+                        </BarChart>
+                      </ChartContainer>
                     ) : (
                       <div className="py-10 text-center text-xs text-[#657373] bg-white rounded-lg border border-dashed border-[#E8E6DF]">
                         No se registraron productos de alta rotación en la categoría &quot;{categoriaRotacion}&quot;.
@@ -679,20 +901,52 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                     </div>
 
                     {productosGraficoRotacion.length > 0 ? (
-                      <BarChart
-                        className="h-56 mt-2"
-                        data={productosGraficoRotacion.map((p) => ({
-                          producto: p.nombre,
-                          "Facturación": p.montoTotal,
-                        }))}
-                        index="producto"
-                        categories={["Facturación"]}
-                        colors={["amber"]}
-                        valueFormatter={(number: number) => `$${number.toLocaleString('es-AR')}`}
-                        showLegend={false}
-                        showGridLines={true}
-                        yAxisWidth={80}
-                      />
+                      <ChartContainer
+                        config={rotacionMenosVendidosChartConfig}
+                        className="h-56 w-full aspect-auto mt-2"
+                      >
+                        <BarChart
+                          data={productosGraficoRotacion.map((p) => ({
+                            producto: p.nombre,
+                            Facturación: p.montoTotal,
+                          }))}
+                          margin={{ top: 10, right: 10, left: 0, bottom: 20 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E8E6DF" />
+                          <XAxis
+                            dataKey="producto"
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                            tick={{ fill: '#657373', fontSize: 11 }}
+                            interval={0}
+                            tickFormatter={(val: string) =>
+                              val.length > 14 ? `${val.substring(0, 12)}...` : val
+                            }
+                          />
+                          <YAxis
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                            tick={{ fill: '#657373', fontSize: 11 }}
+                            tickFormatter={(val) => `$${(val / 1000).toLocaleString('es-AR')}k`}
+                          />
+                          <ChartTooltip
+                            cursor={{ fill: '#F3F4F6', opacity: 0.5 }}
+                            content={
+                              <ChartTooltipContent
+                                formatter={(value) => `$${Number(value).toLocaleString('es-AR')}`}
+                              />
+                            }
+                          />
+                          <Bar
+                            dataKey="Facturación"
+                            fill="#F59E0B"
+                            radius={[4, 4, 0, 0]}
+                            maxBarSize={45}
+                          />
+                        </BarChart>
+                      </ChartContainer>
                     ) : (
                       <div className="py-10 text-center text-xs text-[#657373] bg-white rounded-lg border border-dashed border-[#E8E6DF]">
                         No se registraron productos de baja rotación en la categoría &quot;{categoriaRotacion}&quot;.
@@ -913,7 +1167,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
               </div>
             </div>
 
-            {/* Gráfico Tremor BarChart: Comportamiento y Ritmo de Ventas */}
+            {/* Gráfico shadcn/ui BarChart: Comportamiento y Ritmo de Ventas */}
             <div className="p-4 rounded-lg border border-[#E8E6DF] bg-[#F8F7F2]/40">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-[#1C2424] uppercase tracking-wider flex items-center gap-1.5">
@@ -924,21 +1178,49 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                   Valores expresados en ARS ($)
                 </span>
               </div>
-              <BarChart
-                className="h-64 mt-3"
-                data={
-                  periodoVentasTab === 'semana'
-                    ? data.graficos.barrasVentasSemana
-                    : data.graficos.barrasVentasMes
-                }
-                index="periodo"
-                categories={["Monto Facturado"]}
-                colors={["emerald"]}
-                valueFormatter={(number: number) => `$${number.toLocaleString('es-AR')}`}
-                showLegend={false}
-                showGridLines={true}
-                yAxisWidth={75}
-              />
+              <ChartContainer
+                config={ritmoVentasChartConfig}
+                className="h-64 w-full aspect-auto mt-3"
+              >
+                <BarChart
+                  data={
+                    periodoVentasTab === 'semana'
+                      ? data.graficos.barrasVentasSemana
+                      : data.graficos.barrasVentasMes
+                  }
+                  margin={{ top: 10, right: 10, left: 0, bottom: 10 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E8E6DF" />
+                  <XAxis
+                    dataKey="periodo"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    tick={{ fill: '#657373', fontSize: 11 }}
+                  />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    tick={{ fill: '#657373', fontSize: 11 }}
+                    tickFormatter={(val) => `$${(val / 1000).toLocaleString('es-AR')}k`}
+                  />
+                  <ChartTooltip
+                    cursor={{ fill: '#F3F4F6', opacity: 0.5 }}
+                    content={
+                      <ChartTooltipContent
+                        formatter={(value) => `$${Number(value).toLocaleString('es-AR')}`}
+                      />
+                    }
+                  />
+                  <Bar
+                    dataKey="Monto Facturado"
+                    fill="#2A7A78"
+                    radius={[4, 4, 0, 0]}
+                    maxBarSize={45}
+                  />
+                </BarChart>
+              </ChartContainer>
             </div>
 
             {/* Tabla de Detalle de Ventas con animación de transición */}
