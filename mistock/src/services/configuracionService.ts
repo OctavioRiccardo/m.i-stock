@@ -82,7 +82,8 @@ function inicializarEstadoCliente(): ConfiguracionCompleta {
   return valoresPorDefectoConfiguracion;
 }
 
-let currentSnapshot: ConfiguracionCompleta = inicializarEstadoCliente();
+let currentSnapshot: ConfiguracionCompleta = SERVER_SNAPSHOT;
+let hasHydrated = false;
 const listeners = new Set<() => void>();
 
 /**
@@ -113,6 +114,15 @@ if (typeof window !== 'undefined') {
 
 function subscribe(listener: () => void) {
   listeners.add(listener);
+
+  // Hidratación segura en cliente: tras la reconciliación inicial de SSR,
+  // se carga el estado persistido en localStorage sin generar mismatch de hidratación.
+  if (!hasHydrated && typeof window !== 'undefined') {
+    hasHydrated = true;
+    currentSnapshot = inicializarEstadoCliente();
+    listener();
+  }
+
   return () => {
     listeners.delete(listener);
   };
