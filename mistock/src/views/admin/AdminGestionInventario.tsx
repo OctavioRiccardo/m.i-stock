@@ -592,7 +592,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                 </div>
                 <div className="mt-2 flex items-baseline gap-2">
                   <span className="text-2xl font-bold text-rose-700">{metricasStockHub.criticos}</span>
-                  <span className="text-[11px] text-[#657373]">≤ stock mínimo</span>
+                  <span className="text-[11px] text-[#657373]">Por debajo del mínimo</span>
                 </div>
                 <p className="text-[11px] text-rose-600/90 mt-1">
                   {filtroStockHub === 'critico' ? 'Filtro activo' : 'Clic para filtrar'}
@@ -615,7 +615,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                 </div>
                 <div className="mt-2 flex items-baseline gap-2">
                   <span className="text-2xl font-bold text-amber-700">{metricasStockHub.bajasUnidades}</span>
-                  <span className="text-[11px] text-[#657373]">≤ 1.5x mínimo</span>
+                  <span className="text-[11px] text-[#657373]">Próximo al mínimo</span>
                 </div>
                 <p className="text-[11px] text-amber-600/90 mt-1">
                   {filtroStockHub === 'bajo' ? 'Filtro activo' : 'Clic para filtrar'}
@@ -638,7 +638,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                 </div>
                 <div className="mt-2 flex items-baseline gap-2">
                   <span className="text-2xl font-bold text-red-700">{metricasStockHub.agotados}</span>
-                  <span className="text-[11px] text-[#657373]">0 unidades</span>
+                  <span className="text-[11px] text-[#657373]">0 unidades disponibles</span>
                 </div>
                 <p className="text-[11px] text-red-600/90 mt-1">
                   {filtroStockHub === 'agotado' ? 'Filtro activo' : 'Clic para filtrar'}
@@ -661,7 +661,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                 </div>
                 <div className="mt-2 flex items-baseline gap-2">
                   <span className="text-2xl font-bold text-[#2A7A78]">{metricasStockHub.optimos}</span>
-                  <span className="text-[11px] text-[#657373]">&gt; mínimo</span>
+                  <span className="text-[11px] text-[#657373]">Por encima del mínimo</span>
                 </div>
                 <p className="text-[11px] text-[#2A7A78]/90 mt-1">
                   {filtroStockHub === 'optimo' ? 'Filtro activo' : 'Clic para filtrar'}
@@ -1622,7 +1622,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
 
           {/* Grid de Métricas de Salud de Stock (Click-to-Filter) */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
-            {/* Crítico */}
+              {/* Crítico */}
             <button
               type="button"
               onClick={() => {
@@ -1641,7 +1641,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
               </div>
               <div className="mt-2 flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-rose-700">{metricasModificar.criticos}</span>
-                <span className="text-[11px] text-[#657373]">&le; mínimo</span>
+                <span className="text-[11px] text-[#657373]">Por debajo del mínimo</span>
               </div>
               <p className="text-[11px] text-rose-600/90 mt-1">
                 {filtroStockModificar === 'critico' ? 'Filtro activo' : 'Clic para filtrar'}
@@ -1667,7 +1667,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
               </div>
               <div className="mt-2 flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-amber-700">{metricasModificar.bajasUnidades}</span>
-                <span className="text-[11px] text-[#657373]">&le; 1.5&times; mín</span>
+                <span className="text-[11px] text-[#657373]">Próximo al mínimo</span>
               </div>
               <p className="text-[11px] text-amber-600/90 mt-1">
                 {filtroStockModificar === 'bajo' ? 'Filtro activo' : 'Clic para filtrar'}
@@ -1693,7 +1693,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
               </div>
               <div className="mt-2 flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-red-700">{metricasModificar.agotados}</span>
-                <span className="text-[11px] text-[#657373]">0 unidades</span>
+                <span className="text-[11px] text-[#657373]">0 unidades disponibles</span>
               </div>
               <p className="text-[11px] text-red-600/90 mt-1">
                 {filtroStockModificar === 'agotado' ? 'Filtro activo' : 'Clic para filtrar'}
@@ -1719,7 +1719,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
               </div>
               <div className="mt-2 flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-[#2A7A78]">{metricasModificar.optimos}</span>
-                <span className="text-[11px] text-[#657373]">&gt; mínimo</span>
+                <span className="text-[11px] text-[#657373]">Por encima del mínimo</span>
               </div>
               <p className="text-[11px] text-[#2A7A78]/90 mt-1">
                 {filtroStockModificar === 'optimo' ? 'Filtro activo' : 'Clic para filtrar'}
