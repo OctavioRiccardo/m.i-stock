@@ -21,23 +21,23 @@ import React from 'react';
 import { motion, AnimatePresence, MotionConfig } from 'motion/react';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
 import {
-  BarChart3,
-  TrendingUp,
-  ChevronLeft,
-  ChevronRight,
+  ChartBar,
+  TrendUp,
+  CaretLeft,
+  CaretRight,
   Receipt,
-  PieChart as PieChartIcon,
-  DollarSign,
+  ChartPie as PieChartIcon,
+  CurrencyDollar,
   ShoppingBag,
-  Boxes,
-  AlertCircle,
-  Search,
-  Filter,
-  RotateCcw,
+  Package,
+  WarningCircle,
+  MagnifyingGlass,
+  Funnel,
+  ArrowCounterClockwise,
   Users,
   CreditCard,
   X,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import {
   Area,
   AreaChart,
@@ -325,14 +325,14 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
   const getKpiIcon = (index: number) => {
     switch (index) {
       case 0:
-        return <DollarSign className="h-4 w-4" />;
+        return <CurrencyDollar className="h-4 w-4" weight="duotone" />;
       case 1:
-        return <Receipt className="h-4 w-4" />;
+        return <Receipt className="h-4 w-4" weight="duotone" />;
       case 2:
-        return <ShoppingBag className="h-4 w-4" />;
+        return <ShoppingBag className="h-4 w-4" weight="duotone" />;
       case 3:
       default:
-        return <Boxes className="h-4 w-4" />;
+        return <Package className="h-4 w-4" weight="duotone" />;
     }
   };
 
@@ -463,7 +463,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
               <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 gap-3 border-b border-[#E8E6DF]">
                 <div>
                   <div className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-[#2A7A78]" />
+                    <TrendUp className="h-5 w-5 text-[#2A7A78]" weight="bold" />
                     <CardTitle className="text-base font-bold text-[#1C2424]">
                       Evolución de Recaudación
                     </CardTitle>
@@ -600,7 +600,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
             <Card className="h-full flex flex-col justify-between border-[#E8E6DF] shadow-xs bg-white">
               <CardHeader className="pb-3 border-b border-[#E8E6DF]">
                 <div className="flex items-center gap-2">
-                  <PieChartIcon className="h-5 w-5 text-[#2A7A78]" />
+                  <PieChartIcon className="h-5 w-5 text-[#2A7A78]" weight="duotone" />
                   <CardTitle className="text-base font-bold text-[#1C2424]">
                     Métodos de Pago
                   </CardTitle>
@@ -710,7 +710,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
           <CardHeader className="flex flex-col md:flex-row md:items-center justify-between pb-4 gap-3 border-b border-[#E8E6DF]">
             <div>
               <div className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-[#2A7A78]" />
+                <ChartBar className="h-5 w-5 text-[#2A7A78]" weight="duotone" />
                 <CardTitle className="text-base font-bold text-[#1C2424]">
                   Rotación de Productos y Salud de Stock
                 </CardTitle>
@@ -967,7 +967,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                           onClick={() => setPaginaRotacion((p) => Math.max(p - 1, 1))}
                           disabled={paginaRotacion <= 1}
                         >
-                          <ChevronLeft className="h-3.5 w-3.5 mr-1" />
+                          <CaretLeft className="h-3.5 w-3.5 mr-1" />
                           Anterior
                         </Button>
                         <span className="px-2 font-medium text-[#1C2424]">
@@ -982,7 +982,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                           disabled={paginaRotacion >= totalPaginasRotacion}
                         >
                           Siguiente
-                          <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                          <CaretRight className="h-3.5 w-3.5 ml-1" />
                         </Button>
                       </div>
                     </div>
@@ -1166,7 +1166,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                           onClick={() => setPaginaRotacion((p) => Math.max(p - 1, 1))}
                           disabled={paginaRotacion <= 1}
                         >
-                          <ChevronLeft className="h-3.5 w-3.5 mr-1" />
+                          <CaretLeft className="h-3.5 w-3.5 mr-1" />
                           Anterior
                         </Button>
                         <span className="px-2 font-medium text-[#1C2424]">
@@ -1181,7 +1181,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                           disabled={paginaRotacion >= totalPaginasRotacion}
                         >
                           Siguiente
-                          <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                          <CaretRight className="h-3.5 w-3.5 ml-1" />
                         </Button>
                       </div>
                     </div>
@@ -1302,7 +1302,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
             <div className="p-4 rounded-lg border border-[#E8E6DF] bg-[#F8F7F2]/40">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-[#1C2424] uppercase tracking-wider flex items-center gap-1.5">
-                  <BarChart3 className="h-4 w-4 text-[#2A7A78]" />
+                  <ChartBar className="h-4 w-4 text-[#2A7A78]" weight="duotone" />
                   Ritmo de Facturación {periodoVentasTab === 'semana' ? 'Diario (Esta Semana)' : 'Semanal (Este Mes)'}
                 </span>
                 <span className="text-xs text-[#657373]">
@@ -1359,7 +1359,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
               <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5">
                 {/* 1. Input de Búsqueda Rápida */}
                 <div className="relative flex-1 min-w-[220px]">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#657373]" />
+                  <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#657373]" />
                   <Input
                     type="text"
                     placeholder="Buscar por comprobante o vendedor..."
@@ -1389,7 +1389,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                     >
                       <SelectTrigger className="h-9 text-xs bg-white border-[#E8E6DF]">
                         <div className="flex items-center gap-1.5 truncate">
-                          <Users className="h-3.5 w-3.5 text-[#2A7A78] shrink-0" />
+                          <Users className="h-3.5 w-3.5 text-[#2A7A78] shrink-0" weight="duotone" />
                           <span className="truncate">
                             {filtroVendedorVentas === 'Todos'
                               ? 'Todos los vendedores'
@@ -1415,7 +1415,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                     >
                       <SelectTrigger className="h-9 text-xs bg-white border-[#E8E6DF]">
                         <div className="flex items-center gap-1.5 truncate">
-                          <CreditCard className="h-3.5 w-3.5 text-[#2A7A78] shrink-0" />
+                          <CreditCard className="h-3.5 w-3.5 text-[#2A7A78] shrink-0" weight="duotone" />
                           <span className="truncate">
                             {filtroMetodoPagoVentas === 'Todos'
                               ? 'Todos los pagos'
@@ -1452,7 +1452,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                     >
                       <SelectTrigger className="h-9 text-xs bg-white border-[#E8E6DF]">
                         <div className="flex items-center gap-1.5 truncate">
-                          <Filter className="h-3.5 w-3.5 text-[#2A7A78] shrink-0" />
+                          <Funnel className="h-3.5 w-3.5 text-[#2A7A78] shrink-0" weight="duotone" />
                           <span className="truncate">
                             {filtroEstadoVentas === 'Todos'
                               ? 'Todos los estados'
@@ -1483,7 +1483,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                       className="h-9 px-3 text-xs text-[#657373] hover:text-[#1C2424] border-[#E8E6DF] hover:bg-white active:scale-95 transition-all duration-150 cursor-pointer"
                       title="Restablecer todos los filtros"
                     >
-                      <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                      <ArrowCounterClockwise className="h-3.5 w-3.5 mr-1.5" />
                       Limpiar
                     </Button>
                   )}
@@ -1560,7 +1560,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                         <TableRow>
                           <TableCell colSpan={7} className="h-32 text-center text-[#657373]">
                             <div className="flex flex-col items-center justify-center gap-2 py-4">
-                              <Filter className="h-6 w-6 text-[#94A3B8]" />
+                              <Funnel className="h-6 w-6 text-[#94A3B8]" weight="duotone" />
                               <p className="text-sm font-semibold text-[#1C2424]">
                                 No se encontraron transacciones
                               </p>
@@ -1606,7 +1606,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                         onClick={() => setPaginaVentas((p) => Math.max(p - 1, 1))}
                         disabled={paginaVentas <= 1}
                       >
-                        <ChevronLeft className="h-3.5 w-3.5 mr-1" />
+                        <CaretLeft className="h-3.5 w-3.5 mr-1" />
                         Anterior
                       </Button>
                       <span className="px-2 font-medium text-[#1C2424]">
@@ -1621,7 +1621,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                         disabled={paginaVentas >= totalPaginasVentas}
                       >
                         Siguiente
-                        <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                        <CaretRight className="h-3.5 w-3.5 ml-1" />
                       </Button>
                     </div>
                   </div>

@@ -14,7 +14,15 @@
  */
 
 import React, { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
+import {
+  EnvelopeSimple,
+  Lock,
+  Eye,
+  EyeSlash,
+  ArrowRight,
+  ShieldCheck,
+  WarningCircle,
+} from '@phosphor-icons/react';
 import { useLoginController } from '@/controllers/authController';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,7 +48,7 @@ export function LoginFormView({ loginController }: LoginFormViewProps) {
           <div className="flex flex-col items-center text-center space-y-2">
             <div className="flex items-center gap-2">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#2A7A78] text-white shadow-md">
-                <ShieldCheck className="h-6 w-6" />
+                <ShieldCheck className="h-6 w-6" weight="duotone" />
               </div>
               <h1 className="text-2xl font-bold text-[#1C2424] tracking-tight">
                 miStock
@@ -59,7 +67,7 @@ export function LoginFormView({ loginController }: LoginFormViewProps) {
           {/* Alert Error */}
           {error && (
             <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
+              <WarningCircle className="h-4 w-4" weight="duotone" />
               <AlertTitle>Error de Autenticación</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
@@ -82,7 +90,7 @@ export function LoginFormView({ loginController }: LoginFormViewProps) {
                   className="pl-9"
                   required
                 />
-                <Mail className="absolute left-3 top-2.5 h-4 w-4 text-[#657373]" />
+                <EnvelopeSimple className="absolute left-3 top-2.5 h-4 w-4 text-[#657373]" />
               </div>
             </div>
 
@@ -108,7 +116,7 @@ export function LoginFormView({ loginController }: LoginFormViewProps) {
                   className="absolute right-3 top-2.5 text-[#657373] hover:text-[#1C2424] transition-colors"
                   aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? <EyeSlash className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
@@ -138,7 +146,7 @@ export function LoginFormView({ loginController }: LoginFormViewProps) {
               loading={loading}
             >
               <span>Iniciar Sesión</span>
-              <ArrowRight className="ml-2 h-4 w-4" />
+              <ArrowRight className="ml-2 h-4 w-4" weight="bold" />
             </Button>
           </form>
 

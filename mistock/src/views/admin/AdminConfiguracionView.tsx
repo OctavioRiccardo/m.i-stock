@@ -16,33 +16,33 @@
 import React, { useState } from 'react';
 import { motion, MotionConfig } from 'motion/react';
 import {
-  Store,
+  Storefront,
   CreditCard,
-  Sliders,
+  SlidersHorizontal,
   Database,
-  Save,
-  RotateCcw,
+  FloppyDisk,
+  ArrowCounterClockwise,
   Check,
-  AlertCircle,
-  Banknote,
-  Smartphone,
+  WarningCircle,
+  Money,
+  DeviceMobile,
   Package,
-  FileSpreadsheet,
-  AlertTriangle,
+  FileCsv,
+  Warning,
   Printer,
-  Volume2,
-  ScanLine,
+  SpeakerHigh,
+  Barcode,
   HardDrive,
-  HelpCircle,
-  Building2,
+  Question,
+  Buildings,
   Phone,
   Receipt,
   QrCode,
-  DollarSign,
-  Scale,
+  CurrencyDollar,
+  Scales,
   FileText,
-  CheckCircle2,
-} from 'lucide-react';
+  CheckCircle,
+} from '@phosphor-icons/react';
 import {
   useAdminConfiguracionController,
   PestañaConfiguracion,
@@ -139,7 +139,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
     {
       id: 'negocio',
       etiqueta: 'Negocio & Ticket',
-      icono: Store,
+      icono: Storefront,
       descripcion: 'Datos comerciales, fiscales y encabezado de comprobantes.',
     },
     {
@@ -151,7 +151,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
     {
       id: 'inventario',
       etiqueta: 'Reglas de Inventario',
-      icono: Sliders,
+      icono: SlidersHorizontal,
       descripcion: 'Umbrales mínimos de seguridad y control estricto de catálogo.',
     },
     {
@@ -189,7 +189,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
               onClick={() => setModalRestablecerAbierto(true)}
               className="text-xs border-[#E8E6DF] text-[#657373] hover:text-[#1C2424] hover:bg-[#F2F1EA] gap-1.5 cursor-pointer"
             >
-              <RotateCcw className="h-3.5 w-3.5" />
+              <ArrowCounterClockwise className="h-3.5 w-3.5" />
               <span>Restablecer</span>
             </Button>
 
@@ -200,7 +200,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
               disabled={guardando}
               className="bg-[#2A7A78] hover:bg-[#205E5C] text-white shadow-sm gap-1.5 cursor-pointer text-xs"
             >
-              <Save className="h-3.5 w-3.5" />
+              <FloppyDisk className="h-3.5 w-3.5" weight="bold" />
               <span>{guardando ? 'Guardando...' : 'Guardar Cambios'}</span>
             </Button>
           </div>
@@ -209,7 +209,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
         {/* Notificaciones de Estado */}
         {mensajeExito && (
           <Alert variant="success" className="cursor-pointer shadow-sm" onClick={limpiarMensajes}>
-            <Check className="h-4 w-4" />
+            <Check className="h-4 w-4" weight="bold" />
             <AlertTitle>Operación Completada</AlertTitle>
             <AlertDescription>{mensajeExito}</AlertDescription>
           </Alert>
@@ -217,7 +217,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
 
         {mensajeError && (
           <Alert variant="destructive" className="cursor-pointer shadow-sm" onClick={limpiarMensajes}>
-            <AlertCircle className="h-4 w-4" />
+            <WarningCircle className="h-4 w-4" weight="duotone" />
             <AlertTitle>Atención</AlertTitle>
             <AlertDescription>{mensajeError}</AlertDescription>
           </Alert>
@@ -247,7 +247,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                     esActiva ? 'bg-[#E2F1F0] text-[#2A7A78]' : 'bg-[#E8E6DF]/60 text-[#657373]'
                   }`}
                 >
-                  <Icono className="h-4 w-4" />
+                  <Icono className="h-4 w-4" weight={esActiva ? 'duotone' : 'regular'} />
                 </div>
                 <div className="truncate">
                   <p className="truncate leading-snug">{p.etiqueta}</p>
@@ -273,7 +273,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
               <Card className="border-[#E8E6DF] shadow-sm">
                 <CardHeader className="pb-3 border-b border-[#E8E6DF]">
                   <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-[#2A7A78]" />
+                    <Buildings className="h-4 w-4 text-[#2A7A78]" weight="duotone" />
                     <CardTitle className="text-sm font-bold text-[#1C2424]">
                       Identificación del Comercio
                     </CardTitle>
@@ -364,7 +364,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
               <Card className="border-[#E8E6DF] shadow-sm">
                 <CardHeader className="pb-3 border-b border-[#E8E6DF]">
                   <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-[#2A7A78]" />
+                    <Phone className="h-4 w-4 text-[#2A7A78]" weight="duotone" />
                     <CardTitle className="text-sm font-bold text-[#1C2424]">
                       Ubicación y Canales de Atención
                     </CardTitle>
@@ -419,7 +419,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                 <CardHeader className="pb-3 border-b border-[#E8E6DF]">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Scale className="h-4 w-4 text-[#2A7A78]" />
+                      <Scales className="h-4 w-4 text-[#2A7A78]" weight="duotone" />
                       <CardTitle className="text-sm font-bold text-[#1C2424]">
                         Régimen de Emisión y Validez Legal del Ticket
                       </CardTitle>
@@ -449,11 +449,11 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                     >
                       <div className="flex items-center justify-between">
                         <span className="flex items-center gap-1.5 font-bold text-xs text-[#1C2424]">
-                          <FileText className="h-3.5 w-3.5 text-[#2A7A78]" />
+                          <FileText className="h-3.5 w-3.5 text-[#2A7A78]" weight="duotone" />
                           Comprobante Interno
                         </span>
                         {config.negocio.modoComprobante === 'no_fiscal' && (
-                          <CheckCircle2 className="h-4 w-4 text-[#2A7A78]" />
+                          <CheckCircle className="h-4 w-4 text-[#2A7A78]" weight="duotone" />
                         )}
                       </div>
                       <p className="text-[11px] text-[#657373] mt-1">
@@ -472,11 +472,11 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                     >
                       <div className="flex items-center justify-between">
                         <span className="flex items-center gap-1.5 font-bold text-xs text-[#1C2424]">
-                          <Scale className="h-3.5 w-3.5 text-[#2A7A78]" />
+                          <Scales className="h-3.5 w-3.5 text-[#2A7A78]" weight="duotone" />
                           Factura Electrónica
                         </span>
                         {config.negocio.modoComprobante === 'factura_afip' && (
-                          <CheckCircle2 className="h-4 w-4 text-[#2A7A78]" />
+                          <CheckCircle className="h-4 w-4 text-[#2A7A78]" weight="duotone" />
                         )}
                       </div>
                       <p className="text-[11px] text-[#657373] mt-1">
@@ -530,7 +530,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                   ) : (
                     <div className="p-3.5 rounded-lg bg-amber-50/60 border border-amber-200 space-y-3">
                       <div className="flex items-center gap-2">
-                        <AlertTriangle className="h-4 w-4 text-amber-700" />
+                        <Warning className="h-4 w-4 text-amber-700" weight="duotone" />
                         <p className="text-xs font-semibold text-amber-900">
                           Requisitos para Facturación Electrónica en Vivo
                         </p>
@@ -562,7 +562,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
               <Card className="border-[#E8E6DF] shadow-sm">
                 <CardHeader className="pb-3 border-b border-[#E8E6DF]">
                   <div className="flex items-center gap-2">
-                    <Printer className="h-4 w-4 text-[#2A7A78]" />
+                    <Printer className="h-4 w-4 text-[#2A7A78]" weight="duotone" />
                     <CardTitle className="text-sm font-bold text-[#1C2424]">
                       Textos del Comprobante Impreso (Ticket Térmico)
                     </CardTitle>
@@ -612,7 +612,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                 <CardHeader className="pb-3 border-b border-[#E8E6DF] bg-[#F8F7F2]/60">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Receipt className="h-4 w-4 text-[#2A7A78]" />
+                      <Receipt className="h-4 w-4 text-[#2A7A78]" weight="duotone" />
                       <CardTitle className="text-xs font-bold uppercase tracking-wider text-[#1C2424]">
                         Simulador de Ticket Térmico ({config.pos.anchoPapelTicket || '80mm'})
                       </CardTitle>
@@ -806,7 +806,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
               <CardHeader className="pb-3 border-b border-[#E8E6DF]">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <CreditCard className="h-4 w-4 text-[#2A7A78]" />
+                    <CreditCard className="h-4 w-4 text-[#2A7A78]" weight="duotone" />
                     <CardTitle className="text-sm font-bold text-[#1C2424]">
                       Métodos de Cobro Habilitados en Caja
                     </CardTitle>
@@ -837,7 +837,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                             : 'bg-gray-100 text-gray-500'
                         }`}
                       >
-                        <Banknote className="h-5 w-5" />
+                        <Money className="h-5 w-5" weight="duotone" />
                       </div>
                       <SwitchToggle
                         id="toggle-efectivo"
@@ -878,7 +878,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                             : 'bg-gray-100 text-gray-500'
                         }`}
                       >
-                        <CreditCard className="h-5 w-5" />
+                        <CreditCard className="h-5 w-5" weight="duotone" />
                       </div>
                       <SwitchToggle
                         id="toggle-debito"
@@ -919,7 +919,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                             : 'bg-gray-100 text-gray-500'
                         }`}
                       >
-                        <CreditCard className="h-5 w-5" />
+                        <CreditCard className="h-5 w-5" weight="duotone" />
                       </div>
                       <SwitchToggle
                         id="toggle-credito"
@@ -960,7 +960,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                             : 'bg-gray-100 text-gray-500'
                         }`}
                       >
-                        <Smartphone className="h-5 w-5" />
+                        <DeviceMobile className="h-5 w-5" weight="duotone" />
                       </div>
                       <SwitchToggle
                         id="toggle-transferencia"
@@ -1001,7 +1001,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                             : 'bg-gray-100 text-gray-500'
                         }`}
                       >
-                        <QrCode className="h-5 w-5" />
+                        <QrCode className="h-5 w-5" weight="duotone" />
                       </div>
                       <SwitchToggle
                         id="toggle-mercadopago"
@@ -1126,7 +1126,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <div className="flex items-center gap-1.5">
-                        <Volume2 className="h-4 w-4 text-[#2A7A78]" />
+                        <SpeakerHigh className="h-4 w-4 text-[#2A7A78]" weight="duotone" />
                         <p className="text-xs font-semibold text-[#1C2424]">
                           Sonido Auditivo al Cobrar
                         </p>
@@ -1148,7 +1148,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                     <div className="flex items-start justify-between gap-4">
                       <div>
                         <div className="flex items-center gap-1.5">
-                          <ScanLine className="h-4 w-4 text-[#2A7A78]" />
+                          <Barcode className="h-4 w-4 text-[#2A7A78]" weight="duotone" />
                           <p className="text-xs font-semibold text-[#1C2424]">
                             Modo Escáner de Código de Barras Rápido
                           </p>
@@ -1171,7 +1171,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                     <div className="flex items-start justify-between gap-4">
                       <div>
                         <div className="flex items-center gap-1.5">
-                          <Printer className="h-4 w-4 text-[#2A7A78]" />
+                          <Printer className="h-4 w-4 text-[#2A7A78]" weight="duotone" />
                           <p className="text-xs font-semibold text-[#1C2424]">
                             Impresión Automática de Ticket al Cobrar
                           </p>
@@ -1192,7 +1192,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                   <div className="border-t border-[#E8E6DF] pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <div className="flex items-center gap-1.5 mb-1">
-                        <Receipt className="h-4 w-4 text-[#2A7A78]" />
+                        <Receipt className="h-4 w-4 text-[#2A7A78]" weight="duotone" />
                         <label className="text-xs font-semibold text-[#1C2424]">
                           Ancho de Papel de Ticket
                         </label>
@@ -1212,7 +1212,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
 
                     <div>
                       <div className="flex items-center gap-1.5 mb-1">
-                        <HardDrive className="h-4 w-4 text-[#2A7A78]" />
+                        <HardDrive className="h-4 w-4 text-[#2A7A78]" weight="duotone" />
                         <label className="text-xs font-semibold text-[#1C2424]">
                           Número de Terminal / Caja
                         </label>
@@ -1250,7 +1250,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
             <Card className="border-[#E8E6DF] shadow-sm">
               <CardHeader className="pb-3 border-b border-[#E8E6DF]">
                 <div className="flex items-center gap-2">
-                  <Sliders className="h-4 w-4 text-[#2A7A78]" />
+                  <SlidersHorizontal className="h-4 w-4 text-[#2A7A78]" weight="duotone" />
                   <CardTitle className="text-sm font-bold text-[#1C2424]">
                     Umbrales de Existencias Mínimas
                   </CardTitle>
@@ -1285,7 +1285,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                 </div>
 
                 <div className="p-3 rounded-lg bg-[#F8F7F2] border border-[#E8E6DF] flex items-start gap-2.5">
-                  <HelpCircle className="h-4 w-4 text-[#657373] mt-0.5 flex-shrink-0" />
+                  <Question className="h-4 w-4 text-[#657373] mt-0.5 flex-shrink-0" weight="duotone" />
                   <p className="text-[11px] text-[#657373]">
                     El stock crítico se gestiona de forma centralizada en la tabla de <strong>Gestión de Inventario</strong>, donde puedes filtrar artículos en estado de alerta o sin existencias.
                   </p>
@@ -1297,7 +1297,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
             <Card className="border-[#E8E6DF] shadow-sm">
               <CardHeader className="pb-3 border-b border-[#E8E6DF]">
                 <div className="flex items-center gap-2">
-                  <Package className="h-4 w-4 text-[#2A7A78]" />
+                  <Package className="h-4 w-4 text-[#2A7A78]" weight="duotone" />
                   <CardTitle className="text-sm font-bold text-[#1C2424]">
                     Integridad y Control de Precios
                   </CardTitle>
@@ -1311,7 +1311,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-1.5">
-                      <AlertTriangle className="h-4 w-4 text-amber-600" />
+                      <Warning className="h-4 w-4 text-amber-600" weight="duotone" />
                       <p className="text-xs font-semibold text-[#1C2424]">
                         Bloqueo o Alerta de Margen Negativo
                       </p>
@@ -1333,7 +1333,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <div className="flex items-center gap-1.5">
-                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                        <CheckCircle className="h-4 w-4 text-emerald-600" weight="duotone" />
                         <p className="text-xs font-semibold text-[#1C2424]">
                           Categorización Obligatoria (Integridad Relacional)
                         </p>
@@ -1387,7 +1387,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
               <CardHeader className="pb-3 border-b border-[#E8E6DF]">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <HardDrive className="h-4 w-4 text-[#2A7A78]" />
+                    <HardDrive className="h-4 w-4 text-[#2A7A78]" weight="duotone" />
                     <CardTitle className="text-sm font-bold text-[#1C2424]">
                       Monitor de Conexión e Infraestructura (Supabase Cloud)
                     </CardTitle>
@@ -1458,7 +1458,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
             <Card className="border-[#E8E6DF] shadow-sm">
               <CardHeader className="pb-3 border-b border-[#E8E6DF]">
                 <div className="flex items-center gap-2">
-                  <FileSpreadsheet className="h-4 w-4 text-[#2A7A78]" />
+                  <FileCsv className="h-4 w-4 text-[#2A7A78]" weight="duotone" />
                   <CardTitle className="text-sm font-bold text-[#1C2424]">
                     Exportación de Datos y Respaldos Manuales
                   </CardTitle>
@@ -1474,7 +1474,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                     <div>
                       <div className="flex items-center justify-between">
                         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78]">
-                          <Package className="h-5 w-5" />
+                          <Package className="h-5 w-5" weight="duotone" />
                         </div>
                         <Badge variant="outline" className="text-[10px]">
                           Formato UTF-8 .CSV
@@ -1496,7 +1496,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                         onClick={exportarCatalogoCSV}
                         className="w-full text-xs border-[#2A7A78] text-[#2A7A78] hover:bg-[#E2F1F0] gap-1.5 cursor-pointer"
                       >
-                        <FileSpreadsheet className="h-3.5 w-3.5" />
+                        <FileCsv className="h-3.5 w-3.5" />
                         <span>Descargar Catálogo CSV</span>
                       </Button>
                     </div>
@@ -1507,7 +1507,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                     <div>
                       <div className="flex items-center justify-between">
                         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-800">
-                          <DollarSign className="h-5 w-5" />
+                          <CurrencyDollar className="h-5 w-5" weight="duotone" />
                         </div>
                         <Badge variant="outline" className="text-[10px]">
                           Formato UTF-8 .CSV
@@ -1529,7 +1529,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                         onClick={exportarVentasCSV}
                         className="w-full text-xs border-emerald-600 text-emerald-800 hover:bg-emerald-50 gap-1.5 cursor-pointer"
                       >
-                        <FileSpreadsheet className="h-3.5 w-3.5" />
+                        <FileCsv className="h-3.5 w-3.5" />
                         <span>Descargar Ventas CSV</span>
                       </Button>
                     </div>
@@ -1542,7 +1542,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
             <Card className="border-red-200 bg-red-50/20 shadow-sm">
               <CardHeader className="pb-3 border-b border-red-100">
                 <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-red-600" />
+                  <Warning className="h-4 w-4 text-red-600" weight="duotone" />
                   <CardTitle className="text-sm font-bold text-red-900">
                     Zona de Mantenimiento del Sistema
                   </CardTitle>
@@ -1568,7 +1568,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                     onClick={() => setModalRestablecerAbierto(true)}
                     className="border-red-300 text-red-700 hover:bg-red-50 text-xs gap-1.5 cursor-pointer self-start sm:self-auto"
                   >
-                    <RotateCcw className="h-3.5 w-3.5" />
+                    <ArrowCounterClockwise className="h-3.5 w-3.5" />
                     <span>Restablecer Fábrica</span>
                   </Button>
                 </div>
@@ -1582,7 +1582,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
           <DialogContent className="max-w-md">
             <DialogHeader>
               <div className="flex items-center gap-2 text-amber-700 mb-1">
-                <AlertTriangle className="h-5 w-5" />
+                <Warning className="h-5 w-5" weight="duotone" />
                 <DialogTitle>¿Restablecer Valores de Fábrica?</DialogTitle>
               </div>
               <DialogDescription className="text-xs text-[#657373] pt-1">
@@ -1611,7 +1611,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                 }}
                 className="text-xs gap-1.5"
               >
-                <RotateCcw className="h-3.5 w-3.5" />
+                <ArrowCounterClockwise className="h-3.5 w-3.5" />
                 <span>Sí, Restablecer</span>
               </Button>
             </DialogFooter>

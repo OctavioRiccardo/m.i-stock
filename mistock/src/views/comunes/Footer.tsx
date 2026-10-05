@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * ====================================================================
  * COMPONENTE COMÚN: PIE DE PÁGINA (Footer)
@@ -9,7 +11,7 @@
  */
 
 import React from 'react';
-import { Package } from 'lucide-react';
+import { Package } from '@phosphor-icons/react';
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -22,7 +24,7 @@ export function Footer() {
           {/* Brand & Logo */}
           <div className="flex items-center gap-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#2A7A78] text-white shadow-sm">
-              <Package className="h-4 w-4" />
+              <Package className="h-4 w-4" weight="duotone" />
             </div>
             <span className="text-sm font-bold text-[#1C2424]">M.I Stock</span>
           </div>

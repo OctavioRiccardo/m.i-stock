@@ -19,20 +19,19 @@ import Link from 'next/link';
 import { motion, MotionConfig } from 'motion/react';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
 import {
-  Layers,
-  Search,
-  ChevronLeft,
-  ChevronRight,
-  AlertTriangle,
-  PackageCheck,
-  DollarSign,
+  Stack,
+  MagnifyingGlass,
+  CaretLeft,
+  CaretRight,
+  Warning,
+  CheckCircle,
+  CurrencyDollar,
   Package,
-  ExternalLink,
+  ArrowSquareOut,
   X,
-  Boxes,
-  ArrowUpDown,
-  Filter,
-} from 'lucide-react';
+  ArrowsDownUp,
+  Funnel,
+} from '@phosphor-icons/react';
 import {
   useAdminInventarioGlobalController,
   FiltroEstadoStock,
@@ -106,7 +105,7 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
           <div>
             <div className="flex items-center gap-2">
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78]">
-                <Layers className="h-4 w-4" />
+                <Stack className="h-4 w-4" weight="duotone" />
               </div>
               <h1 className="text-2xl font-bold text-[#1C2424] tracking-tight">
                 Inventario Global
@@ -124,7 +123,7 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
               className="bg-[#2A7A78] hover:bg-[#205E5C] text-white shadow-sm gap-1.5"
             >
               <Link href="/admingestioninven">
-                <Boxes className="h-4 w-4" />
+                <Package className="h-4 w-4" weight="bold" />
                 <span>Gestión de Inventario</span>
               </Link>
             </Button>
@@ -140,7 +139,7 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
                 Total de Artículos
               </span>
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78]">
-                <Package className="h-4 w-4" />
+                <Package className="h-4 w-4" weight="duotone" />
               </div>
             </div>
             <p className="text-2xl font-extrabold text-[#1C2424] tracking-tight mt-2">
@@ -158,7 +157,7 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
                 Unidades en Stock
               </span>
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78]">
-                <PackageCheck className="h-4 w-4" />
+                <CheckCircle className="h-4 w-4" weight="duotone" />
               </div>
             </div>
             <p className="text-2xl font-extrabold text-[#1C2424] tracking-tight mt-2">
@@ -176,7 +175,7 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
                 Valuación Comercial
               </span>
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78]">
-                <DollarSign className="h-4 w-4" />
+                <CurrencyDollar className="h-4 w-4" weight="duotone" />
               </div>
             </div>
             <p className="text-2xl font-extrabold text-[#1C2424] tracking-tight mt-2">
@@ -195,7 +194,7 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
                 Salud de Stock
               </span>
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
-                <AlertTriangle className="h-4 w-4" />
+                <Warning className="h-4 w-4" weight="duotone" />
               </div>
             </div>
             <div className="flex items-baseline gap-2 mt-2">
@@ -381,7 +380,7 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
                 {/* Buscador de texto */}
                 <div className="relative w-full sm:w-56">
-                  <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-[#657373]" />
+                  <MagnifyingGlass className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-[#657373]" />
                   <Input
                     placeholder="Buscar por SKU o nombre..."
                     value={busqueda}
@@ -397,7 +396,7 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
                     onValueChange={(val) => setFiltroStock(val as FiltroEstadoStock)}
                   >
                     <SelectTrigger className="h-9 text-xs">
-                      <Filter className="h-3.5 w-3.5 mr-1 text-[#657373]" />
+                      <Funnel className="h-3.5 w-3.5 mr-1 text-[#657373]" />
                       <SelectValue placeholder="Estado de stock" />
                     </SelectTrigger>
                     <SelectContent>
@@ -416,7 +415,7 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
                     onValueChange={(val) => setOrdenarPor(val as CriterioOrdenInventario)}
                   >
                     <SelectTrigger className="h-9 text-xs">
-                      <ArrowUpDown className="h-3.5 w-3.5 mr-1 text-[#657373]" />
+                      <ArrowsDownUp className="h-3.5 w-3.5 mr-1 text-[#657373]" />
                       <SelectValue placeholder="Ordenar por" />
                     </SelectTrigger>
                     <SelectContent>
@@ -438,7 +437,7 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
               /* Estado vacío cuando ningún producto coincide con los filtros */
               <div className="py-16 text-center flex flex-col items-center justify-center space-y-3 px-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#F8F7F2] text-[#657373]">
-                  <Search className="h-6 w-6" />
+                  <MagnifyingGlass className="h-6 w-6" weight="duotone" />
                 </div>
                 <div className="max-w-md">
                   <p className="font-semibold text-sm text-[#1C2424]">
@@ -596,7 +595,7 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
                               title="Editar en Gestión de Inventario"
                             >
                               <Link href="/admingestioninven">
-                                <ExternalLink className="h-3 w-3" />
+                                <ArrowSquareOut className="h-3 w-3" />
                                 <span>Gestionar</span>
                               </Link>
                             </Button>
@@ -627,7 +626,7 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
                         onClick={() => setPagina(Math.max(pagina - 1, 1))}
                         disabled={pagina <= 1}
                       >
-                        <ChevronLeft className="h-3.5 w-3.5 mr-1" />
+                        <CaretLeft className="h-3.5 w-3.5 mr-1" />
                         Anterior
                       </Button>
                       <span className="px-2 font-medium text-[#1C2424]">
@@ -642,7 +641,7 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
                         disabled={pagina >= totalPaginas}
                       >
                         Siguiente
-                        <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                        <CaretRight className="h-3.5 w-3.5 ml-1" />
                       </Button>
                     </div>
                   </div>

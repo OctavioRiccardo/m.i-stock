@@ -13,7 +13,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { ShieldAlert, Clock, ArrowRight, LogOut, ShoppingCart } from 'lucide-react';
+import { ShieldWarning, Clock, ArrowRight, SignOut, ShoppingCart } from '@phosphor-icons/react';
 import {
   Dialog,
   DialogContent,
@@ -56,9 +56,9 @@ export function ModalAccesoRestringido({
               }`}
             >
               {esVendedorEnAdmin ? (
-                <ShieldAlert className="h-6 w-6" />
+                <ShieldWarning className="h-6 w-6" weight="duotone" />
               ) : (
-                <Clock className="h-6 w-6" />
+                <Clock className="h-6 w-6" weight="duotone" />
               )}
             </div>
             <div>
@@ -102,9 +102,9 @@ export function ModalAccesoRestringido({
               onClick={() => router.push('/dashboard')}
               className="w-full sm:w-auto bg-[#2A7A78] hover:bg-[#205E5C] text-white text-xs gap-1.5 cursor-pointer"
             >
-              <ShoppingCart className="h-3.5 w-3.5" />
+              <ShoppingCart className="h-3.5 w-3.5" weight="duotone" />
               <span>Volver a la Terminal de Caja</span>
-              <ArrowRight className="h-3.5 w-3.5" />
+              <ArrowRight className="h-3.5 w-3.5" weight="bold" />
             </Button>
           ) : (
             <Button
@@ -113,7 +113,7 @@ export function ModalAccesoRestringido({
               onClick={() => router.push('/logout')}
               className="w-full sm:w-auto text-xs gap-1.5 text-red-600 border-red-200 hover:bg-red-50 cursor-pointer"
             >
-              <LogOut className="h-3.5 w-3.5" />
+              <SignOut className="h-3.5 w-3.5" weight="bold" />
               <span>Cerrar Sesión</span>
             </Button>
           )}

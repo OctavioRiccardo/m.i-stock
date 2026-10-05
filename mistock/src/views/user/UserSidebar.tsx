@@ -16,11 +16,11 @@ import {
   ShoppingCart,
   Package,
   Receipt,
-  ListCheck,
-  ArrowLeftRight,
-  LogOut,
+  ListChecks,
+  ArrowsLeftRight,
+  SignOut,
   UserCheck,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 
 /**
@@ -30,7 +30,7 @@ const userNavData = [
   { link: '/dashboard', label: 'Ventas y Operaciones', icon: ShoppingCart },
   { link: '/dashboard#productos', label: 'Catálogo de Productos', icon: Package },
   { link: '/dashboard#historial', label: 'Historial del Día', icon: Receipt },
-  { link: '/dashboard#resumen', label: 'Resumen de Stock', icon: ListCheck },
+  { link: '/dashboard#resumen', label: 'Resumen de Stock', icon: ListChecks },
 ];
 
 
@@ -49,7 +49,7 @@ export function UserSidebar({ onNavigate, className, esAdmin = false }: UserSide
       <div className="flex items-center justify-between px-5 h-16 border-b border-[#E8E6DF]">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#2A7A78] text-white shadow-sm">
-            <UserCheck className="h-5 w-5" />
+            <UserCheck className="h-5 w-5" weight="duotone" />
           </div>
           <div>
             <h1 className="text-base font-bold text-[#1C2424] tracking-tight leading-none">
@@ -88,7 +88,10 @@ export function UserSidebar({ onNavigate, className, esAdmin = false }: UserSide
                   : 'text-[#657373] hover:bg-black/5 hover:text-[#1C2424]'
               )}
             >
-              <Icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-white' : 'text-[#657373]')} />
+              <Icon
+                className={cn('h-5 w-5 shrink-0', isActive ? 'text-white' : 'text-[#657373]')}
+                weight={isActive ? 'duotone' : 'regular'}
+              />
               <span>{item.label}</span>
             </Link>
           );
@@ -104,7 +107,7 @@ export function UserSidebar({ onNavigate, className, esAdmin = false }: UserSide
             onClick={() => onNavigate?.()}
             className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[#657373] hover:bg-black/5 hover:text-[#1C2424] transition-colors"
           >
-            <ArrowLeftRight className="h-4 w-4" />
+            <ArrowsLeftRight className="h-4 w-4" weight="regular" />
             <span>Volver a Administración</span>
           </Link>
         )}
@@ -114,7 +117,7 @@ export function UserSidebar({ onNavigate, className, esAdmin = false }: UserSide
           onClick={() => onNavigate?.()}
           className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
         >
-          <LogOut className="h-4 w-4" />
+          <SignOut className="h-4 w-4" weight="regular" />
           <span>Cerrar Sesión</span>
         </Link>
       </div>

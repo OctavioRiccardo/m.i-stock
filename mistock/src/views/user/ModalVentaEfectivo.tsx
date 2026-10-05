@@ -13,14 +13,14 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  Banknote,
+  Money,
   Plus,
   Minus,
-  CheckCircle2,
-  AlertCircle,
+  CheckCircle,
+  WarningCircle,
   Coins,
   Package,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import {
   Dialog,
   DialogContent,
@@ -121,7 +121,7 @@ export function ModalVentaEfectivo({
         <DialogHeader className="space-y-2">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-              <Banknote className="h-6 w-6" />
+              <Money className="h-6 w-6" weight="duotone" />
             </div>
             <div>
               <DialogTitle className="text-base font-bold text-[#1C2424]">
@@ -150,7 +150,7 @@ export function ModalVentaEfectivo({
             </div>
 
             <div className="flex items-center gap-2 pt-1 border-t border-[#E8E6DF]/60 text-[11px] text-[#657373]">
-              <Package className="h-3.5 w-3.5 text-[#2A7A78]" />
+              <Package className="h-3.5 w-3.5 text-[#2A7A78]" weight="duotone" />
               <span>
                 Stock en góndola: <strong className="text-[#1C2424]">{stockDisponible} unidades</strong>
               </span>
@@ -202,7 +202,7 @@ export function ModalVentaEfectivo({
           <div className="space-y-2 pt-2 border-t border-[#E8E6DF]">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold text-[#1C2424] flex items-center gap-1.5">
-                <Coins className="h-3.5 w-3.5 text-[#2A7A78]" />
+                <Coins className="h-3.5 w-3.5 text-[#2A7A78]" weight="duotone" />
                 <span>Paga con (Monto recibido):</span>
               </label>
               <button
@@ -259,7 +259,7 @@ export function ModalVentaEfectivo({
                   className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-between"
                 >
                   <div className="flex items-center gap-2 text-emerald-800">
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                    <CheckCircle className="h-4 w-4 shrink-0 text-emerald-600" weight="fill" />
                     <span className="text-xs font-semibold">Vuelto a entregar al cliente:</span>
                   </div>
                   <span className="text-sm font-extrabold text-emerald-800">
@@ -276,7 +276,7 @@ export function ModalVentaEfectivo({
                   className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-between"
                 >
                   <div className="flex items-center gap-2 text-amber-800">
-                    <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
+                    <WarningCircle className="h-4 w-4 shrink-0 text-amber-600" weight="fill" />
                     <span className="text-xs font-semibold">Monto insuficiente. Faltan:</span>
                   </div>
                   <span className="text-sm font-extrabold text-amber-800">
@@ -302,7 +302,7 @@ export function ModalVentaEfectivo({
                 disabled={!esMontoSuficiente || (!permitirVentaSinStock && stockDisponible < cantidad)}
                 className="text-xs h-9 bg-emerald-700 hover:bg-emerald-800 text-white gap-1.5 font-semibold cursor-pointer disabled:opacity-50"
               >
-                <Banknote className="h-4 w-4" />
+                <Money className="h-4 w-4" weight="bold" />
                 <span>Confirmar Cobro en Efectivo</span>
               </Button>
             </motion.div>

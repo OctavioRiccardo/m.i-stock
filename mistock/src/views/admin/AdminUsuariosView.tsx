@@ -23,20 +23,20 @@ import {
   ShieldCheck,
   UserCheck,
   Clock,
-  Search,
-  Filter,
+  MagnifyingGlass,
+  Funnel,
   Check,
-  AlertCircle,
-  FileEdit,
-  Trash2,
-  ChevronLeft,
-  ChevronRight,
+  WarningCircle,
+  PencilSimple,
+  Trash,
+  CaretLeft,
+  CaretRight,
   X,
   Phone,
-  Mail,
+  EnvelopeSimple,
   Power,
   Shield,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import {
   useAdminUsuariosController,
   FiltroRol,
@@ -209,7 +209,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
             onClick={() => setModalCrearAbierto(true)}
             className="bg-[#2A7A78] hover:bg-[#205E5C] text-white shadow-sm gap-1.5 cursor-pointer self-start sm:self-auto"
           >
-            <UserPlus className="h-4 w-4" />
+            <UserPlus className="h-4 w-4" weight="bold" />
             <span>Nuevo Colaborador</span>
           </Button>
         </div>
@@ -217,7 +217,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
         {/* Notificaciones Globales */}
         {mensajeExito && (
           <Alert variant="success" className="cursor-pointer shadow-sm" onClick={limpiarMensajes}>
-            <Check className="h-4 w-4" />
+            <Check className="h-4 w-4" weight="bold" />
             <AlertTitle>Operación Exitosa</AlertTitle>
             <AlertDescription>{mensajeExito}</AlertDescription>
           </Alert>
@@ -225,7 +225,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
 
         {mensajeError && (
           <Alert variant="destructive" className="cursor-pointer shadow-sm" onClick={limpiarMensajes}>
-            <AlertCircle className="h-4 w-4" />
+            <WarningCircle className="h-4 w-4" weight="duotone" />
             <AlertTitle>Atención</AlertTitle>
             <AlertDescription>{mensajeError}</AlertDescription>
           </Alert>
@@ -240,7 +240,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                 Total Colaboradores
               </span>
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78]">
-                <Users className="h-4 w-4" />
+                <Users className="h-4 w-4" weight="duotone" />
               </div>
             </div>
             <p className="text-2xl font-extrabold text-[#1C2424] tracking-tight mt-2">
@@ -258,7 +258,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                 Administradores
               </span>
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78]">
-                <ShieldCheck className="h-4 w-4" />
+                <ShieldCheck className="h-4 w-4" weight="duotone" />
               </div>
             </div>
             <p className="text-2xl font-extrabold text-[#1C2424] tracking-tight mt-2">
@@ -276,7 +276,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                 Vendedores (POS)
               </span>
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
-                <UserCheck className="h-4 w-4" />
+                <UserCheck className="h-4 w-4" weight="duotone" />
               </div>
             </div>
             <p className="text-2xl font-extrabold text-[#1C2424] tracking-tight mt-2">
@@ -300,7 +300,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                     : 'bg-[#F8F7F2] text-[#657373]'
                 }`}
               >
-                <Clock className="h-4 w-4" />
+                <Clock className="h-4 w-4" weight="duotone" />
               </div>
             </div>
             <div className="flex items-baseline gap-2 mt-2">
@@ -342,7 +342,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
                 {/* Buscador */}
                 <div className="relative w-full sm:w-56">
-                  <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-[#657373]" />
+                  <MagnifyingGlass className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-[#657373]" />
                   <Input
                     placeholder="Buscar por nombre o correo..."
                     value={busqueda}
@@ -374,7 +374,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                     onValueChange={(val) => setFiltroEstado(val as FiltroEstado)}
                   >
                     <SelectTrigger className="h-9 text-xs">
-                      <Filter className="h-3.5 w-3.5 mr-1 text-[#657373]" />
+                      <Funnel className="h-3.5 w-3.5 mr-1 text-[#657373]" />
                       <SelectValue placeholder="Estado" />
                     </SelectTrigger>
                     <SelectContent>
@@ -468,13 +468,13 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                                   <span>{usr.nombre}</span>
                                   {esAdmin && (
                                     <span title="Administrador">
-                                      <ShieldCheck className="h-3.5 w-3.5 text-[#2A7A78]" />
+                                      <ShieldCheck className="h-3.5 w-3.5 text-[#2A7A78]" weight="duotone" />
                                     </span>
                                   )}
                                 </div>
                                 <div className="flex items-center gap-2 text-xs text-[#657373] mt-0.5">
                                   <span className="flex items-center gap-1">
-                                    <Mail className="h-3 w-3" />
+                                    <EnvelopeSimple className="h-3 w-3" />
                                     {usr.email}
                                   </span>
                                   {usr.telefono && (
@@ -503,19 +503,19 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                               <SelectContent>
                                 <SelectItem value="admin">
                                   <div className="flex items-center gap-1.5 font-medium text-[#2A7A78]">
-                                    <ShieldCheck className="h-3.5 w-3.5" />
+                                    <ShieldCheck className="h-3.5 w-3.5" weight="duotone" />
                                     <span>Administrador</span>
                                   </div>
                                 </SelectItem>
                                 <SelectItem value="vendedor">
                                   <div className="flex items-center gap-1.5 font-medium text-emerald-700">
-                                    <UserCheck className="h-3.5 w-3.5" />
+                                    <UserCheck className="h-3.5 w-3.5" weight="duotone" />
                                     <span>Vendedor</span>
                                   </div>
                                 </SelectItem>
                                 <SelectItem value="no_rol">
                                   <div className="flex items-center gap-1.5 font-medium text-amber-700">
-                                    <Clock className="h-3.5 w-3.5" />
+                                    <Clock className="h-3.5 w-3.5" weight="duotone" />
                                     <span>Sin Rol</span>
                                   </div>
                                 </SelectItem>
@@ -565,7 +565,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                                 onClick={() => handleAbrirEdicion(usr)}
                                 title="Editar colaborador"
                               >
-                                <FileEdit className="h-3.5 w-3.5 mr-1" />
+                                <PencilSimple className="h-3.5 w-3.5 mr-1" />
                                 Editar
                               </Button>
 
@@ -598,7 +598,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                                 onClick={() => abrirModalEliminar(usr)}
                                 title="Eliminar usuario"
                               >
-                                <Trash2 className="h-3.5 w-3.5" />
+                                <Trash className="h-3.5 w-3.5" />
                               </Button>
                             </div>
                           </TableCell>
@@ -628,7 +628,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                         onClick={() => setPagina(Math.max(pagina - 1, 1))}
                         disabled={pagina <= 1}
                       >
-                        <ChevronLeft className="h-3.5 w-3.5 mr-1" />
+                        <CaretLeft className="h-3.5 w-3.5 mr-1" />
                         Anterior
                       </Button>
                       <span className="px-2 font-medium text-[#1C2424]">
@@ -643,7 +643,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                         disabled={pagina >= totalPaginas}
                       >
                         Siguiente
-                        <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                        <CaretRight className="h-3.5 w-3.5 ml-1" />
                       </Button>
                     </div>
                   </div>
@@ -757,7 +757,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
             <DialogHeader>
               <div className="flex items-center gap-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78]">
-                  <FileEdit className="h-4 w-4" />
+                  <PencilSimple className="h-4 w-4" weight="duotone" />
                 </div>
                 <DialogTitle className="text-base font-bold text-[#1C2424]">
                   Editar Datos de Usuario
@@ -856,7 +856,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                     size="sm"
                     className="bg-[#2A7A78] hover:bg-[#205E5C] text-white gap-1.5"
                   >
-                    <Check className="h-4 w-4" />
+                    <Check className="h-4 w-4" weight="bold" />
                     <span>Guardar Cambios</span>
                   </Button>
                 </DialogFooter>
@@ -873,7 +873,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
             <DialogHeader>
               <div className="flex items-center gap-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-600">
-                  <Trash2 className="h-4 w-4" />
+                  <Trash className="h-4 w-4" weight="duotone" />
                 </div>
                 <DialogTitle className="text-base font-bold text-[#1C2424]">
                   Confirmar Desvinculación
@@ -906,7 +906,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                   }
                 }}
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash className="h-4 w-4" weight="bold" />
                 <span>Desvincular Usuario</span>
               </Button>
             </DialogFooter>

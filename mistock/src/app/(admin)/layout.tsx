@@ -12,7 +12,7 @@
  */
 
 import React, { useState } from 'react';
-import { Menu, X, ShieldCheck } from 'lucide-react';
+import { List, X, ShieldCheck } from '@phosphor-icons/react';
 import { AdminSidebar } from '@/views/admin/AdminSidebar';
 import { Footer } from '@/views/comunes/Footer';
 import { useRBAC } from '@/controllers/rbacController';
@@ -84,11 +84,11 @@ export default function AdminLayout({
               className="p-1.5 rounded-lg text-[#1C2424] hover:bg-gray-100 transition-colors"
               aria-label="Abrir menú"
             >
-              <Menu className="h-5 w-5" />
+              <List className="h-5 w-5" />
             </button>
             <div className="flex items-center gap-2">
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#2A7A78] text-white">
-                <ShieldCheck className="h-4 w-4" />
+                <ShieldCheck className="h-4 w-4" weight="duotone" />
               </div>
               <span className="font-bold text-sm text-[#1C2424]">M.I Stock</span>
             </div>

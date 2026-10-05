@@ -16,19 +16,19 @@
 
 import React, { useState } from 'react';
 import {
-  Search,
+  MagnifyingGlass,
   ShoppingCart,
   Package,
-  Check,
+  CheckCircle,
   Clock,
-  DollarSign,
-  AlertCircle,
-  Banknote,
-  Filter,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react';
+  CurrencyDollar,
+  WarningCircle,
+  Money,
+  Funnel,
+  CaretDown,
+  CaretLeft,
+  CaretRight,
+} from '@phosphor-icons/react';
 import { useUserDashboardController } from '@/controllers/userControllers/userDashboardController';
 import { motion, AnimatePresence, MotionConfig } from 'motion/react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -130,7 +130,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
               className="overflow-hidden"
             >
               <Alert variant="success" className="shadow-xs border-emerald-300 bg-emerald-50">
-                <Check className="h-4 w-4 text-emerald-700" />
+                <CheckCircle className="h-4 w-4 text-emerald-700" weight="fill" />
                 <AlertTitle className="text-emerald-900 font-bold">Cobro Registrado</AlertTitle>
                 <AlertDescription className="text-emerald-800 text-xs">{saleSuccessMessage}</AlertDescription>
               </Alert>
@@ -147,7 +147,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
               className="overflow-hidden"
             >
               <Alert variant="destructive" className="shadow-xs">
-                <AlertCircle className="h-4 w-4" />
+                <WarningCircle className="h-4 w-4 text-red-600" weight="fill" />
                 <AlertTitle className="font-bold">Operación No Permitida</AlertTitle>
                 <AlertDescription className="text-xs">{saleErrorMessage}</AlertDescription>
               </Alert>
@@ -169,7 +169,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                   Tickets Cobrados Hoy
                 </span>
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78]">
-                  <ShoppingCart className="h-4 w-4" />
+                  <ShoppingCart className="h-4 w-4" weight="duotone" />
                 </div>
               </div>
               <p className="text-2xl font-extrabold text-[#1C2424] tracking-tight mt-3">
@@ -190,7 +190,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                   Recaudación de la Caja
                 </span>
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78]">
-                  <DollarSign className="h-4 w-4" />
+                  <CurrencyDollar className="h-4 w-4" weight="duotone" />
                 </div>
               </div>
               <p className="text-2xl font-extrabold text-[#1C2424] tracking-tight mt-3">
@@ -211,7 +211,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                   Unidades Disponibles
                 </span>
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78]">
-                  <Package className="h-4 w-4" />
+                  <Package className="h-4 w-4" weight="duotone" />
                 </div>
               </div>
               <p className="text-2xl font-extrabold text-[#1C2424] tracking-tight mt-3">
@@ -260,7 +260,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="pl-9 h-9 text-xs bg-white"
                     />
-                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-[#657373]" />
+                    <MagnifyingGlass className="absolute left-3 top-2.5 h-4 w-4 text-[#657373]" />
                     {searchQuery && (
                       <button
                         type="button"
@@ -289,8 +289,8 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                           </option>
                         ))}
                       </select>
-                      <Filter className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-[#657373] pointer-events-none" />
-                      <ChevronDown className="absolute right-2.5 top-2.5 h-3.5 w-3.5 text-[#657373] pointer-events-none" />
+                      <Funnel className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-[#657373] pointer-events-none" />
+                      <CaretDown className="absolute right-2.5 top-2.5 h-3.5 w-3.5 text-[#657373] pointer-events-none" />
                     </div>
                   </div>
                 </div>
@@ -366,7 +366,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                       <TableRow>
                         <TableCell colSpan={4} className="h-32 text-center text-[#657373]">
                           <div className="flex flex-col items-center justify-center gap-2">
-                            <Package className="h-6 w-6 text-[#A0A8A8]" />
+                            <Package className="h-6 w-6 text-[#A0A8A8]" weight="duotone" />
                             <p className="text-xs font-medium">No se encontraron productos para esta búsqueda o categoría.</p>
                             {(searchQuery || categoriaFiltro !== 'todas') && (
                               <Button
@@ -429,7 +429,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                                   className="h-7 px-3 text-xs bg-[#1C2424] hover:bg-[#2A3636] text-white shadow-xs gap-1.5 cursor-pointer disabled:opacity-50 font-medium"
                                   title="Registrar venta en efectivo con cálculo de vuelto"
                                 >
-                                  <Banknote className="h-3.5 w-3.5 text-emerald-400" />
+                                  <Money className="h-3.5 w-3.5 text-emerald-400" weight="bold" />
                                   <span>Efectivo</span>
                                 </Button>
                               </motion.div>
@@ -473,7 +473,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                         disabled={pagina <= 1}
                         className="h-7 px-2 text-xs border-[#E8E6DF] hover:bg-[#F8F7F2] text-[#1C2424] disabled:opacity-40 cursor-pointer gap-1"
                       >
-                        <ChevronLeft className="h-3.5 w-3.5" />
+                        <CaretLeft className="h-3.5 w-3.5" />
                         <span>Anterior</span>
                       </Button>
                     </motion.div>
@@ -491,7 +491,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                         className="h-7 px-2 text-xs border-[#E8E6DF] hover:bg-[#F8F7F2] text-[#1C2424] disabled:opacity-40 cursor-pointer gap-1"
                       >
                         <span>Siguiente</span>
-                        <ChevronRight className="h-3.5 w-3.5" />
+                        <CaretRight className="h-3.5 w-3.5" />
                       </Button>
                     </motion.div>
                   </div>
@@ -619,7 +619,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                         disabled={paginaVentas <= 1}
                         className="h-7 px-2 text-xs border-[#E8E6DF] hover:bg-[#F8F7F2] text-[#1C2424] disabled:opacity-40 cursor-pointer gap-1"
                       >
-                        <ChevronLeft className="h-3.5 w-3.5" />
+                        <CaretLeft className="h-3.5 w-3.5" />
                         <span>Anterior</span>
                       </Button>
                     </motion.div>
@@ -637,7 +637,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                         className="h-7 px-2 text-xs border-[#E8E6DF] hover:bg-[#F8F7F2] text-[#1C2424] disabled:opacity-40 cursor-pointer gap-1"
                       >
                         <span>Siguiente</span>
-                        <ChevronRight className="h-3.5 w-3.5" />
+                        <CaretRight className="h-3.5 w-3.5" />
                       </Button>
                     </motion.div>
                   </div>

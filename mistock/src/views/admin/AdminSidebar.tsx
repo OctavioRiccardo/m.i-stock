@@ -20,26 +20,26 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  BarChart3,
-  Boxes,
+  ChartBar,
+  Package,
   Users,
-  Layers,
-  Settings,
-  LogOut,
-  ArrowLeftRight,
+  Stack,
+  Gear,
+  SignOut,
+  ArrowsLeftRight,
   ShieldCheck,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 
 /**
  * Estructura de elementos del menú de navegación de administración.
  */
 const adminNavData = [
-  { link: '/admin', label: 'Métricas & KPIs', icon: BarChart3 },
-  { link: '/admingestioninven', label: 'Gestión de Inventario', icon: Boxes },
+  { link: '/admin', label: 'Métricas & KPIs', icon: ChartBar },
+  { link: '/admingestioninven', label: 'Gestión de Inventario', icon: Package },
   { link: '/adminusuarios', label: 'Gestión de Usuarios', icon: Users },
-  { link: '/admininventarioglobal', label: 'Inventario Global', icon: Layers },
-  { link: '/adminconfiguracion', label: 'Configuración', icon: Settings },
+  { link: '/admininventarioglobal', label: 'Inventario Global', icon: Stack },
+  { link: '/adminconfiguracion', label: 'Configuración', icon: Gear },
 ];
 
 interface AdminSidebarProps {
@@ -64,7 +64,7 @@ export function AdminSidebar({ onNavigate, className }: AdminSidebarProps = {}) 
       <div className="flex items-center justify-between px-5 h-16 border-b border-[#E8E6DF]">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#2A7A78] text-white shadow-sm">
-            <ShieldCheck className="h-5 w-5" />
+            <ShieldCheck className="h-5 w-5" weight="duotone" />
           </div>
           <div>
             <h1 className="text-base font-bold text-[#1C2424] tracking-tight leading-none">
@@ -100,7 +100,10 @@ export function AdminSidebar({ onNavigate, className }: AdminSidebarProps = {}) 
                   : 'text-[#657373] hover:bg-black/5 hover:text-[#1C2424]'
               )}
             >
-              <Icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-white' : 'text-[#657373]')} />
+              <Icon
+                className={cn('h-5 w-5 shrink-0', isActive ? 'text-white' : 'text-[#657373]')}
+                weight={isActive ? 'duotone' : 'regular'}
+              />
               <span>{item.label}</span>
             </Link>
           );
@@ -114,7 +117,7 @@ export function AdminSidebar({ onNavigate, className }: AdminSidebarProps = {}) 
           onClick={() => onNavigate?.()}
           className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[#657373] hover:bg-black/5 hover:text-[#1C2424] transition-colors"
         >
-          <ArrowLeftRight className="h-4 w-4" />
+          <ArrowsLeftRight className="h-4 w-4" weight="regular" />
           <span>Punto de Venta / Caja</span>
         </Link>
 
@@ -123,7 +126,7 @@ export function AdminSidebar({ onNavigate, className }: AdminSidebarProps = {}) 
           onClick={() => onNavigate?.()}
           className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
         >
-          <LogOut className="h-4 w-4" />
+          <SignOut className="h-4 w-4" weight="regular" />
           <span>Cerrar Sesión</span>
         </Link>
       </div>

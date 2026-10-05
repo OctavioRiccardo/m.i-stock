@@ -21,11 +21,11 @@ import {
   Clock,
   CreditCard,
   Printer,
-  CheckCircle2,
+  CheckCircle,
   Package,
   QrCode,
   ArrowLeft,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import {
   Dialog,
   DialogContent,
@@ -134,7 +134,7 @@ export function ModalDetalleVenta({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#E2F1F0] text-[#2A7A78] shrink-0">
-                <Receipt className="h-6 w-6" />
+                <Receipt className="h-6 w-6" weight="duotone" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
@@ -145,7 +145,7 @@ export function ModalDetalleVenta({
                     variant="outline"
                     className="text-[10px] text-emerald-700 border-emerald-300 bg-emerald-50"
                   >
-                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    <CheckCircle className="h-3 w-3 mr-1" weight="fill" />
                     Completada
                   </Badge>
                 </div>
@@ -193,7 +193,7 @@ export function ModalDetalleVenta({
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 p-3 rounded-xl border border-[#E8E6DF] bg-[#F8F7F2]/60 text-xs">
               <div>
                 <span className="text-[10px] text-[#657373] uppercase tracking-wider font-semibold block flex items-center gap-1">
-                  <Clock className="h-3 w-3 text-[#2A7A78]" />
+                  <Clock className="h-3 w-3 text-[#2A7A78]" weight="duotone" />
                   Hora de Operación
                 </span>
                 <span className="font-bold text-[#1C2424] mt-0.5 block">
@@ -203,7 +203,7 @@ export function ModalDetalleVenta({
 
               <div>
                 <span className="text-[10px] text-[#657373] uppercase tracking-wider font-semibold block flex items-center gap-1">
-                  <User className="h-3 w-3 text-[#2A7A78]" />
+                  <User className="h-3 w-3 text-[#2A7A78]" weight="duotone" />
                   Vendedor / Caja
                 </span>
                 <span className="font-bold text-[#1C2424] mt-0.5 block truncate">
@@ -213,7 +213,7 @@ export function ModalDetalleVenta({
 
               <div>
                 <span className="text-[10px] text-[#657373] uppercase tracking-wider font-semibold block flex items-center gap-1">
-                  <CreditCard className="h-3 w-3 text-[#2A7A78]" />
+                  <CreditCard className="h-3 w-3 text-[#2A7A78]" weight="duotone" />
                   Medio de Cobro
                 </span>
                 <div className="mt-0.5">
@@ -239,7 +239,7 @@ export function ModalDetalleVenta({
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-xs font-semibold text-[#1C2424]">
                 <span className="flex items-center gap-1.5">
-                  <Package className="h-3.5 w-3.5 text-[#2A7A78]" />
+                  <Package className="h-3.5 w-3.5 text-[#2A7A78]" weight="duotone" />
                   Detalles:
                 </span>
                 <span className="text-[11px] text-[#657373] font-normal">
@@ -524,7 +524,7 @@ export function ModalDetalleVenta({
                   onClick={ejecutarImpresionDirecta}
                   className="text-xs h-9 bg-[#2A7A78] hover:bg-[#205E5C] text-white gap-1.5 font-semibold cursor-pointer shadow-xs"
                 >
-                  <Printer className="h-4 w-4" />
+                  <Printer className="h-4 w-4" weight="duotone" />
                   <span>Imprimir Ticket (80mm)</span>
                 </Button>
               </motion.div>
@@ -545,7 +545,7 @@ export function ModalDetalleVenta({
                   onClick={handleImprimirTicket}
                   className="text-xs h-9 bg-[#2A7A78] hover:bg-[#205E5C] text-white gap-1.5 font-semibold cursor-pointer shadow-xs"
                 >
-                  <Printer className="h-4 w-4" />
+                  <Printer className="h-4 w-4" weight="duotone" />
                   <span>Imprimir Ticket</span>
                 </Button>
               </motion.div>
