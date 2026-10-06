@@ -14,7 +14,12 @@
  */
 
 import { useState, useMemo, useEffect } from 'react';
-import { UserDashboardData, ProductoRapidoPOS, VentaRecientePOS } from '@/models/modelos_vista/dashboardModel';
+import {
+  UserDashboardData,
+  ProductoRapidoPOS,
+  VentaRecientePOS,
+  ItemCarritoPOS,
+} from '@/models/modelos_vista/dashboardModel';
 import { initialProductos } from '@/models/mock_data/inventarioMock';
 import { useInventarioData, inventarioService } from '@/services/inventarioService';
 import { MetodoPago, DetalleVenta } from '@/models/modelos_dominio/ventaModel';
@@ -335,6 +340,232 @@ export function useUserDashboardController() {
     inicioPaginacionVentas + itemsPorPaginaVentas
   );
 
+  // ====================================================================
+  // OPERATIVA DE TICKET / CARRITO DE VENTA ACTIVO (POS EN MOSTRADOR)
+  // ====================================================================
+  const [carrito, setCarrito] = useState<ItemCarritoPOS[]>([]);
+
+  // Totales calculados en tiempo real
+  const totalCarrito = useMemo(() => {
+    return carrito.reduce((acc, item) => acc + item.subtotal, 0);
+  }, [carrito]);
+
+  const cantidadArticulosCarrito = useMemo(() => {
+    return carrito.reduce((acc, item) => acc + item.cantidad, 0);
+  }, [carrito]);
+
+  /**
+   * Agrega un producto al carrito de la venta en curso (o incrementa su cantidad).
+   */
+  const agregarAlCarrito = (producto: ProductoRapidoPOS, cantidadAAgregar: number = 1): boolean => {
+    if (producto.stock <= 0 && !permitirVentaSinStock) {
+      setSaleErrorMessage(`"${producto.nombre}" no tiene unidades disponibles en stock.`);
+      setTimeout(() => setSaleErrorMessage(null), 3000);
+      return false;
+    }
+
+    setCarrito((prev) => {
+      const index = prev.findIndex((item) => item.producto.id === producto.id);
+      if (index >= 0) {
+        const itemExistente = prev[index];
+        const nuevaCantidad = itemExistente.cantidad + cantidadAAgregar;
+
+        if (nuevaCantidad > producto.stock && !permitirVentaSinStock) {
+          setSaleErrorMessage(
+            `No se pueden agregar más unidades de "${producto.nombre}". Stock disponible: ${producto.stock} un.`
+          );
+          setTimeout(() => setSaleErrorMessage(null), 3000);
+          return prev;
+        }
+
+        const actualizado = [...prev];
+        actualizado[index] = {
+          ...itemExistente,
+          cantidad: nuevaCantidad,
+          subtotal: nuevaCantidad * producto.precio,
+        };
+        return actualizado;
+      } else {
+        if (cantidadAAgregar > producto.stock && !permitirVentaSinStock) {
+          setSaleErrorMessage(
+            `Stock insuficiente para "${producto.nombre}". Disponible: ${producto.stock} un.`
+          );
+          setTimeout(() => setSaleErrorMessage(null), 3000);
+          return prev;
+        }
+
+        return [
+          ...prev,
+          {
+            producto,
+            cantidad: cantidadAAgregar,
+            subtotal: cantidadAAgregar * producto.precio,
+          },
+        ];
+      }
+    });
+    return true;
+  };
+
+  /**
+   * Modifica la cantidad de un ítem en el carrito.
+   */
+  const actualizarCantidadItem = (productoId: string, nuevaCantidad: number) => {
+    if (nuevaCantidad <= 0) {
+      removerItemCarrito(productoId);
+      return;
+    }
+
+    setCarrito((prev) => {
+      const index = prev.findIndex((item) => item.producto.id === productoId);
+      if (index === -1) return prev;
+
+      const item = prev[index];
+      const prod = data.productosPopulares.find((p) => p.id === productoId) || item.producto;
+
+      if (nuevaCantidad > prod.stock && !permitirVentaSinStock) {
+        setSaleErrorMessage(
+          `Stock máximo alcanzado para "${prod.nombre}". Disponible: ${prod.stock} un.`
+        );
+        setTimeout(() => setSaleErrorMessage(null), 3000);
+        return prev;
+      }
+
+      const actualizado = [...prev];
+      actualizado[index] = {
+        ...item,
+        cantidad: nuevaCantidad,
+        subtotal: nuevaCantidad * item.producto.precio,
+      };
+      return actualizado;
+    });
+  };
+
+  /**
+   * Quita un renglón del carrito.
+   */
+  const removerItemCarrito = (productoId: string) => {
+    setCarrito((prev) => prev.filter((item) => item.producto.id !== productoId));
+  };
+
+  /**
+   * Vacía todos los ítems del ticket actual.
+   */
+  const vaciarCarrito = () => {
+    setCarrito([]);
+  };
+
+  /**
+   * Procesa y cobra el ticket completo con todos los productos del carrito.
+   */
+  const procesarVentaTicket = (
+    metodoPago: MetodoPago = 'efectivo',
+    montoRecibido?: number
+  ): VentaRecientePOS | null => {
+    if (carrito.length === 0) {
+      setSaleErrorMessage('El ticket está vacío. Agregue productos antes de cobrar.');
+      setTimeout(() => setSaleErrorMessage(null), 3000);
+      return null;
+    }
+
+    // Validar stock de todos los renglones
+    if (!permitirVentaSinStock) {
+      for (const item of carrito) {
+        const prod = data.productosPopulares.find((p) => p.id === item.producto.id);
+        if (!prod || prod.stock < item.cantidad) {
+          setSaleErrorMessage(
+            `Stock insuficiente para "${item.producto.nombre}". Stock: ${prod?.stock ?? 0}, Requerido: ${item.cantidad}.`
+          );
+          setTimeout(() => setSaleErrorMessage(null), 4000);
+          return null;
+        }
+      }
+    }
+
+    setLoading(true);
+    setSaleErrorMessage(null);
+    setSaleSuccessMessage(null);
+
+    const totalVenta = totalCarrito;
+    const vuelto =
+      metodoPago === 'efectivo' && montoRecibido !== undefined && montoRecibido >= totalVenta
+        ? montoRecibido - totalVenta
+        : 0;
+
+    const ventaId = `VNT-${Date.now().toString().slice(-4)}`;
+
+    // Generar renglones DetalleVenta
+    const itemsVenta: DetalleVenta[] = carrito.map((item, idx) => ({
+      id: `DET-${Date.now().toString().slice(-4)}-${idx + 1}`,
+      ventaId,
+      productoId: item.producto.id,
+      nombreProducto: item.producto.nombre,
+      codigoProducto: item.producto.codigo,
+      cantidad: item.cantidad,
+      precioUnitario: item.producto.precio,
+      subtotal: item.subtotal,
+    }));
+
+    const newSale: VentaRecientePOS = {
+      id: ventaId,
+      hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      fecha: new Date().toLocaleDateString('es-AR'),
+      montoTotal: totalVenta,
+      cantidadItems: cantidadArticulosCarrito,
+      metodoPago,
+      vendedor: 'Cajero en Turno',
+      items: itemsVenta,
+      pagos: [
+        {
+          id: `PAG-${Date.now().toString().slice(-4)}`,
+          ventaId,
+          metodo: metodoPago,
+          total: totalVenta,
+        },
+      ],
+      estado: 'completada',
+    };
+
+    // Descontar existencias en el inventario central para cada renglón
+    for (const item of carrito) {
+      inventarioService.descontarStock(item.producto.id, item.cantidad);
+    }
+
+    setVentasState((prev) => ({
+      ...prev,
+      ventasDelDia: prev.ventasDelDia + 1,
+      recaudacionDelDia: prev.recaudacionDelDia + totalVenta,
+      ventasRecientes: [newSale, ...prev.ventasRecientes],
+    }));
+
+    setPaginaVentas(1);
+    setCarrito([]);
+
+    const textoMetodo =
+      metodoPago === 'efectivo'
+        ? 'Efectivo'
+        : metodoPago === 'mercado_pago'
+        ? 'Mercado Pago'
+        : metodoPago === 'tarjeta_debito'
+        ? 'Tarjeta Débito'
+        : metodoPago === 'tarjeta_credito'
+        ? 'Tarjeta Crédito'
+        : 'Transferencia';
+
+    const textoVuelto =
+      metodoPago === 'efectivo' && vuelto > 0
+        ? ` • Vuelto: ${monedaSimbolo} ${vuelto.toLocaleString('es-AR')}`
+        : '';
+
+    setSaleSuccessMessage(
+      `Cobro registrado con éxito (${ventaId}): ${itemsVenta.length} ítems • Total: ${monedaSimbolo} ${totalVenta.toLocaleString('es-AR')} (${textoMetodo})${textoVuelto}`
+    );
+    setLoading(false);
+    setTimeout(() => setSaleSuccessMessage(null), 4500);
+
+    return newSale;
+  };
+
   /**
    * Registra una venta en efectivo especificando cantidad y monto recibido para cálculo de vuelto.
    */
@@ -558,5 +789,14 @@ export function useUserDashboardController() {
     setMetodoSeleccionado,
     permitirVentaSinStock,
     config,
+    // Operativa de Carrito / Ticket de Venta
+    carrito,
+    totalCarrito,
+    cantidadArticulosCarrito,
+    agregarAlCarrito,
+    actualizarCantidadItem,
+    removerItemCarrito,
+    vaciarCarrito,
+    procesarVentaTicket,
   };
 }

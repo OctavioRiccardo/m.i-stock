@@ -35,6 +35,15 @@ export interface ProductoRapidoPOS {
 export type QuickProduct = ProductoRapidoPOS;
 
 /**
+ * Renglón de artículo añadido al ticket en curso de la caja (POS).
+ */
+export interface ItemCarritoPOS {
+  producto: ProductoRapidoPOS;
+  cantidad: number;
+  subtotal: number;
+}
+
+/**
  * Registro de una venta concretada en caja con su desglose de renglones (DetalleVenta).
  */
 export interface VentaRecientePOS {
