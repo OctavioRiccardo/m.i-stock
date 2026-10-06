@@ -756,32 +756,17 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                         {config.negocio.mensajePieTicket || '¡Gracias por su compra!'}
                       </p>
 
-                      {config.negocio.modoComprobante === 'no_fiscal' ? (
-                        <div className="flex flex-col items-center justify-center pt-1 text-[#6B7280]">
-                          <QrCode className="h-9 w-9 opacity-60" />
-                          <span className="text-[8px] mt-0.5 tracking-wider text-[#6B7280] uppercase">
-                            CÓDIGO DE SEGUIMIENTO Y CAMBIOS
-                          </span>
+                      {config.negocio.modoComprobante === 'factura_afip' && (
+                        <div className="pt-2 text-[9px] border-t border-dashed border-[#A0A8A8] space-y-0.5 text-left font-mono">
+                          <div className="flex justify-between">
+                            <span>CAE N°:</span>
+                            <span className="font-bold">74389201938472</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>VTO. CAE:</span>
+                            <span>05/10/2026</span>
+                          </div>
                         </div>
-                      ) : (
-                        <>
-                          <div className="pt-2 text-[9px] border-t border-dashed border-[#A0A8A8] space-y-0.5 text-left font-mono">
-                            <div className="flex justify-between">
-                              <span>CAE N°:</span>
-                              <span className="font-bold">74389201938472</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>VTO. CAE:</span>
-                              <span>05/10/2026</span>
-                            </div>
-                          </div>
-                          <div className="flex flex-col items-center justify-center pt-1 text-[#111827]">
-                            <QrCode className="h-10 w-10 text-[#111827]" />
-                            <span className="text-[8px] mt-0.5 tracking-widest text-[#4B5563] font-bold">
-                              AFIP QR OFICIAL (RG 4892)
-                            </span>
-                          </div>
-                        </>
                       )}
                     </div>
                   </div>
