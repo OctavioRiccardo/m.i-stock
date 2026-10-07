@@ -34,6 +34,8 @@ import {
   CreditCard,
   QrCode,
   ArrowsLeftRight,
+  Funnel,
+  Tag,
 } from '@phosphor-icons/react';
 import { useUserDashboardController } from '@/controllers/userControllers/userDashboardController';
 import { motion, AnimatePresence, MotionConfig } from 'motion/react';
@@ -41,6 +43,13 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Table,
   TableHeader,
@@ -339,8 +348,9 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
           <div className="lg:col-span-7 space-y-3">
             <Card className="border-[#E8E6DF] shadow-xs">
               <CardContent className="p-4 space-y-3">
-                {/* Buscador de Código de Barras y Nombre */}
-                <div className="flex gap-2">
+                {/* Fila de Búsqueda, Filtro Desplegable de Categorías y Modo de Vista */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  {/* Buscador de Código de Barras y Nombre */}
                   <div className="relative flex-1">
                     <Input
                       ref={searchInputRef}
@@ -364,12 +374,37 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                     )}
                   </div>
 
+                  {/* Lista Desplegable con Todas las Categorías */}
+                  <div className="w-full sm:w-52 shrink-0">
+                    <Select
+                      value={categoriaFiltro}
+                      onValueChange={(val) => setCategoriaFiltro(val)}
+                    >
+                      <SelectTrigger className="h-10 text-xs bg-white border-[#E8E6DF] focus:ring-[#2A7A78] cursor-pointer">
+                        <div className="flex items-center gap-1.5 truncate">
+                          <Funnel className="h-3.5 w-3.5 text-[#2A7A78] shrink-0" weight="duotone" />
+                          <SelectValue placeholder="Todas las categorías" />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent className="max-h-72">
+                        <SelectItem value="todas">
+                          Todas las categorías ({data.productosPopulares.length})
+                        </SelectItem>
+                        {categorias.map((cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            {cat} ({conteosPorCategoria[cat] || 0})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   {/* Alternador de Vista de Catálogo (Cuadrícula Táctil vs Tabla Lista) */}
-                  <div className="flex items-center border border-[#E8E6DF] rounded-lg bg-white p-0.5 shrink-0 shadow-2xs">
+                  <div className="flex items-center border border-[#E8E6DF] rounded-lg bg-white p-0.5 shrink-0 shadow-2xs self-end sm:self-auto">
                     <button
                       type="button"
                       onClick={() => setModoVistaCatalogo('grid')}
-                      className={`p-1.5 rounded-md transition-colors cursor-pointer ${
+                      className={`p-2 rounded-md transition-colors cursor-pointer ${
                         modoVistaCatalogo === 'grid'
                           ? 'bg-[#2A7A78] text-white'
                           : 'text-[#657373] hover:text-[#1C2424]'
@@ -381,7 +416,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                     <button
                       type="button"
                       onClick={() => setModoVistaCatalogo('table')}
-                      className={`p-1.5 rounded-md transition-colors cursor-pointer ${
+                      className={`p-2 rounded-md transition-colors cursor-pointer ${
                         modoVistaCatalogo === 'table'
                           ? 'bg-[#2A7A78] text-white'
                           : 'text-[#657373] hover:text-[#1C2424]'
@@ -395,6 +430,10 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
 
                 {/* Píldoras de Categorías Rápidas */}
                 <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                  <span className="text-[11px] font-semibold text-[#657373] shrink-0 hidden md:inline-flex items-center gap-1 mr-0.5">
+                    <Tag className="h-3 w-3 text-[#2A7A78]" weight="duotone" />
+                    <span>Rápido:</span>
+                  </span>
                   <button
                     type="button"
                     onClick={() => setCategoriaFiltro('todas')}
