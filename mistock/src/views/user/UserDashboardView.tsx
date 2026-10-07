@@ -22,9 +22,11 @@ import {
   CheckCircle,
   WarningCircle,
   Storefront,
+  Vault,
 } from '@phosphor-icons/react';
 import { motion, AnimatePresence, MotionConfig } from 'motion/react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useUserDashboardController } from '@/controllers/userControllers/userDashboardController';
 import { VentaRecientePOS, PestanaOperativaPOS } from '@/models/modelos_vista/dashboardModel';
@@ -34,6 +36,8 @@ import { ModuloConsultorPrecios } from './ModuloConsultorPrecios';
 import { ModuloHistorialTickets } from './ModuloHistorialTickets';
 import { ModalCobroTicket } from './ModalCobroTicket';
 import { ModalDetalleVenta } from './ModalDetalleVenta';
+import { ModalArqueoCaja } from './ModalArqueoCaja';
+import { ModalReporteCierreTicket } from './ModalReporteCierreTicket';
 
 interface UserDashboardViewProps {
   controller: ReturnType<typeof useUserDashboardController>;
@@ -52,6 +56,11 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
     carrito,
     totalCarrito,
     procesarVentaTicket,
+    isModalArqueoOpen,
+    setIsModalArqueoOpen,
+    isModalTicketCierreOpen,
+    setIsModalTicketCierreOpen,
+    ultimoCierre,
   } = controller;
 
   const [isModalCobroOpen, setIsModalCobroOpen] = useState<boolean>(false);
@@ -121,6 +130,18 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                 {data.ventasDelDia} tickets
               </span>
             </div>
+
+            {/* Acceso a Cierre de Turno y Arqueo */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsModalArqueoOpen(true)}
+              className="h-10 px-3 text-xs font-bold text-[#2A7A78] border-[#2A7A78]/30 hover:bg-[#E2F1F0] hover:text-[#205E5C] gap-1.5 cursor-pointer shadow-xs"
+            >
+              <Vault className="h-4 w-4" weight="duotone" />
+              <span>Arqueo y Cierre</span>
+            </Button>
           </div>
         </div>
 
@@ -270,6 +291,21 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
           isOpen={!!ventaSeleccionada}
           onClose={() => setVentaSeleccionada(null)}
           venta={ventaSeleccionada}
+          monedaSimbolo={monedaSimbolo}
+        />
+
+        {/* Modal de Arqueo y Conciliación de Efectivo (Mono-caja) */}
+        <ModalArqueoCaja
+          isOpen={isModalArqueoOpen}
+          onClose={() => setIsModalArqueoOpen(false)}
+          controller={controller}
+        />
+
+        {/* Modal de Reporte Z de Cierre de Caja (Ticket 80mm) */}
+        <ModalReporteCierreTicket
+          isOpen={isModalTicketCierreOpen}
+          onClose={() => setIsModalTicketCierreOpen(false)}
+          cierre={ultimoCierre}
           monedaSimbolo={monedaSimbolo}
         />
       </div>

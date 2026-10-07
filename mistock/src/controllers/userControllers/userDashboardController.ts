@@ -26,6 +26,11 @@ import { initialProductos } from '@/models/mock_data/inventarioMock';
 import { useInventarioData, inventarioService } from '@/services/inventarioService';
 import { MetodoPago, DetalleVenta } from '@/models/modelos_dominio/ventaModel';
 import { useConfiguracionData } from '@/services/configuracionService';
+import {
+  ArqueoCajaDTO,
+  ResumenMediosPagoCierre,
+  EstadoBalanceCaja,
+} from '@/models/modelos_vista/cierreCajaModel';
 
 /**
  * Mapeo de artículos del catálogo maestro para listas rápidas en el mostrador.
@@ -440,6 +445,99 @@ export function useUserDashboardController() {
     inicioPaginacionVentas,
     inicioPaginacionVentas + itemsPorPaginaVentas
   );
+
+  // ====================================================================
+  // OPERATIVA DE ARQUEO Y CIERRE DE CAJA (MONO-CAJA)
+  // ====================================================================
+  const [fondoInicial, setFondoInicial] = useState<number>(10000); // Fondo de gaveta inicial para dar cambio ($10.000 default)
+  const [isModalArqueoOpen, setIsModalArqueoOpen] = useState<boolean>(false);
+  const [isModalTicketCierreOpen, setIsModalTicketCierreOpen] = useState<boolean>(false);
+  const [ultimoCierre, setUltimoCierre] = useState<ArqueoCajaDTO | null>(null);
+
+  // Desglose de ingresos por medio de cobro acumulado en el turno actual
+  const resumenMediosTurno: ResumenMediosPagoCierre = useMemo(() => {
+    const resumen: ResumenMediosPagoCierre = {
+      efectivo: 0,
+      mercadoPago: 0,
+      tarjetaDebito: 0,
+      tarjetaCredito: 0,
+      transferencia: 0,
+      otro: 0,
+    };
+
+    for (const v of data.ventasRecientes) {
+      if (v.estado === 'cancelada') continue;
+      const m = v.metodoPago;
+      if (m === 'efectivo') resumen.efectivo += v.montoTotal;
+      else if (m === 'mercado_pago') resumen.mercadoPago += v.montoTotal;
+      else if (m === 'tarjeta_debito') resumen.tarjetaDebito += v.montoTotal;
+      else if (m === 'tarjeta_credito') resumen.tarjetaCredito += v.montoTotal;
+      else if (m === 'transferencia') resumen.transferencia += v.montoTotal;
+      else resumen.otro += v.montoTotal;
+    }
+
+    return resumen;
+  }, [data.ventasRecientes]);
+
+  const totalVentasEfectivo = resumenMediosTurno.efectivo;
+  const totalDigitales =
+    resumenMediosTurno.mercadoPago +
+    resumenMediosTurno.tarjetaDebito +
+    resumenMediosTurno.tarjetaCredito +
+    resumenMediosTurno.transferencia +
+    resumenMediosTurno.otro;
+  const granTotalRecaudado = totalVentasEfectivo + totalDigitales;
+  const cantidadTicketsValidos = useMemo(
+    () => data.ventasRecientes.filter((v) => v.estado !== 'cancelada').length,
+    [data.ventasRecientes]
+  );
+  const efectivoEsperado = fondoInicial + totalVentasEfectivo;
+
+  /**
+   * Ejecuta la confirmación del Arqueo y emite el comprobante de Cierre de Caja (Z).
+   */
+  const confirmarCierreCaja = (efectivoReal: number, observaciones?: string): ArqueoCajaDTO => {
+    const diferencia = efectivoReal - efectivoEsperado;
+    let estadoBalance: EstadoBalanceCaja = 'exacto';
+    if (diferencia > 0) estadoBalance = 'sobrante';
+    else if (diferencia < 0) estadoBalance = 'faltante';
+
+    const fechaHoy = new Date();
+    const horaFormateada = fechaHoy.toLocaleTimeString('es-AR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    const fechaFormateada = fechaHoy.toLocaleDateString('es-AR');
+
+    const nuevoCierre: ArqueoCajaDTO = {
+      idCierre: `CR-${Date.now().toString().slice(-6)}`,
+      fechaApertura: `${fechaFormateada} 08:30`,
+      fechaCierre: `${fechaFormateada} ${horaFormateada}`,
+      cajero: data.ventasRecientes[0]?.vendedor || 'Lucas Benítez',
+      numeroCaja: config.pos.numeroCaja || 1,
+      fondoInicial,
+      totalVentasEfectivo,
+      totalDigitales,
+      granTotalRecaudado,
+      cantidadTickets: cantidadTicketsValidos,
+      efectivoEsperado,
+      efectivoReal,
+      diferencia,
+      estadoBalance,
+      desgloseMedios: resumenMediosTurno,
+      observaciones: observaciones?.trim() || undefined,
+    };
+
+    setUltimoCierre(nuevoCierre);
+    setIsModalArqueoOpen(false);
+    setIsModalTicketCierreOpen(true);
+    setSaleSuccessMessage(
+      `Cierre de Caja ${nuevoCierre.idCierre} emitido. Diferencia: ${monedaSimbolo} ${diferencia.toLocaleString('es-AR')}`
+    );
+    setTimeout(() => setSaleSuccessMessage(null), 4000);
+
+    return nuevoCierre;
+  };
 
   // ====================================================================
   // ESTADO Y MÉTODOS: CONSULTOR DE PRECIOS & DISPONIBILIDAD
@@ -1035,5 +1133,21 @@ export function useUserDashboardController() {
     totalUnidadesEnStock,
     productosAgotadosCount,
     productosConStockCount,
+    // Operativa de Arqueo y Cierre de Caja (Mono-caja)
+    fondoInicial,
+    setFondoInicial,
+    isModalArqueoOpen,
+    setIsModalArqueoOpen,
+    isModalTicketCierreOpen,
+    setIsModalTicketCierreOpen,
+    ultimoCierre,
+    setUltimoCierre,
+    resumenMediosTurno,
+    totalVentasEfectivo,
+    totalDigitales,
+    granTotalRecaudado,
+    cantidadTicketsValidos,
+    efectivoEsperado,
+    confirmarCierreCaja,
   };
 }

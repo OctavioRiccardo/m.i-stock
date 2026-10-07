@@ -28,6 +28,7 @@ import {
   MagnifyingGlass,
   Printer,
   CalendarBlank,
+  Vault,
 } from '@phosphor-icons/react';
 import { motion } from 'motion/react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -69,6 +70,9 @@ export function ModuloHistorialTickets({
     inicioPaginacionVentas,
     itemsPorPaginaVentas,
     monedaSimbolo,
+    setIsModalArqueoOpen,
+    setIsModalTicketCierreOpen,
+    ultimoCierre,
   } = controller;
 
   const [modoVistaVentas, setModoVistaVentas] = useState<'grid' | 'table'>('table');
@@ -219,34 +223,60 @@ export function ModuloHistorialTickets({
               </div>
             </div>
 
-            {/* Alternador de Vista (Tarjetas vs Tabla) */}
-            <div className="flex items-center border border-[#E8E6DF] rounded-lg bg-white p-0.5 shrink-0 shadow-2xs self-end sm:self-auto">
-              <button
+            {/* Acciones de Cierre de Caja y Alternador de Vista */}
+            <div className="flex flex-wrap items-center gap-2 self-end sm:self-auto">
+              {ultimoCierre && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsModalTicketCierreOpen(true)}
+                  className="h-8 text-xs font-semibold text-[#2A7A78] border-[#2A7A78]/30 hover:bg-[#E2F1F0] gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <Receipt className="h-3.5 w-3.5" weight="duotone" />
+                  <span>Ver Cierre (Z)</span>
+                </Button>
+              )}
+
+              <Button
                 type="button"
-                onClick={() => setModoVistaVentas('grid')}
-                className={`p-1.5 rounded-md transition-colors cursor-pointer flex items-center gap-1 text-xs ${
-                  modoVistaVentas === 'grid'
-                    ? 'bg-[#2A7A78] text-white font-medium'
-                    : 'text-[#657373] hover:text-[#1C2424]'
-                }`}
-                title="Vista cuadrícula de tarjetas"
+                size="sm"
+                onClick={() => setIsModalArqueoOpen(true)}
+                className="h-8 text-xs font-bold bg-[#2A7A78] hover:bg-[#205E5C] text-white gap-1.5 cursor-pointer shadow-xs"
               >
-                <SquaresFour className="h-4 w-4" weight={modoVistaVentas === 'grid' ? 'bold' : 'regular'} />
-                <span className="hidden sm:inline">Tarjetas</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setModoVistaVentas('table')}
-                className={`p-1.5 rounded-md transition-colors cursor-pointer flex items-center gap-1 text-xs ${
-                  modoVistaVentas === 'table'
-                    ? 'bg-[#2A7A78] text-white font-medium'
-                    : 'text-[#657373] hover:text-[#1C2424]'
-                }`}
-                title="Vista tabla detallada"
-              >
-                <ListBullets className="h-4 w-4" weight={modoVistaVentas === 'table' ? 'bold' : 'regular'} />
-                <span className="hidden sm:inline">Tabla</span>
-              </button>
+                <Vault className="h-3.5 w-3.5" weight="duotone" />
+                <span>Arqueo y Cierre</span>
+              </Button>
+
+              {/* Alternador de Vista (Tarjetas vs Tabla) */}
+              <div className="flex items-center border border-[#E8E6DF] rounded-lg bg-white p-0.5 shrink-0 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setModoVistaVentas('grid')}
+                  className={`p-1.5 rounded-md transition-colors cursor-pointer flex items-center gap-1 text-xs ${
+                    modoVistaVentas === 'grid'
+                      ? 'bg-[#2A7A78] text-white font-medium'
+                      : 'text-[#657373] hover:text-[#1C2424]'
+                  }`}
+                  title="Vista cuadrícula de tarjetas"
+                >
+                  <SquaresFour className="h-4 w-4" weight={modoVistaVentas === 'grid' ? 'bold' : 'regular'} />
+                  <span className="hidden sm:inline">Tarjetas</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModoVistaVentas('table')}
+                  className={`p-1.5 rounded-md transition-colors cursor-pointer flex items-center gap-1 text-xs ${
+                    modoVistaVentas === 'table'
+                      ? 'bg-[#2A7A78] text-white font-medium'
+                      : 'text-[#657373] hover:text-[#1C2424]'
+                  }`}
+                  title="Vista tabla detallada"
+                >
+                  <ListBullets className="h-4 w-4" weight={modoVistaVentas === 'table' ? 'bold' : 'regular'} />
+                  <span className="hidden sm:inline">Tabla</span>
+                </button>
+              </div>
             </div>
           </div>
         </CardHeader>
