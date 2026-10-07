@@ -280,7 +280,7 @@ export function ModuloConsultorPrecios({ controller }: ModuloConsultorPreciosPro
                       type="button"
                       onClick={() => handleAgregarAlTicket(productoConsultado)}
                       disabled={productoConsultado.stock <= 0}
-                      className="w-full h-11 text-xs bg-[#2A7A78] hover:bg-[#205E5D] text-white font-bold gap-2 cursor-pointer shadow-xs disabled:opacity-40"
+                      className="w-full h-11 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 cursor-pointer shadow-xs disabled:opacity-40"
                     >
                       <Plus className="h-4 w-4" weight="bold" />
                       <span>Cargar al Ticket Actual</span>

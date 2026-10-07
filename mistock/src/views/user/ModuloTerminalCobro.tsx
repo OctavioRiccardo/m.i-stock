@@ -315,32 +315,49 @@ export function ModuloTerminalCobro({
                         <h4 className="font-semibold text-xs text-[#1C2424] line-clamp-2 leading-tight">
                           {product.nombre}
                         </h4>
+
+                        {/* Indicador de Unidades Disponibles */}
+                        <div className="mt-2 flex items-center justify-between text-xs">
+                          <span className="text-[11px] text-[#657373]">Stock disponible:</span>
+                          <span
+                            className={`text-xs font-bold px-2 py-0.5 rounded-md inline-flex items-center ${
+                              product.stock <= 0
+                                ? 'bg-red-50 text-red-700 border border-red-200'
+                                : product.stock <= (product.stockMinimo ?? 5)
+                                ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                                : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                            }`}
+                          >
+                            {product.stock <= 0 ? 'Sin stock' : `${product.stock} un.`}
+                          </span>
+                        </div>
                       </div>
 
-                      <div className="pt-2.5 mt-2 border-t border-[#E8E6DF]/60 flex items-center justify-between">
+                      <div className="pt-2.5 mt-2 border-t border-[#E8E6DF]/60 flex items-center justify-between gap-2">
                         <div>
-                          <span className="text-[10px] text-[#657373] block leading-none">Precio</span>
+                          <span className="text-[10px] text-[#657373] uppercase font-semibold block leading-none">Precio</span>
                           <span className="text-sm font-black text-[#1C2424]">
                             {monedaSimbolo} {product.precio.toLocaleString('es-AR')}
                           </span>
                         </div>
 
-                        <div className="text-right">
-                          <span
-                            className={`text-[10px] font-semibold block leading-none ${
-                              product.stock <= 0
-                                ? 'text-red-600'
-                                : product.stock <= (product.stockMinimo ?? 5)
-                                ? 'text-amber-600'
-                                : 'text-emerald-700'
-                            }`}
-                          >
-                            {product.stock <= 0 ? 'Sin stock' : `${product.stock} un.`}
-                          </span>
-                          <span className="text-[9px] text-[#A0A8A8] inline-flex items-center gap-0.5 mt-0.5">
-                            <Plus className="h-2.5 w-2.5" /> Agregar
-                          </span>
-                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={sinStock}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!sinStock) agregarAlCarrito(product, 1);
+                          }}
+                          className={`h-7 px-2.5 text-xs font-bold gap-1 shadow-xs transition-all cursor-pointer ${
+                            sinStock
+                              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                              : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                          }`}
+                        >
+                          <Plus className="h-3.5 w-3.5" weight="bold" />
+                          <span>{itemEnCarrito ? `Sumar (${itemEnCarrito.cantidad})` : 'Agregar'}</span>
+                        </Button>
                       </div>
                     </motion.div>
                   );
@@ -383,36 +400,35 @@ export function ModuloTerminalCobro({
                               {product.categoria}
                             </Badge>
                           </TableCell>
-                          <TableCell className="py-2 text-right">
+                          <TableCell className="py-2.5 text-right">
                             <span
-                              className={`text-xs font-bold ${
+                              className={`text-xs font-bold px-2 py-0.5 rounded-md inline-block ${
                                 product.stock <= 0
-                                  ? 'text-red-600'
+                                  ? 'bg-red-50 text-red-700 border border-red-200'
                                   : product.stock <= (product.stockMinimo ?? 5)
-                                  ? 'text-amber-600'
-                                  : 'text-emerald-700'
+                                  ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                                  : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                               }`}
                             >
-                              {product.stock <= 0 ? '0 un.' : `${product.stock} un.`}
+                              {product.stock <= 0 ? 'Sin stock' : `${product.stock} un.`}
                             </span>
                           </TableCell>
-                          <TableCell className="py-2 text-right font-black text-xs text-[#1C2424]">
+                          <TableCell className="py-2.5 text-right font-black text-sm text-[#1C2424]">
                             {monedaSimbolo} {product.precio.toLocaleString('es-AR')}
                           </TableCell>
-                          <TableCell className="py-2 text-right">
+                          <TableCell className="py-2.5 text-right">
                             <Button
                               size="sm"
-                              variant={itemEnCarrito ? 'default' : 'outline'}
                               disabled={sinStock}
                               onClick={() => agregarAlCarrito(product, 1)}
-                              className={`h-7 px-2.5 text-xs font-semibold gap-1 cursor-pointer ${
-                                itemEnCarrito
-                                  ? 'bg-[#2A7A78] hover:bg-[#205E5D] text-white'
-                                  : 'border-[#E8E6DF] hover:bg-[#E2F1F0] text-[#2A7A78]'
+                              className={`h-7 px-3 text-xs font-bold gap-1 shadow-2xs cursor-pointer ${
+                                sinStock
+                                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
                               }`}
                             >
-                              <Plus className="h-3 w-3" />
-                              <span>{itemEnCarrito ? `(${itemEnCarrito.cantidad})` : 'Agregar'}</span>
+                              <Plus className="h-3.5 w-3.5" weight="bold" />
+                              <span>{itemEnCarrito ? `Sumar (${itemEnCarrito.cantidad})` : 'Agregar'}</span>
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -543,7 +559,7 @@ export function ModuloTerminalCobro({
 
                       <div className="flex items-center justify-between pt-2 mt-1.5 border-t border-[#E8E6DF]/50">
                         {/* Selector de Cantidad */}
-                        <div className="flex items-center border border-[#E8E6DF] rounded-lg bg-[#F8F7F2]/60 overflow-hidden">
+                        <div className="flex items-center border border-[#E8E6DF] rounded-lg bg-[#F8F7F2]/60 overflow-hidden shadow-2xs">
                           <button
                             type="button"
                             onClick={() => actualizarCantidadItem(item.producto.id, item.cantidad - 1)}
@@ -552,8 +568,8 @@ export function ModuloTerminalCobro({
                           >
                             <Minus className="h-3 w-3" />
                           </button>
-                          <span className="w-8 text-center text-xs font-bold text-[#1C2424] select-none">
-                            {item.cantidad}
+                          <span className="min-w-11 px-1.5 py-0.5 text-center text-xs font-black text-emerald-950 bg-emerald-50 border-x border-[#E8E6DF] select-none">
+                            {item.cantidad} un.
                           </span>
                           <button
                             type="button"
