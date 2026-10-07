@@ -45,7 +45,6 @@ import {
   ChartLineUp,
   CalendarBlank,
   CalendarCheck,
-  Lightbulb,
 } from '@phosphor-icons/react';
 import {
   useAdminConfiguracionController,
@@ -1546,19 +1545,6 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                 </div>
               </CardContent>
             </Card>
-
-            {/* 3. Banner Informativo y Explicativo */}
-            <div className="p-4 rounded-xl border border-[#2A7A78]/20 bg-[#E2F1F0]/40 flex items-start gap-3">
-              <Lightbulb className="h-5 w-5 text-[#2A7A78] shrink-0 mt-0.5" weight="duotone" />
-              <div className="space-y-1">
-                <p className="text-xs font-semibold text-[#1C2424]">
-                  ¿Cómo impacta esta configuración en el día a día?
-                </p>
-                <p className="text-xs text-[#657373] leading-relaxed">
-                  Al ingresar a la sección de <strong className="text-[#1C2424]">Métricas (/admin)</strong>, los indicadores se calcularán automáticamente considerando el período seleccionado por defecto. En cualquier momento, el Administrador podrá cambiar la vista en vivo (por ejemplo, para revisar una semana puntual o el balance mensual cerrado) utilizando el selector dinámico del panel superior.
-                </p>
-              </div>
-            </div>
           </motion.div>
         )}
 
