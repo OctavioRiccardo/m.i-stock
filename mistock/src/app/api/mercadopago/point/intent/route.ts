@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { crearIntencionPagoPoint } from '@/services/mercadopago';
+import { crearIntencionPagoPoint, MP_CONFIG } from '@/services/mercadopago';
 
 /**
  * POST /api/mercadopago/point/intent
@@ -9,10 +9,11 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { deviceId, amount, description, externalReference, ticketNumber } = body;
+    const targetDeviceId = deviceId || MP_CONFIG.defaultDeviceId;
 
-    if (!deviceId) {
+    if (!targetDeviceId) {
       return NextResponse.json(
-        { error: 'Se requiere el identificador deviceId de la terminal Point.' },
+        { error: 'Se requiere el identificador deviceId de la terminal Point (o configurar MERCADOPAGO_POINT_DEVICE_ID en .env.local).' },
         { status: 400 }
       );
     }
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest) {
     const idempotencyKey = req.headers.get('x-idempotency-key') || `MP-${Date.now()}`;
 
     const resultado = await crearIntencionPagoPoint(
-      deviceId,
+      targetDeviceId,
       {
         amount: Number(amount),
         description: description || 'Venta presencial en mostrador M.I Stock',

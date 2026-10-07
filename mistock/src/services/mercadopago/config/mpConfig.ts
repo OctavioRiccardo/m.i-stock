@@ -26,6 +26,12 @@ export const MP_CONFIG = {
   get webhookSecret(): string {
     return process.env.MERCADOPAGO_WEBHOOK_SECRET || '';
   },
+  get defaultDeviceId(): string {
+    return process.env.MERCADOPAGO_POINT_DEVICE_ID || '';
+  },
+  get isSandbox(): boolean {
+    return (process.env.MERCADOPAGO_ACCESS_TOKEN || '').startsWith('TEST-');
+  },
   // Endpoints oficiales para Point (Terminales / Postnet Cloud)
   endpoints: {
     point: {
