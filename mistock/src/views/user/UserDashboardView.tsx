@@ -94,7 +94,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-base sm:text-lg font-bold text-[#1C2424] tracking-tight">
-                  Punto de Venta y Salón (POS)
+                  Punto de Venta
                 </h1>
                 {permitirVentaSinStock && (
                   <Badge variant="warning" className="text-[10px]">
@@ -103,7 +103,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                 )}
               </div>
               <p className="text-xs text-[#657373]">
-                Operativa comercial en mostrador • Gestión de ventas, precios y reposición de salón.
+                Operativa comercial en mostrador • Gestión de ventas, catálogo y cobro de tickets.
               </p>
             </div>
           </div>

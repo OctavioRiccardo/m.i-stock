@@ -56,7 +56,7 @@ export function UserSidebar({ onNavigate, className, esAdmin = false }: UserSide
             <h1 className="text-base font-bold text-[#1C2424] tracking-tight leading-none">
               M.I Stock
             </h1>
-            <span className="text-[11px] font-medium text-[#657373]">Punto de Venta (POS)</span>
+            <span className="text-[11px] font-medium text-[#657373]">Punto de Venta</span>
           </div>
         </div>
         <span className="rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-[#657373] border border-gray-200">
