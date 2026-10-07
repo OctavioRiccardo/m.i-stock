@@ -11,22 +11,18 @@
  * 2. Catálogo ágil con alternador de vista táctil (Cuadrícula POS) o compacta (Lista).
  * 3. Ticket actual multi-producto en tiempo real con selector de cantidades y subtotales.
  * 4. Cobro inmediato con múltiples medios de pago, cálculo reactivo de vuelto y emisión de ticket.
- * 5. Historial colapsable de ventas de la jornada para reimpresión ágil de comprobantes.
+ * 5. Historial de ventas de la jornada con alternador dual (Tarjetas / Tabla) y filtros por medio de cobro.
  */
 
 import React, { useState, useRef } from 'react';
 import {
   Barcode,
-  MagnifyingGlass,
   ShoppingCart,
   Package,
   CheckCircle,
   Clock,
-  CurrencyDollar,
   WarningCircle,
   Money,
-  Funnel,
-  CaretDown,
   CaretLeft,
   CaretRight,
   Receipt,
@@ -35,10 +31,9 @@ import {
   Minus,
   SquaresFour,
   ListBullets,
-  ArrowCounterClockwise,
   CreditCard,
   QrCode,
-  Tag,
+  ArrowsLeftRight,
 } from '@phosphor-icons/react';
 import { useUserDashboardController } from '@/controllers/userControllers/userDashboardController';
 import { motion, AnimatePresence, MotionConfig } from 'motion/react';
@@ -57,7 +52,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ModalCobroTicket } from './ModalCobroTicket';
 import { ModalDetalleVenta } from './ModalDetalleVenta';
-import { ProductoRapidoPOS, VentaRecientePOS } from '@/models/modelos_vista/dashboardModel';
+import { VentaRecientePOS } from '@/models/modelos_vista/dashboardModel';
 
 interface UserDashboardViewProps {
   controller: ReturnType<typeof useUserDashboardController>;
@@ -85,6 +80,10 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
     inicioPaginacionVentas,
     itemsPorPaginaVentas,
     ventasRecientesPaginadas,
+    ventasFiltradas,
+    metodoPagoFiltroVentas,
+    setMetodoPagoFiltroVentas,
+    conteosPorMetodoPago,
     saleSuccessMessage,
     saleErrorMessage,
     monedaSimbolo,
@@ -103,11 +102,89 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
 
   // Estados de interfaz
   const [modoVistaCatalogo, setModoVistaCatalogo] = useState<'grid' | 'table'>('grid');
+  const [modoVistaVentas, setModoVistaVentas] = useState<'grid' | 'table'>('table');
   const [isModalCobroOpen, setIsModalCobroOpen] = useState<boolean>(false);
   const [ventaSeleccionada, setVentaSeleccionada] = useState<VentaRecientePOS | null>(null);
-  const [mostrarHistorial, setMostrarHistorial] = useState<boolean>(false);
+  const [mostrarHistorial, setMostrarHistorial] = useState<boolean>(true);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  /**
+   * Opciones de filtro por medio de pago para las ventas recientes
+   */
+  const opcionesFiltroMetodo = [
+    { id: 'todos', label: 'Todos los medios', icon: Receipt },
+    { id: 'efectivo', label: 'Efectivo', icon: Money },
+    { id: 'mercado_pago', label: 'Mercado Pago', icon: QrCode },
+    { id: 'tarjeta_debito', label: 'Débito', icon: CreditCard },
+    { id: 'tarjeta_credito', label: 'Crédito', icon: CreditCard },
+    { id: 'transferencia', label: 'Transferencia', icon: ArrowsLeftRight },
+  ];
+
+  /**
+   * Renderiza el badge visual correspondiente a cada método de cobro
+   */
+  const renderBadgeMetodo = (metodo?: string) => {
+    const m = metodo || 'efectivo';
+    switch (m) {
+      case 'efectivo':
+        return (
+          <Badge
+            variant="outline"
+            className="text-[9px] uppercase px-1.5 py-0 font-semibold border-emerald-300 text-emerald-700 bg-emerald-50 gap-1 inline-flex items-center"
+          >
+            <Money className="h-3 w-3" weight="bold" />
+            <span>Efectivo</span>
+          </Badge>
+        );
+      case 'mercado_pago':
+        return (
+          <Badge
+            variant="outline"
+            className="text-[9px] uppercase px-1.5 py-0 font-semibold border-[#009EE3]/40 text-[#009EE3] bg-[#009EE3]/10 gap-1 inline-flex items-center"
+          >
+            <QrCode className="h-3 w-3" weight="bold" />
+            <span>Mercado Pago</span>
+          </Badge>
+        );
+      case 'tarjeta_debito':
+        return (
+          <Badge
+            variant="outline"
+            className="text-[9px] uppercase px-1.5 py-0 font-semibold border-[#2A7A78]/40 text-[#2A7A78] bg-[#E2F1F0]/60 gap-1 inline-flex items-center"
+          >
+            <CreditCard className="h-3 w-3" weight="bold" />
+            <span>Débito</span>
+          </Badge>
+        );
+      case 'tarjeta_credito':
+        return (
+          <Badge
+            variant="outline"
+            className="text-[9px] uppercase px-1.5 py-0 font-semibold border-[#2A7A78]/40 text-[#2A7A78] bg-[#E2F1F0]/60 gap-1 inline-flex items-center"
+          >
+            <CreditCard className="h-3 w-3" weight="bold" />
+            <span>Crédito</span>
+          </Badge>
+        );
+      case 'transferencia':
+        return (
+          <Badge
+            variant="outline"
+            className="text-[9px] uppercase px-1.5 py-0 font-semibold border-gray-300 text-gray-700 bg-gray-50 gap-1 inline-flex items-center"
+          >
+            <ArrowsLeftRight className="h-3 w-3" weight="bold" />
+            <span>Transferencia</span>
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="outline" className="text-[9px] uppercase px-1.5 py-0 font-semibold border-[#E8E6DF] text-[#657373]">
+            {m.replace('_', ' ')}
+          </Badge>
+        );
+    }
+  };
 
   /**
    * Manejo de escáner de código de barras o Enter en el buscador:
@@ -141,7 +218,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
   };
 
   /**
-   * Callback cuando se completa una venta para opcionalmente abrir el visor de ticket térmico.
+   * Callback cuando se completa una venta para abrir el visor de ticket térmico.
    */
   const handleVentaCompletada = (venta: VentaRecientePOS) => {
     setVentaSeleccionada(venta);
@@ -210,7 +287,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
               className="text-xs h-9 border-[#E8E6DF] text-[#1C2424] hover:bg-[#F8F7F2] cursor-pointer gap-1.5"
             >
               <Receipt className="h-4 w-4 text-[#2A7A78]" weight="duotone" />
-              <span>{mostrarHistorial ? 'Ocultar Historial' : 'Ver Ventas'}</span>
+              <span>{mostrarHistorial ? 'Ocultar Historial' : 'Ver Historial'}</span>
             </Button>
           </div>
         </div>
@@ -287,7 +364,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                     )}
                   </div>
 
-                  {/* Alternador de Vista (Cuadrícula Táctil vs Tabla Lista) */}
+                  {/* Alternador de Vista de Catálogo (Cuadrícula Táctil vs Tabla Lista) */}
                   <div className="flex items-center border border-[#E8E6DF] rounded-lg bg-white p-0.5 shrink-0 shadow-2xs">
                     <button
                       type="button"
@@ -712,76 +789,222 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
         </div>
 
         {/* ==================================================================== */}
-        {/* SECCIÓN COLAPSABLE: VENTAS RECIENTES DE LA JORNADA                     */}
+        {/* SECCIÓN: HISTORIAL DE VENTAS RECIENTES EN CAJA CON FILTROS Y VISTAS   */}
         {/* ==================================================================== */}
         {mostrarHistorial && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.25 }}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.22 }}
             id="historial"
           >
             <Card className="border-[#E8E6DF] shadow-xs">
-              <CardHeader className="pb-3 border-b border-[#E8E6DF]">
-                <div className="flex items-center justify-between">
+              <CardHeader className="pb-3 border-b border-[#E8E6DF] bg-[#F8F7F2]/60">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
-                    <Receipt className="h-4 w-4 text-[#2A7A78]" weight="duotone" />
-                    <CardTitle className="text-sm font-bold text-[#1C2424]">
-                      Historial de Ventas Recientes en Caja
-                    </CardTitle>
+                    <Receipt className="h-5 w-5 text-[#2A7A78]" weight="duotone" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-sm font-bold text-[#1C2424]">
+                          Historial de Ventas Recientes en Caja
+                        </CardTitle>
+                        <Badge variant="outline" className="text-xs text-[#2A7A78] border-[#2A7A78]/30 bg-[#E2F1F0]/50 font-semibold">
+                          {ventasFiltradas.length} {ventasFiltradas.length === 1 ? 'ticket' : 'tickets'}
+                        </Badge>
+                      </div>
+                      <p className="text-[11px] text-[#657373]">
+                        Registro de tickets emitidos en la jornada. Haga clic en cualquier venta para ver o imprimir el ticket térmico.
+                      </p>
+                    </div>
                   </div>
-                  <Badge variant="outline" className="text-xs text-[#2A7A78] border-[#2A7A78]/30 bg-[#E2F1F0]/50 font-semibold">
-                    {data.ventasRecientes.length} tickets emitidos
-                  </Badge>
+
+                  {/* Alternador de Vista para Historial (Tarjetas vs Tabla) */}
+                  <div className="flex items-center border border-[#E8E6DF] rounded-lg bg-white p-0.5 shrink-0 shadow-2xs self-end sm:self-auto">
+                    <button
+                      type="button"
+                      onClick={() => setModoVistaVentas('grid')}
+                      className={`p-1.5 rounded-md transition-colors cursor-pointer flex items-center gap-1 text-xs ${
+                        modoVistaVentas === 'grid'
+                          ? 'bg-[#2A7A78] text-white font-medium'
+                          : 'text-[#657373] hover:text-[#1C2424]'
+                      }`}
+                      title="Vista cuadrícula de tarjetas"
+                    >
+                      <SquaresFour className="h-4 w-4" weight={modoVistaVentas === 'grid' ? 'bold' : 'regular'} />
+                      <span className="hidden sm:inline">Tarjetas</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModoVistaVentas('table')}
+                      className={`p-1.5 rounded-md transition-colors cursor-pointer flex items-center gap-1 text-xs ${
+                        modoVistaVentas === 'table'
+                          ? 'bg-[#2A7A78] text-white font-medium'
+                          : 'text-[#657373] hover:text-[#1C2424]'
+                      }`}
+                      title="Vista tabla detallada"
+                    >
+                      <ListBullets className="h-4 w-4" weight={modoVistaVentas === 'table' ? 'bold' : 'regular'} />
+                      <span className="hidden sm:inline">Tabla</span>
+                    </button>
+                  </div>
                 </div>
               </CardHeader>
-              <CardContent className="p-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-                  {ventasRecientesPaginadas.map((sale) => {
-                    const esEfectivo = sale.metodoPago === 'efectivo';
-                    const esMercadoPago = sale.metodoPago === 'mercado_pago';
+
+              <CardContent className="p-4 space-y-3.5">
+                {/* Filtros Rápidos por Medio de Cobro */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                  {opcionesFiltroMetodo.map((op) => {
+                    const esActivo = metodoPagoFiltroVentas === op.id;
+                    const cantidad = conteosPorMetodoPago[op.id] || 0;
+                    const IconComponent = op.icon;
 
                     return (
-                      <div
-                        key={sale.id}
-                        onClick={() => setVentaSeleccionada(sale)}
-                        className="p-3 rounded-lg border border-[#E8E6DF] bg-white hover:border-[#2A7A78] cursor-pointer shadow-2xs transition-all hover:bg-[#F8F7F2]/60"
-                        title="Ver detalle del comprobante / reimprimir ticket"
+                      <button
+                        key={op.id}
+                        type="button"
+                        onClick={() => setMetodoPagoFiltroVentas(op.id)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-all shrink-0 cursor-pointer ${
+                          esActivo
+                            ? 'bg-[#2A7A78] text-white shadow-xs font-semibold'
+                            : 'bg-[#F8F7F2] text-[#657373] hover:text-[#1C2424] hover:bg-[#E8E6DF] border border-[#E8E6DF]'
+                        }`}
                       >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-bold text-[#1C2424]">{sale.id}</span>
-                          <Badge
-                            variant="outline"
-                            className={`text-[9px] uppercase px-1.5 py-0 font-semibold ${
-                              esEfectivo
-                                ? 'border-emerald-300 text-emerald-700 bg-emerald-50'
-                                : esMercadoPago
-                                ? 'border-[#009EE3]/50 text-[#009EE3] bg-[#009EE3]/10'
-                                : 'border-[#E8E6DF] text-[#657373]'
-                            }`}
-                          >
-                            {esMercadoPago ? 'Mercado Pago' : sale.metodoPago?.replace('_', ' ') || 'Efectivo'}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center justify-between text-xs mt-2">
-                          <span className="text-[11px] text-[#657373]">{sale.hora} • {sale.cantidadItems} ítems</span>
-                          <span className="font-bold text-[#2A7A78]">
-                            {monedaSimbolo} {sale.montoTotal.toLocaleString('es-AR')}
-                          </span>
-                        </div>
-                      </div>
+                        <IconComponent className="h-3.5 w-3.5" weight={esActivo ? 'bold' : 'regular'} />
+                        <span>{op.label}</span>
+                        <span
+                          className={`px-1.5 py-0.2 rounded-full text-[9px] ${
+                            esActivo ? 'bg-white/20 text-white font-bold' : 'bg-[#E8E6DF] text-[#657373]'
+                          }`}
+                        >
+                          {cantidad}
+                        </span>
+                      </button>
                     );
                   })}
                 </div>
 
-                {/* Paginación de Ventas */}
-                {data.ventasRecientes.length > 0 && (
-                  <div className="flex items-center justify-between pt-3 mt-3 border-t border-[#E8E6DF] text-xs text-[#657373]">
+                {/* Contenido del Historial: Vista Tarjetas vs Vista Tabla */}
+                {ventasFiltradas.length === 0 ? (
+                  <div className="py-10 px-4 text-center border border-dashed border-[#E8E6DF] rounded-xl space-y-1.5">
+                    <Receipt className="h-8 w-8 mx-auto text-[#A0A8A8]" weight="duotone" />
+                    <p className="text-xs font-bold text-[#1C2424]">
+                      No se encontraron ventas para este medio de cobro
+                    </p>
+                    <p className="text-[11px] text-[#657373]">
+                      No hay registros correspondientes al filtro seleccionado.
+                    </p>
+                    {metodoPagoFiltroVentas !== 'todos' && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setMetodoPagoFiltroVentas('todos')}
+                        className="text-xs h-7 text-[#2A7A78] hover:underline cursor-pointer mt-1"
+                      >
+                        Ver todos los medios de pago
+                      </Button>
+                    )}
+                  </div>
+                ) : modoVistaVentas === 'grid' ? (
+                  /* VISTA 1: TARJETAS EN CUADRÍCULA */
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                    {ventasRecientesPaginadas.map((sale) => (
+                      <motion.div
+                        key={sale.id}
+                        whileHover={{ y: -2, scale: 1.01 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setVentaSeleccionada(sale)}
+                        className="p-3 rounded-xl border border-[#E8E6DF] bg-white hover:border-[#2A7A78] cursor-pointer shadow-2xs transition-all hover:bg-[#F8F7F2]/60 flex flex-col justify-between"
+                        title="Ver detalle del comprobante / reimprimir ticket"
+                      >
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-xs font-bold text-[#1C2424] font-mono">{sale.id}</span>
+                            {renderBadgeMetodo(sale.metodoPago)}
+                          </div>
+                          <p className="text-[11px] text-[#657373] mt-1 flex items-center gap-1 font-mono">
+                            <Clock className="h-3 w-3 text-[#2A7A78]" weight="duotone" />
+                            <span>{sale.hora} {sale.fecha ? `• ${sale.fecha}` : ''}</span>
+                          </p>
+                          <p className="text-[11px] text-[#657373] mt-0.5">
+                            {sale.cantidadItems} {sale.cantidadItems === 1 ? 'artículo' : 'artículos'} • {sale.vendedor || 'Caja'}
+                          </p>
+                        </div>
+                        <div className="flex items-center justify-between pt-2.5 mt-2 border-t border-[#E8E6DF]/60">
+                          <span className="text-[11px] text-[#657373] font-medium">Total:</span>
+                          <span className="text-sm font-black text-[#2A7A78]">
+                            {monedaSimbolo} {sale.montoTotal.toLocaleString('es-AR')}
+                          </span>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  /* VISTA 2: TABLA DETALLADA */
+                  <div className="rounded-lg border border-[#E8E6DF] overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-[#F8F7F2]/60">
+                          <TableHead className="text-xs">Comprobante</TableHead>
+                          <TableHead className="text-xs">Fecha y Hora</TableHead>
+                          <TableHead className="text-xs">Medio de Cobro</TableHead>
+                          <TableHead className="text-xs">Cajero / Vendedor</TableHead>
+                          <TableHead className="text-xs">Artículos</TableHead>
+                          <TableHead className="text-xs text-right">Total Cobrado</TableHead>
+                          <TableHead className="text-xs text-right">Acción</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {ventasRecientesPaginadas.map((sale) => (
+                          <TableRow key={sale.id} className="hover:bg-[#F8F7F2]/50">
+                            <TableCell className="py-2.5 font-bold text-xs text-[#1C2424] font-mono">
+                              {sale.id}
+                            </TableCell>
+                            <TableCell className="py-2.5 text-xs text-[#657373]">
+                              {sale.hora} {sale.fecha ? `• ${sale.fecha}` : ''}
+                            </TableCell>
+                            <TableCell className="py-2.5">
+                              {renderBadgeMetodo(sale.metodoPago)}
+                            </TableCell>
+                            <TableCell className="py-2.5 text-xs text-[#1C2424]">
+                              {sale.vendedor || 'Cajero en Turno'}
+                            </TableCell>
+                            <TableCell className="py-2.5 text-xs text-[#657373]">
+                              {sale.cantidadItems} {sale.cantidadItems === 1 ? 'ítem' : 'ítems'}
+                            </TableCell>
+                            <TableCell className="py-2.5 text-xs font-black text-[#2A7A78] text-right">
+                              {monedaSimbolo} {sale.montoTotal.toLocaleString('es-AR')}
+                            </TableCell>
+                            <TableCell className="py-2.5 text-right">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setVentaSeleccionada(sale)}
+                                className="h-7 px-2.5 text-xs border-[#E8E6DF] hover:bg-[#E2F1F0] text-[#2A7A78] hover:text-[#205E5D] font-medium gap-1 cursor-pointer"
+                              >
+                                <Receipt className="h-3.5 w-3.5" weight="duotone" />
+                                <span>Ver Ticket</span>
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+
+                {/* Paginación del Historial */}
+                {ventasFiltradas.length > 0 && (
+                  <div className="flex items-center justify-between pt-3 border-t border-[#E8E6DF] text-xs text-[#657373]">
                     <div>
                       Mostrando {inicioPaginacionVentas + 1} a{' '}
-                      {Math.min(inicioPaginacionVentas + itemsPorPaginaVentas, data.ventasRecientes.length)} de{' '}
-                      {data.ventasRecientes.length} tickets
+                      {Math.min(inicioPaginacionVentas + itemsPorPaginaVentas, ventasFiltradas.length)} de{' '}
+                      {ventasFiltradas.length} tickets
+                      {metodoPagoFiltroVentas !== 'todos' && (
+                        <span className="ml-1 text-[11px] text-[#2A7A78] font-semibold">
+                          (filtrado por {opcionesFiltroMetodo.find((o) => o.id === metodoPagoFiltroVentas)?.label})
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-1.5">
                       <Button

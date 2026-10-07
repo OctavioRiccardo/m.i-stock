@@ -230,6 +230,38 @@ const initialMockUserData: UserDashboardData = {
       ],
       estado: 'completada',
     },
+    {
+      id: 'VNT-108',
+      hora: '17:15',
+      fecha: '26/09/2026',
+      montoTotal: 6900,
+      cantidadItems: 2,
+      metodoPago: 'mercado_pago',
+      vendedor: 'Camila Fernández',
+      items: [
+        {
+          id: 'DET-108-1',
+          ventaId: 'VNT-108',
+          productoId: 'prod-1',
+          nombreProducto: 'Aceite de Girasol 1.5L',
+          codigoProducto: '779001',
+          cantidad: 2,
+          precioUnitario: 2450,
+          subtotal: 4900,
+        },
+        {
+          id: 'DET-108-2',
+          ventaId: 'VNT-108',
+          productoId: 'prod-3',
+          nombreProducto: 'Arroz Largo Fino 1kg',
+          codigoProducto: '779003',
+          cantidad: 2,
+          precioUnitario: 1000,
+          subtotal: 2000,
+        },
+      ],
+      estado: 'completada',
+    },
   ],
   productosPopulares: initialProductosPOS,
 };
@@ -330,12 +362,42 @@ export function useUserDashboardController() {
     inicioPaginacion + itemsPorPagina
   );
 
+  // ====================================================================
+  // FILTRADO Y PAGINACIÓN DE VENTAS RECIENTES EN CAJA
+  // ====================================================================
+  const [metodoPagoFiltroVentas, setMetodoPagoFiltroVentas] = useState<string>('todos');
+
+  // Conteo de ventas por método de pago para píldoras de filtro
+  const conteosPorMetodoPago = useMemo(() => {
+    const counts: Record<string, number> = { todos: data.ventasRecientes.length };
+    for (const v of data.ventasRecientes) {
+      const m = v.metodoPago || 'efectivo';
+      counts[m] = (counts[m] || 0) + 1;
+    }
+    return counts;
+  }, [data.ventasRecientes]);
+
+  // Filtrado reactivo de ventas según el método de pago seleccionado
+  const ventasFiltradas = useMemo(() => {
+    if (metodoPagoFiltroVentas === 'todos') {
+      return data.ventasRecientes;
+    }
+    return data.ventasRecientes.filter(
+      (v) => (v.metodoPago || 'efectivo') === metodoPagoFiltroVentas
+    );
+  }, [data.ventasRecientes, metodoPagoFiltroVentas]);
+
+  // Reset de página al cambiar el filtro de método de pago
+  useEffect(() => {
+    setPaginaVentas(1);
+  }, [metodoPagoFiltroVentas]);
+
   // Paginación para Ventas Recientes en Caja
   const [paginaVentas, setPaginaVentas] = useState<number>(1);
-  const itemsPorPaginaVentas = 4;
-  const totalPaginasVentas = Math.max(1, Math.ceil(data.ventasRecientes.length / itemsPorPaginaVentas));
+  const itemsPorPaginaVentas = 6;
+  const totalPaginasVentas = Math.max(1, Math.ceil(ventasFiltradas.length / itemsPorPaginaVentas));
   const inicioPaginacionVentas = (paginaVentas - 1) * itemsPorPaginaVentas;
-  const ventasRecientesPaginadas = data.ventasRecientes.slice(
+  const ventasRecientesPaginadas = ventasFiltradas.slice(
     inicioPaginacionVentas,
     inicioPaginacionVentas + itemsPorPaginaVentas
   );
@@ -779,6 +841,10 @@ export function useUserDashboardController() {
     inicioPaginacionVentas,
     itemsPorPaginaVentas,
     ventasRecientesPaginadas,
+    ventasFiltradas,
+    metodoPagoFiltroVentas,
+    setMetodoPagoFiltroVentas,
+    conteosPorMetodoPago,
     saleSuccessMessage,
     saleErrorMessage,
     handleQuickSale,
