@@ -17,8 +17,10 @@
  *   de los componentes visuales de la interfaz de usuario.
  */
 
-import { useState } from 'react';
-import { AdminDashboardData } from '@/models/modelos_vista/dashboardModel';
+import { useState, useMemo, useEffect } from 'react';
+import { AdminDashboardData, AdminMetricCard } from '@/models/modelos_vista/dashboardModel';
+import { useConfiguracionData } from '@/services/configuracionService';
+import { PeriodoMetricas } from '@/models/modelos_vista/configuracionModel';
 
 /**
  * Datos iniciales simulados (Mock) para métricas y alertas del Administrador.
@@ -582,6 +584,138 @@ export type PeriodoVentasTab = 'semana' | 'mes';
  * @returns {Object} Estado consolidado del panel y métodos de interacción.
  */
 export function useAdminDashboardController() {
+  const config = useConfiguracionData();
+  const monedaSimbolo = config.negocio?.monedaSimbolo || '$';
+
+  // Período activo de métricas, inicializado con la preferencia configurada en el sistema
+  const [periodoMetricasActivo, setPeriodoMetricasActivo] = useState<PeriodoMetricas>(
+    config.metricas?.periodoPorDefecto || 'mensual'
+  );
+
+  // Sincronizar si cambia la preferencia global en configuración
+  useEffect(() => {
+    if (config.metricas?.periodoPorDefecto) {
+      setPeriodoMetricasActivo(config.metricas.periodoPorDefecto);
+    }
+  }, [config.metricas?.periodoPorDefecto]);
+
+  // KPIs dinámicos calculados según el período activo y la regla de comparativa
+  const kpisActivos = useMemo<AdminMetricCard[]>(() => {
+    const comparar = config.metricas?.compararPeriodoAnterior ?? true;
+
+    switch (periodoMetricasActivo) {
+      case 'diario':
+        return [
+          {
+            title: 'Recaudación de Hoy (Caja)',
+            value: `${monedaSimbolo} 86.500`,
+            changePercentage: comparar ? '+5.4% vs ayer' : undefined,
+            status: 'positive',
+          },
+          {
+            title: 'Ticket Promedio Diario',
+            value: `${monedaSimbolo} 7.200`,
+            changePercentage: comparar ? '+2.1%' : undefined,
+            status: 'positive',
+          },
+          {
+            title: 'Operaciones de Hoy',
+            value: '18 ventas',
+            changePercentage: comparar ? '+12.5%' : undefined,
+            status: 'positive',
+          },
+          {
+            title: 'Unidades Despachadas Hoy',
+            value: '74 un.',
+            changePercentage: comparar ? '+8.8%' : undefined,
+            status: 'positive',
+          },
+        ];
+      case 'semanal':
+        return [
+          {
+            title: 'Recaudación Semanal',
+            value: `${monedaSimbolo} 385.400`,
+            changePercentage: comparar ? '+9.2% vs sem. ant.' : undefined,
+            status: 'positive',
+          },
+          {
+            title: 'Ticket Promedio Semanal',
+            value: `${monedaSimbolo} 7.860`,
+            changePercentage: comparar ? '+3.5%' : undefined,
+            status: 'positive',
+          },
+          {
+            title: 'Operaciones de la Semana',
+            value: '49 ventas',
+            changePercentage: comparar ? '+6.4%' : undefined,
+            status: 'positive',
+          },
+          {
+            title: 'Unidades Despachadas',
+            value: '198 un.',
+            changePercentage: comparar ? '+11.2%' : undefined,
+            status: 'positive',
+          },
+        ];
+      case 'ultimos_30_dias':
+        return [
+          {
+            title: 'Recaudación (Últimos 30 Días)',
+            value: `${monedaSimbolo} 1.520.000`,
+            changePercentage: comparar ? '+10.8% vs 30d prev.' : undefined,
+            status: 'positive',
+          },
+          {
+            title: 'Ticket Promedio (30 Días)',
+            value: `${monedaSimbolo} 8.740`,
+            changePercentage: comparar ? '+4.0%' : undefined,
+            status: 'positive',
+          },
+          {
+            title: 'Operaciones (30 Días)',
+            value: '174 ventas',
+            changePercentage: comparar ? '+7.9%' : undefined,
+            status: 'positive',
+          },
+          {
+            title: 'Unidades Despachadas (30 Días)',
+            value: '662 un.',
+            changePercentage: comparar ? '+14.1%' : undefined,
+            status: 'positive',
+          },
+        ];
+      case 'mensual':
+      default:
+        return [
+          {
+            title: 'Recaudación del Mes',
+            value: `${monedaSimbolo} 1.450.000`,
+            changePercentage: comparar ? '+12.5% vs mes ant.' : undefined,
+            status: 'positive',
+          },
+          {
+            title: 'Ticket Promedio Mensual',
+            value: `${monedaSimbolo} 8.630`,
+            changePercentage: comparar ? '+4.2%' : undefined,
+            status: 'positive',
+          },
+          {
+            title: 'Operaciones Concretadas',
+            value: '168 ventas',
+            changePercentage: comparar ? '+8.1%' : undefined,
+            status: 'positive',
+          },
+          {
+            title: 'Unidades Despachadas',
+            value: '640 un.',
+            changePercentage: comparar ? '+15.3%' : undefined,
+            status: 'positive',
+          },
+        ];
+    }
+  }, [periodoMetricasActivo, monedaSimbolo, config.metricas?.compararPeriodoAnterior]);
+
   // Estado principal que contiene métricas agregadas y datos analíticos
   const [data] = useState<AdminDashboardData>(initialMockAdminData);
 
@@ -678,9 +812,27 @@ export function useAdminDashboardController() {
     setPaginaVentas(1);
   };
 
+  /**
+   * Alterna el período activo de análisis y sincroniza las pestañas dependientes.
+   */
+  const cambiarPeriodoMetricas = (periodo: PeriodoMetricas) => {
+    setPeriodoMetricasActivo(periodo);
+    if (periodo === 'semanal' || periodo === 'diario') {
+      setPeriodoVentasTab('semana');
+    } else {
+      setPeriodoVentasTab('mes');
+    }
+    setPaginaVentas(1);
+  };
+
   return {
     data,
     loading,
+    periodoMetricasActivo,
+    cambiarPeriodoMetricas,
+    configuracionMetricas: config.metricas,
+    kpisActivos,
+    monedaSimbolo,
     rotacionTab,
     cambiarTabRotacion,
     categoriaRotacion,

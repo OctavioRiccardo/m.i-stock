@@ -26,6 +26,7 @@ import {
   ConfiguracionNegocio,
   ConfiguracionPOS,
   ConfiguracionInventario,
+  ConfiguracionMetricas,
   MetodosPagoConfig,
   valoresPorDefectoConfiguracion,
 } from '@/models/modelos_vista/configuracionModel';
@@ -40,7 +41,7 @@ const SERVER_SNAPSHOT: ConfiguracionCompleta = Object.freeze(valoresPorDefectoCo
 /**
  * Inicialización segura del estado en el cliente (Browser).
  * Aplica fusión profunda (deep-merge) para garantizar que propiedades nuevas
- * como 'mercado_pago' o 'autoImprimirTicket' existan aun si el localStorage
+ * como 'mercado_pago' o 'metricas' existan aun si el localStorage
  * contenía una versión anterior de la configuración.
  */
 function inicializarEstadoCliente(): ConfiguracionCompleta {
@@ -69,6 +70,10 @@ function inicializarEstadoCliente(): ConfiguracionCompleta {
         inventario: {
           ...valoresPorDefectoConfiguracion.inventario,
           ...(parsed.inventario || {}),
+        },
+        metricas: {
+          ...valoresPorDefectoConfiguracion.metricas,
+          ...(parsed.metricas || {}),
         },
         sistema: {
           ...valoresPorDefectoConfiguracion.sistema,
@@ -223,6 +228,20 @@ export const configuracionService = {
       ...currentSnapshot,
       inventario: {
         ...currentSnapshot.inventario,
+        ...datos,
+      },
+    };
+    notifySubscribers();
+  },
+
+  /**
+   * Actualiza las preferencias de cálculo y períodos de métricas/KPIs.
+   */
+  actualizarMetricas(datos: Partial<ConfiguracionMetricas>): void {
+    currentSnapshot = {
+      ...currentSnapshot,
+      metricas: {
+        ...currentSnapshot.metricas,
         ...datos,
       },
     };

@@ -42,6 +42,10 @@ import {
   Scales,
   FileText,
   CheckCircle,
+  ChartLineUp,
+  CalendarBlank,
+  CalendarCheck,
+  Lightbulb,
 } from '@phosphor-icons/react';
 import {
   useAdminConfiguracionController,
@@ -50,6 +54,8 @@ import {
 import {
   CondicionIva,
   AnchoPapelTicket,
+  PeriodoMetricas,
+  InicioSemana,
 } from '@/models/modelos_vista/configuracionModel';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -121,6 +127,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
     actualizarPOS,
     toggleMetodoPago,
     actualizarInventario,
+    actualizarMetricas,
     guardarCambios,
     restablecerPorDefecto,
     exportarCatalogoCSV,
@@ -155,6 +162,12 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
       descripcion: 'Umbrales mínimos de seguridad y control estricto de catálogo.',
     },
     {
+      id: 'metricas',
+      etiqueta: 'Métricas & Períodos',
+      icono: ChartLineUp,
+      descripcion: 'Período base de análisis, corte de ciclo e indicadores de rendimiento.',
+    },
+    {
       id: 'respaldos',
       etiqueta: 'Respaldos & Base de Datos',
       icono: Database,
@@ -177,7 +190,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
               </Badge>
             </div>
             <p className="text-sm text-[#657373] mt-1">
-              Personaliza la identidad del negocio, reglas de venta en caja y respaldos de información.
+              Personaliza la identidad del negocio, reglas de venta en caja, períodos analíticos y respaldos.
             </p>
           </div>
 
@@ -224,7 +237,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
         )}
 
         {/* Navegación por Pestañas */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 p-1.5 bg-[#F8F7F2] rounded-xl border border-[#E8E6DF]">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 p-1.5 bg-[#F8F7F2] rounded-xl border border-[#E8E6DF]">
           {pestañas.map((p) => {
             const Icono = p.icono;
             const esActiva = pestañaActiva === p.id;
@@ -1358,7 +1371,199 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
         )}
 
         {/* ==================================================================== */}
-        {/* PESTAÑA 4: RESPALDOS & BASE DE DATOS                                 */}
+        {/* PESTAÑA 4: CRITERIOS DE MEDICIÓN & KPIS                              */}
+        {/* ==================================================================== */}
+        {pestañaActiva === 'metricas' && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.15 }}
+            className="space-y-6"
+          >
+            {/* 1. Selector de Período Predeterminado */}
+            <Card className="border-[#E8E6DF] shadow-sm">
+              <CardHeader className="pb-3 border-b border-[#E8E6DF]">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ChartLineUp className="h-4 w-4 text-[#2A7A78]" weight="duotone" />
+                    <CardTitle className="text-sm font-semibold text-[#1C2424]">
+                      Período Base Predeterminado del Dashboard
+                    </CardTitle>
+                  </div>
+                  <Badge variant="outline" className="text-xs border-[#E8E6DF] text-[#657373]">
+                    Visualización Inicial
+                  </Badge>
+                </div>
+                <p className="text-xs text-[#657373] mt-1">
+                  Define qué ventana de tiempo analizan las métricas (Recaudación, Ticket Promedio, Operaciones) cada vez que el Administrador accede al panel.
+                </p>
+              </CardHeader>
+              <CardContent className="p-4 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {[
+                    {
+                      id: 'mensual',
+                      titulo: 'Mes Calendario (Recomendado)',
+                      descripcion: 'Del día 1 al último día del mes en curso. Ideal para balances mensuales y control contable.',
+                      badge: 'Balance Mensual',
+                    },
+                    {
+                      id: 'semanal',
+                      titulo: 'Semana en Curso',
+                      descripcion: 'Monitorea de lunes a domingo. Ideal para comercios de alta rotación (minimercados, almacenes).',
+                      badge: 'Rotación Alta',
+                    },
+                    {
+                      id: 'diario',
+                      titulo: 'Jornada de Hoy (Diario)',
+                      descripcion: 'Enfocado en las ventas y caja del día en vivo. Arranca en cero al inicio de cada jornada.',
+                      badge: 'En Vivo',
+                    },
+                    {
+                      id: 'ultimos_30_dias',
+                      titulo: 'Últimos 30 Días (Ventana Móvil)',
+                      descripcion: 'Ventana continua de 30 días deslizantes. Evita la caída a cero de métricas el primer día del mes.',
+                      badge: 'Continuo',
+                    },
+                  ].map((opcion) => {
+                    const esSeleccionado = config.metricas.periodoPorDefecto === opcion.id;
+                    return (
+                      <div
+                        key={opcion.id}
+                        onClick={() => actualizarMetricas({ periodoPorDefecto: opcion.id as PeriodoMetricas })}
+                        className={`p-3.5 rounded-xl border cursor-pointer transition-all flex flex-col justify-between ${
+                          esSeleccionado
+                            ? 'border-[#2A7A78] bg-[#E2F1F0]/30 shadow-2xs ring-1 ring-[#2A7A78]/20'
+                            : 'border-[#E8E6DF] bg-white hover:border-[#2A7A78]/50 hover:bg-[#F8F7F2]/50'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <div
+                              className={`h-4 w-4 rounded-full border flex items-center justify-center transition-colors ${
+                                esSeleccionado
+                                  ? 'border-[#2A7A78] bg-[#2A7A78]'
+                                  : 'border-[#D5D3C8] bg-white'
+                              }`}
+                            >
+                              {esSeleccionado && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
+                            </div>
+                            <span className="text-xs font-bold text-[#1C2424]">
+                              {opcion.titulo}
+                            </span>
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] px-1.5 py-0 font-medium ${
+                              esSeleccionado
+                                ? 'border-[#2A7A78]/40 bg-white text-[#2A7A78]'
+                                : 'border-[#E8E6DF] text-[#657373]'
+                            }`}
+                          >
+                            {opcion.badge}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-[#657373] mt-2 ml-6">
+                          {opcion.descripcion}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 2. Ciclos de Tiempo y Comparativas */}
+            <Card className="border-[#E8E6DF] shadow-sm">
+              <CardHeader className="pb-3 border-b border-[#E8E6DF]">
+                <div className="flex items-center gap-2">
+                  <CalendarCheck className="h-4 w-4 text-[#2A7A78]" weight="duotone" />
+                  <CardTitle className="text-sm font-semibold text-[#1C2424]">
+                    Parámetros de Calendario & Ciclos de Corte
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Inicio de la Semana */}
+                  <div>
+                    <label className="block text-xs font-semibold text-[#1C2424] mb-1">
+                      Inicio de la Semana Laboral
+                    </label>
+                    <select
+                      value={config.metricas.inicioSemana}
+                      onChange={(e) => actualizarMetricas({ inicioSemana: e.target.value as InicioSemana })}
+                      className="w-full text-xs rounded-lg border border-[#E8E6DF] bg-white px-3 py-2 text-[#1C2424] focus:outline-none focus:ring-1 focus:ring-[#2A7A78] focus:border-[#2A7A78]"
+                    >
+                      <option value="lunes">Lunes (Estándar comercial habitual)</option>
+                      <option value="domingo">Domingo (Estándar calendario tradicional)</option>
+                    </select>
+                    <p className="text-[11px] text-[#657373] mt-1">
+                      Define a partir de qué día se agrupan los gráficos de tendencia semanal.
+                    </p>
+                  </div>
+
+                  {/* Día de Corte Mensual */}
+                  <div>
+                    <label className="block text-xs font-semibold text-[#1C2424] mb-1">
+                      Día de Corte Mensual (1 al 28)
+                    </label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={28}
+                      value={config.metricas.diaCorteMensual}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (!isNaN(val) && val >= 1 && val <= 28) {
+                          actualizarMetricas({ diaCorteMensual: val });
+                        }
+                      }}
+                      className="text-xs h-9"
+                    />
+                    <p className="text-[11px] text-[#657373] mt-1">
+                      Día del mes donde inicia el balance (habitualmente el día 1).
+                    </p>
+                  </div>
+                </div>
+
+                {/* Comparación de Tendencia vs Período Anterior */}
+                <div className="pt-3 border-t border-[#E8E6DF] flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-[#1C2424]">
+                      Comparativa porcentual vs. período anterior
+                    </p>
+                    <p className="text-xs text-[#657373] mt-0.5">
+                      Muestra badges con la variación porcentual (+12.5%, -4.2%) contra la misma ventana temporal previa.
+                    </p>
+                  </div>
+                  <SwitchToggle
+                    id="toggle-comparar-periodo"
+                    checked={Boolean(config.metricas.compararPeriodoAnterior)}
+                    onChange={(val) => actualizarMetricas({ compararPeriodoAnterior: val })}
+                    label="Comparativa de período anterior"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 3. Banner Informativo y Explicativo */}
+            <div className="p-4 rounded-xl border border-[#2A7A78]/20 bg-[#E2F1F0]/40 flex items-start gap-3">
+              <Lightbulb className="h-5 w-5 text-[#2A7A78] shrink-0 mt-0.5" weight="duotone" />
+              <div className="space-y-1">
+                <p className="text-xs font-semibold text-[#1C2424]">
+                  ¿Cómo impacta esta configuración en el día a día?
+                </p>
+                <p className="text-xs text-[#657373] leading-relaxed">
+                  Al ingresar a la sección de <strong className="text-[#1C2424]">Métricas (/admin)</strong>, los indicadores se calcularán automáticamente considerando el período seleccionado por defecto. En cualquier momento, el Administrador podrá cambiar la vista en vivo (por ejemplo, para revisar una semana puntual o el balance mensual cerrado) utilizando el selector dinámico del panel superior.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* ==================================================================== */}
+        {/* PESTAÑA 5: RESPALDOS & BASE DE DATOS                                 */}
         {/* ==================================================================== */}
         {pestañaActiva === 'respaldos' && (
           <motion.div

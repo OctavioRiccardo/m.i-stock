@@ -37,6 +37,7 @@ import {
   Users,
   CreditCard,
   X,
+  CalendarBlank,
 } from '@phosphor-icons/react';
 import {
   Area,
@@ -59,6 +60,7 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart';
 import { MetodoPago, EstadoVenta } from '@/models/modelos_dominio/ventaModel';
+import { PeriodoMetricas } from '@/models/modelos_vista/configuracionModel';
 import { useAdminDashboardController } from '@/controllers/adminControllers/dashboardController';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -151,6 +153,10 @@ interface AdminDashboardViewProps {
 export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
   const {
     data,
+    periodoMetricasActivo,
+    cambiarPeriodoMetricas,
+    configuracionMetricas,
+    kpisActivos,
     rotacionTab,
     cambiarTabRotacion,
     categoriaRotacion,
@@ -399,11 +405,44 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#E2F1F0] text-[#2A7A78] border border-[#2A7A78]/20">
-              <span className="w-2 h-2 rounded-full bg-[#2A7A78] animate-pulse" />
-              Período Activo: Septiembre
-            </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center p-1 bg-[#F8F7F2] rounded-lg border border-[#E8E6DF]">
+              <CalendarBlank className="h-4 w-4 text-[#2A7A78] ml-2 mr-1 shrink-0" weight="duotone" />
+              <span className="text-xs font-semibold text-[#657373] mr-2 hidden sm:inline">Período:</span>
+              <div className="flex items-center gap-1">
+                {[
+                  { id: 'diario', label: 'Hoy' },
+                  { id: 'semanal', label: 'Esta Semana' },
+                  { id: 'mensual', label: 'Este Mes' },
+                  { id: 'ultimos_30_dias', label: 'Últimos 30d' },
+                ].map((op) => {
+                  const esActivo = periodoMetricasActivo === op.id;
+                  const esPorDefecto = configuracionMetricas?.periodoPorDefecto === op.id;
+                  return (
+                    <button
+                      key={op.id}
+                      type="button"
+                      onClick={() => cambiarPeriodoMetricas(op.id as PeriodoMetricas)}
+                      className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+                        esActivo
+                          ? 'bg-white text-[#2A7A78] font-bold shadow-2xs border border-[#E8E6DF]'
+                          : 'text-[#657373] hover:text-[#1C2424] hover:bg-white/50'
+                      }`}
+                      title={esPorDefecto ? `${op.label} (Preferencia base configurada en el sistema)` : op.label}
+                    >
+                      <span>{op.label}</span>
+                      {esPorDefecto && (
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            esActivo ? 'bg-[#2A7A78]' : 'bg-[#2A7A78]/50'
+                          }`}
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </motion.div>
 
@@ -412,7 +451,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
         {/* 1. TARJETAS KPI DE RENDIMIENTO FINANCIERO Y MENSUAL                  */}
         {/* ==================================================================== */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {data.kpiMetrics.map((kpi, idx) => (
+          {kpisActivos.map((kpi, idx) => (
             <motion.div
               key={kpi.title}
               initial={{ opacity: 0, y: 8 }}

@@ -16,12 +16,13 @@ import {
   ConfiguracionNegocio,
   ConfiguracionPOS,
   ConfiguracionInventario,
+  ConfiguracionMetricas,
   MetodosPagoConfig,
 } from '@/models/modelos_vista/configuracionModel';
 import { configuracionService, useConfiguracionData } from '@/services/configuracionService';
 import { inventarioService } from '@/services/inventarioService';
 
-export type PestañaConfiguracion = 'negocio' | 'pos' | 'inventario' | 'respaldos';
+export type PestañaConfiguracion = 'negocio' | 'pos' | 'inventario' | 'metricas' | 'respaldos';
 
 export function useAdminConfiguracionController() {
   const config = useConfiguracionData();
@@ -65,6 +66,13 @@ export function useAdminConfiguracionController() {
    */
   const actualizarInventario = (datos: Partial<ConfiguracionInventario>) => {
     configuracionService.actualizarInventario(datos);
+  };
+
+  /**
+   * Actualiza los criterios y períodos base de métricas y KPIs.
+   */
+  const actualizarMetricas = (datos: Partial<ConfiguracionMetricas>) => {
+    configuracionService.actualizarMetricas(datos);
   };
 
   /**
@@ -173,6 +181,7 @@ export function useAdminConfiguracionController() {
     actualizarPOS,
     toggleMetodoPago,
     actualizarInventario,
+    actualizarMetricas,
     guardarCambios,
     restablecerPorDefecto,
     exportarCatalogoCSV,

@@ -57,6 +57,16 @@ export interface ConfiguracionInventario {
   controlarVencimientos: boolean;
 }
 
+export type PeriodoMetricas = 'diario' | 'semanal' | 'mensual' | 'ultimos_30_dias';
+export type InicioSemana = 'lunes' | 'domingo';
+
+export interface ConfiguracionMetricas {
+  periodoPorDefecto: PeriodoMetricas;
+  inicioSemana: InicioSemana;
+  diaCorteMensual: number; // 1 a 28 (por defecto 1, inicio de mes)
+  compararPeriodoAnterior: boolean;
+}
+
 export interface ConfiguracionSistema {
   estadoConexionDB: 'conectado' | 'desconectado' | 'latencia_alta';
   versionEsquema: string;
@@ -68,6 +78,7 @@ export interface ConfiguracionCompleta {
   negocio: ConfiguracionNegocio;
   pos: ConfiguracionPOS;
   inventario: ConfiguracionInventario;
+  metricas: ConfiguracionMetricas;
   sistema: ConfiguracionSistema;
 }
 
@@ -110,6 +121,12 @@ export const valoresPorDefectoConfiguracion: ConfiguracionCompleta = {
     alertarMargenNegativo: true,
     requerirCategoriaEstricta: true,
     controlarVencimientos: false,
+  },
+  metricas: {
+    periodoPorDefecto: 'mensual',
+    inicioSemana: 'lunes',
+    diaCorteMensual: 1,
+    compararPeriodoAnterior: true,
   },
   sistema: {
     estadoConexionDB: 'conectado',
