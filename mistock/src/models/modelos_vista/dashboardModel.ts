@@ -23,7 +23,7 @@ import { MetodoPago, EstadoVenta, DetalleVenta, Pago } from '@/models/modelos_do
 /**
  * Módulos / pestañas operativas disponibles en la terminal del vendedor/cajero (POS).
  */
-export type PestanaOperativaPOS = 'caja' | 'precios' | 'historial' | 'reposicion';
+export type PestanaOperativaPOS = 'caja' | 'catalogo' | 'precios' | 'historial';
 
 /**
  * Representación optimizada de un producto para listas rápidas en el POS.

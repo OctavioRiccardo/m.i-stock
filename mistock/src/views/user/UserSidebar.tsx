@@ -15,8 +15,8 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
   ShoppingCart,
+  Package,
   Receipt,
-  ListChecks,
   ArrowsLeftRight,
   SignOut,
   UserCheck,
@@ -29,9 +29,9 @@ import { cn } from '@/lib/utils';
  */
 const userNavData = [
   { id: 'caja', link: '/dashboard?tab=caja', label: 'Terminal de Cobro', icon: ShoppingCart },
+  { id: 'catalogo', link: '/dashboard?tab=catalogo', label: 'Catálogo de Productos', icon: Package },
   { id: 'precios', link: '/dashboard?tab=precios', label: 'Consultor de Precios', icon: Tag },
   { id: 'historial', link: '/dashboard?tab=historial', label: 'Historial del Día', icon: Receipt },
-  { id: 'reposicion', link: '/dashboard?tab=reposicion', label: 'Faltantes de Góndola', icon: ListChecks },
 ];
 
 interface UserSidebarProps {

@@ -250,11 +250,11 @@ export function ModuloConsultorPrecios({ controller }: ModuloConsultorPreciosPro
 
                     <div>
                       <span className="text-[10px] text-[#657373] uppercase font-semibold block leading-none">
-                        Existencias en Salón
+                        Disponibilidad en Stock
                       </span>
                       <span className="text-sm font-bold text-[#1C2424]">
                         {productoConsultado.stock <= 0
-                          ? 'Agotado en Tienda'
+                          ? 'Agotado'
                           : `${productoConsultado.stock} ${productoConsultado.unidadMedida || 'unidades'} disponibles`}
                       </span>
                     </div>

@@ -278,13 +278,13 @@ export function useUserDashboardController() {
   // Gestión reactiva de pestaña operativa (sincronizada con ?tab=...)
   const tabParam = (searchParams?.get('tab') as PestanaOperativaPOS) || 'caja';
   const [pestanaOperativa, setPestanaOperativaState] = useState<PestanaOperativaPOS>(
-    ['caja', 'precios', 'historial', 'reposicion'].includes(tabParam) ? tabParam : 'caja'
+    ['caja', 'catalogo', 'precios', 'historial'].includes(tabParam) ? tabParam : 'caja'
   );
 
   // Sincronizar automáticamente si cambia el searchParam de la URL
   useEffect(() => {
     const param = searchParams?.get('tab') as PestanaOperativaPOS;
-    if (param && ['caja', 'precios', 'historial', 'reposicion'].includes(param)) {
+    if (param && ['caja', 'catalogo', 'precios', 'historial'].includes(param)) {
       setPestanaOperativaState(param);
     }
   }, [searchParams]);
@@ -486,56 +486,62 @@ export function useUserDashboardController() {
   }, [data.productosPopulares, busquedaPrecios]);
 
   // ====================================================================
-  // ESTADO Y MÉTODOS: MONITOR DE REPOSICIÓN EN SALÓN (FALTANTES DE GÓNDOLA)
+  // ESTADO Y MÉTODOS: CATÁLOGO GENERAL CON DISPONIBILIDAD EN TIEMPO REAL
   // ====================================================================
-  const [filtroCategoriaReposicion, setFiltroCategoriaReposicion] = useState<string>('todas');
-  const [filtroEstadoReposicion, setFiltroEstadoReposicion] = useState<'todos' | 'agotados' | 'criticos'>('todos');
-  const [solicitudesReposicion, setSolicitudesReposicion] = useState<Record<string, boolean>>({});
+  const [busquedaCatalogo, setBusquedaCatalogo] = useState<string>('');
+  const [categoriaFiltroCatalogo, setCategoriaFiltroCatalogo] = useState<string>('todas');
+  const [disponibilidadFiltroCatalogo, setDisponibilidadFiltroCatalogo] = useState<'todos' | 'con_stock' | 'agotados'>('todos');
+  const [paginaCatalogo, setPaginaCatalogo] = useState<number>(1);
+  const itemsPorPaginaCatalogo = 8;
 
-  const solicitarReposicion = (productoId: string) => {
-    setSolicitudesReposicion((prev) => ({
-      ...prev,
-      [productoId]: true,
-    }));
-  };
+  // Reset de página al cambiar filtros de catálogo
+  useEffect(() => {
+    setPaginaCatalogo(1);
+  }, [busquedaCatalogo, categoriaFiltroCatalogo, disponibilidadFiltroCatalogo]);
 
-  const cancelarSolicitudReposicion = (productoId: string) => {
-    setSolicitudesReposicion((prev) => {
-      const nuevo = { ...prev };
-      delete nuevo[productoId];
-      return nuevo;
+  // Filtrado reactivo del catálogo general con disponibilidad
+  const productosCatalogoFiltrados = useMemo(() => {
+    const query = busquedaCatalogo.trim().toLowerCase();
+    const catFiltro = categoriaFiltroCatalogo.toLowerCase();
+
+    return data.productosPopulares.filter((p) => {
+      const coincideBusqueda =
+        !query ||
+        p.nombre.toLowerCase().includes(query) ||
+        p.codigo.toLowerCase().includes(query) ||
+        p.categoria.toLowerCase().includes(query);
+
+      const coincideCategoria =
+        catFiltro === 'todas' || p.categoria.toLowerCase() === catFiltro;
+
+      const coincideDisponibilidad =
+        disponibilidadFiltroCatalogo === 'todos' ||
+        (disponibilidadFiltroCatalogo === 'con_stock' && p.stock > 0) ||
+        (disponibilidadFiltroCatalogo === 'agotados' && p.stock === 0);
+
+      return coincideBusqueda && coincideCategoria && coincideDisponibilidad;
     });
-  };
+  }, [data.productosPopulares, busquedaCatalogo, categoriaFiltroCatalogo, disponibilidadFiltroCatalogo]);
 
-  // Conteo de artículos totalmente agotados (stock 0)
-  const productosAgotados = useMemo(() => {
-    return data.productosPopulares.filter((p) => p.stock === 0);
+  const totalPaginasCatalogo = Math.max(1, Math.ceil(productosCatalogoFiltrados.length / itemsPorPaginaCatalogo));
+  const inicioPaginacionCatalogo = (paginaCatalogo - 1) * itemsPorPaginaCatalogo;
+  const productosCatalogoPaginados = productosCatalogoFiltrados.slice(
+    inicioPaginacionCatalogo,
+    inicioPaginacionCatalogo + itemsPorPaginaCatalogo
+  );
+
+  // Métricas agregadas de catálogo para el vendedor
+  const totalUnidadesEnStock = useMemo(() => {
+    return data.productosPopulares.reduce((acc, p) => acc + p.stock, 0);
   }, [data.productosPopulares]);
 
-  // Conteo de artículos con stock bajo/crítico (stock > 0 y stock <= stockMinimo)
-  const productosStockBajo = useMemo(() => {
-    return data.productosPopulares.filter((p) => p.stock > 0 && p.stock <= (p.stockMinimo ?? 5));
+  const productosAgotadosCount = useMemo(() => {
+    return data.productosPopulares.filter((p) => p.stock === 0).length;
   }, [data.productosPopulares]);
 
-  // Lista para el monitor de reposición en salón con filtros de categoría y criticidad
-  const productosParaReponer = useMemo(() => {
-    const catFiltro = filtroCategoriaReposicion.toLowerCase();
-
-    return data.productosPopulares
-      .filter((p) => {
-        const esCriticoOAgotado = p.stock === 0 || p.stock <= (p.stockMinimo ?? 5);
-        if (!esCriticoOAgotado) return false;
-
-        const coincideCat = catFiltro === 'todas' || p.categoria.toLowerCase() === catFiltro;
-        if (!coincideCat) return false;
-
-        if (filtroEstadoReposicion === 'agotados') return p.stock === 0;
-        if (filtroEstadoReposicion === 'criticos') return p.stock > 0 && p.stock <= (p.stockMinimo ?? 5);
-
-        return true;
-      })
-      .sort((a, b) => a.stock - b.stock); // Priorizar los de menor stock (0 primero)
-  }, [data.productosPopulares, filtroCategoriaReposicion, filtroEstadoReposicion]);
+  const productosConStockCount = useMemo(() => {
+    return data.productosPopulares.filter((p) => p.stock > 0).length;
+  }, [data.productosPopulares]);
 
   // ====================================================================
   // OPERATIVA DE TICKET / CARRITO DE VENTA ACTIVO (POS EN MOSTRADOR)
@@ -1012,16 +1018,22 @@ export function useUserDashboardController() {
     setProductoConsultado,
     consultarProducto,
     productosConsultorFiltrados,
-    // Monitor de Reposición en Salón
-    filtroCategoriaReposicion,
-    setFiltroCategoriaReposicion,
-    filtroEstadoReposicion,
-    setFiltroEstadoReposicion,
-    solicitudesReposicion,
-    solicitarReposicion,
-    cancelarSolicitudReposicion,
-    productosAgotados,
-    productosStockBajo,
-    productosParaReponer,
+    // Catálogo General con Disponibilidad en Tiempo Real
+    busquedaCatalogo,
+    setBusquedaCatalogo,
+    categoriaFiltroCatalogo,
+    setCategoriaFiltroCatalogo,
+    disponibilidadFiltroCatalogo,
+    setDisponibilidadFiltroCatalogo,
+    paginaCatalogo,
+    setPaginaCatalogo,
+    itemsPorPaginaCatalogo,
+    totalPaginasCatalogo,
+    inicioPaginacionCatalogo,
+    productosCatalogoFiltrados,
+    productosCatalogoPaginados,
+    totalUnidadesEnStock,
+    productosAgotadosCount,
+    productosConStockCount,
   };
 }
