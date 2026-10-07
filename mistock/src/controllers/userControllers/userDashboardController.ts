@@ -14,11 +14,13 @@
  */
 
 import { useState, useMemo, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   UserDashboardData,
   ProductoRapidoPOS,
   VentaRecientePOS,
   ItemCarritoPOS,
+  PestanaOperativaPOS,
 } from '@/models/modelos_vista/dashboardModel';
 import { initialProductos } from '@/models/mock_data/inventarioMock';
 import { useInventarioData, inventarioService } from '@/services/inventarioService';
@@ -36,6 +38,9 @@ const initialProductosPOS: ProductoRapidoPOS[] = initialProductos.map((p) => ({
   stock: p.stockActual,
   stockMinimo: p.stockMinimo,
   codigo: p.codigo,
+  descripcion: p.descripcion,
+  unidadMedida: p.unidadMedida,
+  oferta: p.oferta,
 }));
 
 /**
@@ -267,6 +272,28 @@ const initialMockUserData: UserDashboardData = {
 };
 
 export function useUserDashboardController() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Gestión reactiva de pestaña operativa (sincronizada con ?tab=...)
+  const tabParam = (searchParams?.get('tab') as PestanaOperativaPOS) || 'caja';
+  const [pestanaOperativa, setPestanaOperativaState] = useState<PestanaOperativaPOS>(
+    ['caja', 'precios', 'historial', 'reposicion'].includes(tabParam) ? tabParam : 'caja'
+  );
+
+  // Sincronizar automáticamente si cambia el searchParam de la URL
+  useEffect(() => {
+    const param = searchParams?.get('tab') as PestanaOperativaPOS;
+    if (param && ['caja', 'precios', 'historial', 'reposicion'].includes(param)) {
+      setPestanaOperativaState(param);
+    }
+  }, [searchParams]);
+
+  const setPestanaOperativa = (nuevaPestana: PestanaOperativaPOS) => {
+    setPestanaOperativaState(nuevaPestana);
+    router.push(`/dashboard?tab=${nuevaPestana}`);
+  };
+
   const { productos: storeProductos } = useInventarioData();
 
   // Mapeo reactivo del catálogo en tiempo real sincronizado con Inventario Central
@@ -281,6 +308,9 @@ export function useUserDashboardController() {
         stock: p.stockActual,
         stockMinimo: p.stockMinimo,
         codigo: p.codigo,
+        descripcion: p.descripcion,
+        unidadMedida: p.unidadMedida,
+        oferta: p.oferta,
       }));
   }, [storeProductos]);
 
@@ -366,6 +396,7 @@ export function useUserDashboardController() {
   // FILTRADO Y PAGINACIÓN DE VENTAS RECIENTES EN CAJA
   // ====================================================================
   const [metodoPagoFiltroVentas, setMetodoPagoFiltroVentas] = useState<string>('todos');
+  const [busquedaHistorial, setBusquedaHistorial] = useState<string>('');
 
   // Conteo de ventas por método de pago para píldoras de filtro
   const conteosPorMetodoPago = useMemo(() => {
@@ -377,20 +408,28 @@ export function useUserDashboardController() {
     return counts;
   }, [data.ventasRecientes]);
 
-  // Filtrado reactivo de ventas según el método de pago seleccionado
+  // Filtrado reactivo de ventas según el método de pago seleccionado y término de búsqueda
   const ventasFiltradas = useMemo(() => {
-    if (metodoPagoFiltroVentas === 'todos') {
-      return data.ventasRecientes;
-    }
-    return data.ventasRecientes.filter(
-      (v) => (v.metodoPago || 'efectivo') === metodoPagoFiltroVentas
-    );
-  }, [data.ventasRecientes, metodoPagoFiltroVentas]);
+    const query = busquedaHistorial.trim().toLowerCase();
 
-  // Reset de página al cambiar el filtro de método de pago
+    return data.ventasRecientes.filter((v) => {
+      const coincideMetodo =
+        metodoPagoFiltroVentas === 'todos' || (v.metodoPago || 'efectivo') === metodoPagoFiltroVentas;
+
+      const coincideBusqueda =
+        !query ||
+        v.id.toLowerCase().includes(query) ||
+        (v.vendedor && v.vendedor.toLowerCase().includes(query)) ||
+        (v.items && v.items.some((it) => it.nombreProducto?.toLowerCase().includes(query)));
+
+      return coincideMetodo && coincideBusqueda;
+    });
+  }, [data.ventasRecientes, metodoPagoFiltroVentas, busquedaHistorial]);
+
+  // Reset de página al cambiar filtros en historial
   useEffect(() => {
     setPaginaVentas(1);
-  }, [metodoPagoFiltroVentas]);
+  }, [metodoPagoFiltroVentas, busquedaHistorial]);
 
   // Paginación para Ventas Recientes en Caja
   const [paginaVentas, setPaginaVentas] = useState<number>(1);
@@ -401,6 +440,102 @@ export function useUserDashboardController() {
     inicioPaginacionVentas,
     inicioPaginacionVentas + itemsPorPaginaVentas
   );
+
+  // ====================================================================
+  // ESTADO Y MÉTODOS: CONSULTOR DE PRECIOS & DISPONIBILIDAD
+  // ====================================================================
+  const [busquedaPrecios, setBusquedaPrecios] = useState<string>('');
+  const [productoConsultado, setProductoConsultado] = useState<ProductoRapidoPOS | null>(null);
+
+  /**
+   * Consulta directa de un artículo por código de barras o nombre sin alterar el ticket activo.
+   */
+  const consultarProducto = (termino: string) => {
+    const q = termino.trim().toLowerCase();
+    if (!q) {
+      setProductoConsultado(null);
+      return;
+    }
+
+    // Coincidencia exacta por código
+    const exacto = data.productosPopulares.find((p) => p.codigo.toLowerCase() === q);
+    if (exacto) {
+      setProductoConsultado(exacto);
+      return;
+    }
+
+    // Coincidencia parcial por nombre o código
+    const match = data.productosPopulares.find(
+      (p) => p.nombre.toLowerCase().includes(q) || p.codigo.toLowerCase().includes(q)
+    );
+    setProductoConsultado(match || null);
+  };
+
+  /**
+   * Sugerencias filtradas en tiempo real para el consultor de precios.
+   */
+  const productosConsultorFiltrados = useMemo(() => {
+    const q = busquedaPrecios.trim().toLowerCase();
+    if (!q) return data.productosPopulares.slice(0, 8);
+    return data.productosPopulares.filter(
+      (p) =>
+        p.nombre.toLowerCase().includes(q) ||
+        p.codigo.toLowerCase().includes(q) ||
+        p.categoria.toLowerCase().includes(q)
+    );
+  }, [data.productosPopulares, busquedaPrecios]);
+
+  // ====================================================================
+  // ESTADO Y MÉTODOS: MONITOR DE REPOSICIÓN EN SALÓN (FALTANTES DE GÓNDOLA)
+  // ====================================================================
+  const [filtroCategoriaReposicion, setFiltroCategoriaReposicion] = useState<string>('todas');
+  const [filtroEstadoReposicion, setFiltroEstadoReposicion] = useState<'todos' | 'agotados' | 'criticos'>('todos');
+  const [solicitudesReposicion, setSolicitudesReposicion] = useState<Record<string, boolean>>({});
+
+  const solicitarReposicion = (productoId: string) => {
+    setSolicitudesReposicion((prev) => ({
+      ...prev,
+      [productoId]: true,
+    }));
+  };
+
+  const cancelarSolicitudReposicion = (productoId: string) => {
+    setSolicitudesReposicion((prev) => {
+      const nuevo = { ...prev };
+      delete nuevo[productoId];
+      return nuevo;
+    });
+  };
+
+  // Conteo de artículos totalmente agotados (stock 0)
+  const productosAgotados = useMemo(() => {
+    return data.productosPopulares.filter((p) => p.stock === 0);
+  }, [data.productosPopulares]);
+
+  // Conteo de artículos con stock bajo/crítico (stock > 0 y stock <= stockMinimo)
+  const productosStockBajo = useMemo(() => {
+    return data.productosPopulares.filter((p) => p.stock > 0 && p.stock <= (p.stockMinimo ?? 5));
+  }, [data.productosPopulares]);
+
+  // Lista para el monitor de reposición en salón con filtros de categoría y criticidad
+  const productosParaReponer = useMemo(() => {
+    const catFiltro = filtroCategoriaReposicion.toLowerCase();
+
+    return data.productosPopulares
+      .filter((p) => {
+        const esCriticoOAgotado = p.stock === 0 || p.stock <= (p.stockMinimo ?? 5);
+        if (!esCriticoOAgotado) return false;
+
+        const coincideCat = catFiltro === 'todas' || p.categoria.toLowerCase() === catFiltro;
+        if (!coincideCat) return false;
+
+        if (filtroEstadoReposicion === 'agotados') return p.stock === 0;
+        if (filtroEstadoReposicion === 'criticos') return p.stock > 0 && p.stock <= (p.stockMinimo ?? 5);
+
+        return true;
+      })
+      .sort((a, b) => a.stock - b.stock); // Priorizar los de menor stock (0 primero)
+  }, [data.productosPopulares, filtroCategoriaReposicion, filtroEstadoReposicion]);
 
   // ====================================================================
   // OPERATIVA DE TICKET / CARRITO DE VENTA ACTIVO (POS EN MOSTRADOR)
@@ -820,6 +955,9 @@ export function useUserDashboardController() {
   };
 
   return {
+    // Navegación de Pestañas Operativas
+    pestanaOperativa,
+    setPestanaOperativa,
     data,
     loading,
     searchQuery,
@@ -835,6 +973,7 @@ export function useUserDashboardController() {
     itemsPorPagina,
     filteredProducts,
     productosPaginados,
+    // Historial del Día y Filtros
     paginaVentas,
     setPaginaVentas,
     totalPaginasVentas,
@@ -845,6 +984,8 @@ export function useUserDashboardController() {
     metodoPagoFiltroVentas,
     setMetodoPagoFiltroVentas,
     conteosPorMetodoPago,
+    busquedaHistorial,
+    setBusquedaHistorial,
     saleSuccessMessage,
     saleErrorMessage,
     handleQuickSale,
@@ -864,5 +1005,23 @@ export function useUserDashboardController() {
     removerItemCarrito,
     vaciarCarrito,
     procesarVentaTicket,
+    // Consultor de Precios & Disponibilidad
+    busquedaPrecios,
+    setBusquedaPrecios,
+    productoConsultado,
+    setProductoConsultado,
+    consultarProducto,
+    productosConsultorFiltrados,
+    // Monitor de Reposición en Salón
+    filtroCategoriaReposicion,
+    setFiltroCategoriaReposicion,
+    filtroEstadoReposicion,
+    setFiltroEstadoReposicion,
+    solicitudesReposicion,
+    solicitarReposicion,
+    cancelarSolicitudReposicion,
+    productosAgotados,
+    productosStockBajo,
+    productosParaReponer,
   };
 }

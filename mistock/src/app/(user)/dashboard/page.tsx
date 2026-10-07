@@ -10,13 +10,20 @@
  * habilitando la búsqueda rápida de artículos y el checkout ágil de ventas.
  */
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { useUserDashboardController } from '@/controllers/userControllers/userDashboardController';
 import { UserDashboardView } from '@/views/user/UserDashboardView';
 
-export default function UserDashboardPage() {
+function DashboardPOSContent() {
   const controller = useUserDashboardController();
-
   return <UserDashboardView controller={controller} />;
+}
+
+export default function UserDashboardPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-sm text-[#657373]">Iniciando terminal POS...</div>}>
+      <DashboardPOSContent />
+    </Suspense>
+  );
 }
 

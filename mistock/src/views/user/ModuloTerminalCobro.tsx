@@ -1,0 +1,616 @@
+'use client';
+
+/**
+ * ====================================================================
+ * SUB-VISTA POS: TERMINAL DE COBRO EN MOSTRADOR (ModuloTerminalCobro)
+ * ====================================================================
+ * 
+ * Propósito:
+ * Pantalla de trabajo táctil y de alta velocidad para el cajero:
+ * 1. Escaneo por código de barras o búsqueda de texto con Enter-to-cart.
+ * 2. Catálogo con alternador de vista táctil (Cuadrícula POS) o compacta (Tabla).
+ * 3. Selector de categorías dinámico (Dropdown + Píldoras horizontales).
+ * 4. Carrito / Ticket multi-ítem con modificación de cantidades y subtotales en vivo.
+ * 5. Botón de checkout ágil hacia el modal de cobro multi-método.
+ */
+
+import React, { useRef } from 'react';
+import {
+  Barcode,
+  Package,
+  ShoppingCart,
+  Trash,
+  Plus,
+  Minus,
+  SquaresFour,
+  ListBullets,
+  Tag,
+  Funnel,
+  CaretLeft,
+  CaretRight,
+  Money,
+} from '@phosphor-icons/react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '@/components/ui/table';
+import { useUserDashboardController } from '@/controllers/userControllers/userDashboardController';
+
+interface ModuloTerminalCobroProps {
+  controller: ReturnType<typeof useUserDashboardController>;
+  onAbrirCobro: () => void;
+}
+
+export function ModuloTerminalCobro({
+  controller,
+  onAbrirCobro,
+}: ModuloTerminalCobroProps) {
+  const {
+    data,
+    searchQuery,
+    setSearchQuery,
+    categoriaFiltro,
+    setCategoriaFiltro,
+    categorias,
+    conteosPorCategoria,
+    pagina,
+    setPagina,
+    totalPaginas,
+    inicioPaginacion,
+    itemsPorPagina,
+    filteredProducts,
+    productosPaginados,
+    monedaSimbolo,
+    permitirVentaSinStock,
+    // Carrito
+    carrito,
+    totalCarrito,
+    cantidadArticulosCarrito,
+    agregarAlCarrito,
+    actualizarCantidadItem,
+    removerItemCarrito,
+    vaciarCarrito,
+  } = controller;
+
+  const [modoVistaCatalogo, setModoVistaCatalogo] = React.useState<'grid' | 'table'>('grid');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  /**
+   * Manejo de escáner de código de barras o tecla Enter en el buscador:
+   * Si hay una coincidencia exacta de código de barras o queda un solo producto filtrado,
+   * lo agrega inmediatamente al ticket y limpia el buscador.
+   */
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const query = searchQuery.trim().toLowerCase();
+      if (!query) return;
+
+      const exactCodeMatch = data.productosPopulares.find(
+        (p) => p.codigo.toLowerCase() === query
+      );
+
+      if (exactCodeMatch) {
+        agregarAlCarrito(exactCodeMatch, 1);
+        setSearchQuery('');
+        return;
+      }
+
+      if (filteredProducts.length === 1) {
+        agregarAlCarrito(filteredProducts[0], 1);
+        setSearchQuery('');
+        return;
+      }
+    }
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+      {/* ================================================================== */}
+      {/* COLUMNA IZQUIERDA: CATÁLOGO Y BUSCADOR RÁPIDO (7 de 12 cols)       */}
+      {/* ================================================================== */}
+      <div className="lg:col-span-7 space-y-3">
+        <Card className="border-[#E8E6DF] shadow-xs">
+          <CardContent className="p-4 space-y-3">
+            {/* Buscador + Dropdown de Categorías + Alternador de Vista */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              {/* Buscador de Código de Barras y Nombre */}
+              <div className="relative flex-1">
+                <Input
+                  ref={searchInputRef}
+                  placeholder="Escanear código de barras o buscar por nombre (presione Enter)..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={handleSearchKeyDown}
+                  className="pl-9 h-10 text-xs bg-white border-[#E8E6DF] focus-visible:ring-[#2A7A78]"
+                  autoFocus
+                />
+                <Barcode className="absolute left-3 top-2.5 h-5 w-5 text-[#657373]" />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 top-2.5 text-xs text-[#657373] hover:text-[#1C2424] cursor-pointer"
+                    title="Limpiar búsqueda"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {/* Lista Desplegable con Todas las Categorías */}
+              <div className="w-full sm:w-52 shrink-0">
+                <Select
+                  value={categoriaFiltro}
+                  onValueChange={(val) => setCategoriaFiltro(val)}
+                >
+                  <SelectTrigger className="h-10 text-xs bg-white border-[#E8E6DF] focus:ring-[#2A7A78] cursor-pointer">
+                    <div className="flex items-center gap-1.5 truncate">
+                      <Funnel className="h-3.5 w-3.5 text-[#2A7A78] shrink-0" weight="duotone" />
+                      <SelectValue placeholder="Todas las categorías" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    <SelectItem value="todas">
+                      Todas las categorías ({data.productosPopulares.length})
+                    </SelectItem>
+                    {categorias.map((cat) => (
+                      <SelectItem key={cat} value={cat}>
+                        {cat} ({conteosPorCategoria[cat] || 0})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Alternador de Vista (Cuadrícula Táctil vs Tabla Lista) */}
+              <div className="flex items-center border border-[#E8E6DF] rounded-lg bg-white p-0.5 shrink-0 shadow-2xs self-end sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setModoVistaCatalogo('grid')}
+                  className={`p-2 rounded-md transition-colors cursor-pointer ${
+                    modoVistaCatalogo === 'grid'
+                      ? 'bg-[#2A7A78] text-white'
+                      : 'text-[#657373] hover:text-[#1C2424]'
+                  }`}
+                  title="Vista cuadrícula táctil"
+                >
+                  <SquaresFour className="h-4 w-4" weight={modoVistaCatalogo === 'grid' ? 'bold' : 'regular'} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModoVistaCatalogo('table')}
+                  className={`p-2 rounded-md transition-colors cursor-pointer ${
+                    modoVistaCatalogo === 'table'
+                      ? 'bg-[#2A7A78] text-white'
+                      : 'text-[#657373] hover:text-[#1C2424]'
+                  }`}
+                  title="Vista lista compacta"
+                >
+                  <ListBullets className="h-4 w-4" weight={modoVistaCatalogo === 'table' ? 'bold' : 'regular'} />
+                </button>
+              </div>
+            </div>
+
+            {/* Píldoras de Categorías Rápidas */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+              <span className="text-[11px] font-semibold text-[#657373] shrink-0 hidden md:inline-flex items-center gap-1 mr-0.5">
+                <Tag className="h-3 w-3 text-[#2A7A78]" weight="duotone" />
+                <span>Rápido:</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setCategoriaFiltro('todas')}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all shrink-0 cursor-pointer ${
+                  categoriaFiltro === 'todas'
+                    ? 'bg-[#2A7A78] text-white shadow-xs font-semibold'
+                    : 'bg-[#F8F7F2] text-[#657373] hover:text-[#1C2424] hover:bg-[#E8E6DF] border border-[#E8E6DF]'
+                }`}
+              >
+                <span>Todas</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[9px] ${
+                  categoriaFiltro === 'todas' ? 'bg-white/20 text-white' : 'bg-[#E8E6DF] text-[#657373]'
+                }`}>
+                  {data.productosPopulares.length}
+                </span>
+              </button>
+
+              {categorias.map((cat) => {
+                const esActiva = categoriaFiltro.toLowerCase() === cat.toLowerCase();
+                const cantidad = conteosPorCategoria[cat] || 0;
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setCategoriaFiltro(cat)}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-all shrink-0 cursor-pointer ${
+                      esActiva
+                        ? 'bg-[#2A7A78] text-white shadow-xs font-semibold'
+                        : 'bg-[#F8F7F2] text-[#657373] hover:text-[#1C2424] hover:bg-[#E8E6DF] border border-[#E8E6DF]'
+                    }`}
+                  >
+                    <span>{cat}</span>
+                    <span className={`px-1.5 py-0.2 rounded-full text-[9px] ${
+                      esActiva ? 'bg-white/20 text-white' : 'bg-[#E8E6DF] text-[#657373]'
+                    }`}>
+                      {cantidad}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Contenido del Catálogo: Cuadrícula vs Tabla */}
+            {filteredProducts.length === 0 ? (
+              <div className="p-8 text-center text-[#657373] border border-dashed border-[#E8E6DF] rounded-xl">
+                <Package className="h-8 w-8 mx-auto text-[#A0A8A8] mb-1.5" weight="duotone" />
+                <p className="text-xs font-medium">No se encontraron productos coincidentes.</p>
+                <p className="text-[11px] text-[#A0A8A8] mt-0.5">
+                  Verifique el código escaneado o la categoría seleccionada.
+                </p>
+                {(searchQuery || categoriaFiltro !== 'todas') && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setCategoriaFiltro('todas');
+                    }}
+                    className="text-xs h-7 text-[#2A7A78] hover:underline cursor-pointer mt-2"
+                  >
+                    Limpiar filtros
+                  </Button>
+                )}
+              </div>
+            ) : modoVistaCatalogo === 'grid' ? (
+              /* Vista Cuadrícula */
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                {productosPaginados.map((product) => {
+                  const sinStock = product.stock <= 0 && !permitirVentaSinStock;
+                  const itemEnCarrito = carrito.find((it) => it.producto.id === product.id);
+
+                  return (
+                    <motion.div
+                      key={product.id}
+                      whileHover={sinStock ? {} : { y: -2, scale: 1.01 }}
+                      whileTap={sinStock ? {} : { scale: 0.98 }}
+                      onClick={() => !sinStock && agregarAlCarrito(product, 1)}
+                      className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between relative group ${
+                        sinStock
+                          ? 'bg-gray-50 border-gray-200 opacity-60 cursor-not-allowed'
+                          : itemEnCarrito
+                          ? 'bg-[#E2F1F0]/40 border-[#2A7A78] shadow-xs'
+                          : 'bg-white border-[#E8E6DF] hover:border-[#2A7A78] hover:bg-[#F8F7F2]/60 shadow-2xs'
+                      }`}
+                    >
+                      {itemEnCarrito && (
+                        <div className="absolute top-2 right-2 flex items-center justify-center h-5 px-1.5 rounded-full bg-[#2A7A78] text-white text-[10px] font-bold shadow-xs">
+                          {itemEnCarrito.cantidad} en ticket
+                        </div>
+                      )}
+
+                      <div>
+                        <div className="flex items-center justify-between gap-1 mb-1">
+                          <Badge variant="outline" className="text-[9px] uppercase px-1.5 py-0 border-[#E8E6DF] text-[#657373]">
+                            {product.categoria}
+                          </Badge>
+                          <span className="text-[10px] font-mono text-[#A0A8A8]">{product.codigo}</span>
+                        </div>
+                        <h4 className="font-semibold text-xs text-[#1C2424] line-clamp-2 leading-tight">
+                          {product.nombre}
+                        </h4>
+                      </div>
+
+                      <div className="pt-2.5 mt-2 border-t border-[#E8E6DF]/60 flex items-center justify-between">
+                        <div>
+                          <span className="text-[10px] text-[#657373] block leading-none">Precio</span>
+                          <span className="text-sm font-black text-[#1C2424]">
+                            {monedaSimbolo} {product.precio.toLocaleString('es-AR')}
+                          </span>
+                        </div>
+
+                        <div className="text-right">
+                          <span
+                            className={`text-[10px] font-semibold block leading-none ${
+                              product.stock <= 0
+                                ? 'text-red-600'
+                                : product.stock <= (product.stockMinimo ?? 5)
+                                ? 'text-amber-600'
+                                : 'text-emerald-700'
+                            }`}
+                          >
+                            {product.stock <= 0 ? 'Sin stock' : `${product.stock} un.`}
+                          </span>
+                          <span className="text-[9px] text-[#A0A8A8] inline-flex items-center gap-0.5 mt-0.5">
+                            <Plus className="h-2.5 w-2.5" /> Agregar
+                          </span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            ) : (
+              /* Vista Tabla Compacta */
+              <div className="rounded-lg border border-[#E8E6DF] overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-[#F8F7F2]/60">
+                      <TableHead className="text-xs">Código</TableHead>
+                      <TableHead className="text-xs">Producto</TableHead>
+                      <TableHead className="text-xs">Categoría</TableHead>
+                      <TableHead className="text-xs text-right">Stock</TableHead>
+                      <TableHead className="text-xs text-right">Precio</TableHead>
+                      <TableHead className="text-xs text-right">Acción</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {productosPaginados.map((product) => {
+                      const sinStock = product.stock <= 0 && !permitirVentaSinStock;
+                      const itemEnCarrito = carrito.find((it) => it.producto.id === product.id);
+
+                      return (
+                        <TableRow
+                          key={product.id}
+                          className={`hover:bg-[#F8F7F2]/50 ${sinStock ? 'opacity-60 bg-gray-50/50' : ''}`}
+                        >
+                          <TableCell className="py-2 text-xs font-mono text-[#657373]">
+                            {product.codigo}
+                          </TableCell>
+                          <TableCell className="py-2">
+                            <span className="text-xs font-semibold text-[#1C2424] block">
+                              {product.nombre}
+                            </span>
+                          </TableCell>
+                          <TableCell className="py-2">
+                            <Badge variant="outline" className="text-[9px] uppercase px-1.5 py-0 border-[#E8E6DF] text-[#657373]">
+                              {product.categoria}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="py-2 text-right">
+                            <span
+                              className={`text-xs font-bold ${
+                                product.stock <= 0
+                                  ? 'text-red-600'
+                                  : product.stock <= (product.stockMinimo ?? 5)
+                                  ? 'text-amber-600'
+                                  : 'text-emerald-700'
+                              }`}
+                            >
+                              {product.stock <= 0 ? '0 un.' : `${product.stock} un.`}
+                            </span>
+                          </TableCell>
+                          <TableCell className="py-2 text-right font-black text-xs text-[#1C2424]">
+                            {monedaSimbolo} {product.precio.toLocaleString('es-AR')}
+                          </TableCell>
+                          <TableCell className="py-2 text-right">
+                            <Button
+                              size="sm"
+                              variant={itemEnCarrito ? 'default' : 'outline'}
+                              disabled={sinStock}
+                              onClick={() => agregarAlCarrito(product, 1)}
+                              className={`h-7 px-2.5 text-xs font-semibold gap-1 cursor-pointer ${
+                                itemEnCarrito
+                                  ? 'bg-[#2A7A78] hover:bg-[#205E5D] text-white'
+                                  : 'border-[#E8E6DF] hover:bg-[#E2F1F0] text-[#2A7A78]'
+                              }`}
+                            >
+                              <Plus className="h-3 w-3" />
+                              <span>{itemEnCarrito ? `(${itemEnCarrito.cantidad})` : 'Agregar'}</span>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            {/* Paginación del Catálogo */}
+            {filteredProducts.length > 0 && (
+              <div className="flex items-center justify-between pt-2 border-t border-[#E8E6DF] text-xs text-[#657373]">
+                <div>
+                  Mostrando {inicioPaginacion + 1} a{' '}
+                  {Math.min(inicioPaginacion + itemsPorPagina, filteredProducts.length)} de{' '}
+                  {filteredProducts.length} productos
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setPagina((p) => Math.max(p - 1, 1))}
+                    disabled={pagina <= 1}
+                    className="h-7 px-2 text-xs border-[#E8E6DF] hover:bg-[#F8F7F2] text-[#1C2424] cursor-pointer"
+                  >
+                    <CaretLeft className="h-3.5 w-3.5" />
+                    <span>Ant.</span>
+                  </Button>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded bg-[#F8F7F2] text-[#1C2424] border border-[#E8E6DF]">
+                    {pagina} / {totalPaginas}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setPagina((p) => Math.min(p + 1, totalPaginas))}
+                    disabled={pagina >= totalPaginas}
+                    className="h-7 px-2 text-xs border-[#E8E6DF] hover:bg-[#F8F7F2] text-[#1C2424] cursor-pointer"
+                  >
+                    <span>Sig.</span>
+                    <CaretRight className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ================================================================== */}
+      {/* COLUMNA DERECHA: TICKET / CARRITO DE VENTA ACTIVO (5 de 12 cols)    */}
+      {/* ================================================================== */}
+      <div className="lg:col-span-5 sticky top-4">
+        <Card className="border-[#E8E6DF] shadow-sm bg-white overflow-hidden">
+          <div className="p-3.5 border-b border-[#E8E6DF] bg-[#F8F7F2]/60 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#2A7A78] text-white">
+                <ShoppingCart className="h-4 w-4" weight="duotone" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-[#1C2424] leading-tight">
+                  Ticket de Venta en Curso
+                </h3>
+                <span className="text-[11px] text-[#657373]">
+                  {cantidadArticulosCarrito} {cantidadArticulosCarrito === 1 ? 'artículo' : 'artículos'} agregados
+                </span>
+              </div>
+            </div>
+
+            {carrito.length > 0 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={vaciarCarrito}
+                className="h-7 px-2 text-[11px] text-red-600 hover:text-red-700 hover:bg-red-50 cursor-pointer gap-1"
+                title="Vaciar ticket completo"
+              >
+                <Trash className="h-3.5 w-3.5" />
+                <span>Vaciar</span>
+              </Button>
+            )}
+          </div>
+
+          <CardContent className="p-3.5 space-y-3">
+            {carrito.length === 0 ? (
+              <div className="py-12 px-4 text-center border border-dashed border-[#E8E6DF] rounded-xl space-y-2">
+                <div className="flex h-12 w-12 mx-auto items-center justify-center rounded-full bg-[#F8F7F2] text-[#A0A8A8]">
+                  <ShoppingCart className="h-6 w-6" weight="duotone" />
+                </div>
+                <p className="text-xs font-bold text-[#1C2424]">El ticket está listo y vacío</p>
+                <p className="text-[11px] text-[#657373] max-w-xs mx-auto">
+                  Escanee un código de barras o seleccione productos del catálogo para comenzar a registrar la venta.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+                <AnimatePresence initial={false}>
+                  {carrito.map((item) => (
+                    <motion.div
+                      key={item.producto.id}
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className="p-2.5 rounded-lg border border-[#E8E6DF] bg-white hover:border-[#2A7A78]/50 shadow-2xs transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-xs font-bold text-[#1C2424] truncate">
+                            {item.producto.nombre}
+                          </h4>
+                          <div className="flex items-center gap-2 mt-0.5 text-[10px] text-[#657373]">
+                            <span className="font-mono">{item.producto.codigo}</span>
+                            <span>•</span>
+                            <span>{monedaSimbolo} {item.producto.precio.toLocaleString('es-AR')} c/u</span>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => removerItemCarrito(item.producto.id)}
+                          className="text-[#657373] hover:text-red-600 transition-colors p-1 cursor-pointer"
+                          title="Quitar artículo"
+                        >
+                          <Trash className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 mt-1.5 border-t border-[#E8E6DF]/50">
+                        {/* Selector de Cantidad */}
+                        <div className="flex items-center border border-[#E8E6DF] rounded-lg bg-[#F8F7F2]/60 overflow-hidden">
+                          <button
+                            type="button"
+                            onClick={() => actualizarCantidadItem(item.producto.id, item.cantidad - 1)}
+                            className="h-7 w-7 flex items-center justify-center hover:bg-[#E8E6DF] text-[#1C2424] cursor-pointer transition-colors"
+                            title="Restar 1"
+                          >
+                            <Minus className="h-3 w-3" />
+                          </button>
+                          <span className="w-8 text-center text-xs font-bold text-[#1C2424] select-none">
+                            {item.cantidad}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => actualizarCantidadItem(item.producto.id, item.cantidad + 1)}
+                            className="h-7 w-7 flex items-center justify-center hover:bg-[#E8E6DF] text-[#1C2424] cursor-pointer transition-colors"
+                            title="Sumar 1"
+                          >
+                            <Plus className="h-3 w-3" />
+                          </button>
+                        </div>
+
+                        {/* Subtotal del Renglón */}
+                        <div className="text-right">
+                          <span className="text-xs font-black text-[#1C2424]">
+                            {monedaSimbolo} {item.subtotal.toLocaleString('es-AR')}
+                          </span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            )}
+
+            {/* Resumen Financiero y Botón de Cobro */}
+            <div className="pt-3 border-t border-[#E8E6DF] space-y-3">
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between text-[#657373]">
+                  <span>Subtotal ({cantidadArticulosCarrito} artículos):</span>
+                  <span className="font-semibold text-[#1C2424]">
+                    {monedaSimbolo} {totalCarrito.toLocaleString('es-AR')}
+                  </span>
+                </div>
+                <div className="flex justify-between items-baseline pt-1 border-t border-dashed border-[#E8E6DF]">
+                  <span className="text-sm font-bold text-[#1C2424]">TOTAL A COBRAR:</span>
+                  <span className="text-2xl font-black text-emerald-800 tracking-tight">
+                    {monedaSimbolo} {totalCarrito.toLocaleString('es-AR')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Botón Principal de Cobro */}
+              <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
+                <Button
+                  type="button"
+                  disabled={carrito.length === 0}
+                  onClick={onAbrirCobro}
+                  className="w-full h-12 text-sm bg-emerald-700 hover:bg-emerald-800 text-white font-bold gap-2 cursor-pointer disabled:opacity-40 shadow-sm transition-all"
+                >
+                  <Money className="h-5 w-5" weight="bold" />
+                  <span>Cobrar Ticket ({monedaSimbolo} {totalCarrito.toLocaleString('es-AR')})</span>
+                </Button>
+              </motion.div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

@@ -13,7 +13,7 @@
  * - Integración con control de jerarquía (Admin operando en caja).
  */
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { List, X, UserCheck } from '@phosphor-icons/react';
 import { UserSidebar } from '@/views/user/UserSidebar';
 import { Footer } from '@/views/comunes/Footer';
@@ -40,7 +40,9 @@ export default function UserLayout({
 
       {/* Sidebar Desktop */}
       <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:w-64">
-        <UserSidebar esAdmin={esAdmin} />
+        <Suspense fallback={<div className="w-64 h-full bg-white border-r border-[#E8E6DF]" />}>
+          <UserSidebar esAdmin={esAdmin} />
+        </Suspense>
       </aside>
 
       {/* Mobile Drawer Backdrop */}
@@ -66,10 +68,12 @@ export default function UserLayout({
             <X className="h-5 w-5" />
           </button>
         </div>
-        <UserSidebar
-          esAdmin={esAdmin}
-          onNavigate={() => setMobileMenuOpen(false)}
-        />
+        <Suspense fallback={<div className="w-64 h-full bg-white" />}>
+          <UserSidebar
+            esAdmin={esAdmin}
+            onNavigate={() => setMobileMenuOpen(false)}
+          />
+        </Suspense>
       </aside>
 
       {/* Main Content */}

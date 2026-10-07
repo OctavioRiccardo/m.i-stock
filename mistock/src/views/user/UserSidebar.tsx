@@ -10,29 +10,29 @@
  * accesos directos a ventas, catálogo, historial diario y resumen de stock.
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
   ShoppingCart,
-  Package,
   Receipt,
   ListChecks,
   ArrowsLeftRight,
   SignOut,
   UserCheck,
+  Tag,
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 
 /**
- * Enlaces de navegación rápida para la operativa de ventas.
+ * Enlaces de navegación rápida para la operativa modular de ventas en mostrador.
  */
 const userNavData = [
-  { link: '/dashboard', label: 'Ventas y Operaciones', icon: ShoppingCart },
-  { link: '/dashboard#productos', label: 'Catálogo de Productos', icon: Package },
-  { link: '/dashboard#historial', label: 'Historial del Día', icon: Receipt },
-  { link: '/dashboard#resumen', label: 'Resumen de Stock', icon: ListChecks },
+  { id: 'caja', link: '/dashboard?tab=caja', label: 'Terminal de Cobro', icon: ShoppingCart },
+  { id: 'precios', link: '/dashboard?tab=precios', label: 'Consultor de Precios', icon: Tag },
+  { id: 'historial', link: '/dashboard?tab=historial', label: 'Historial del Día', icon: Receipt },
+  { id: 'reposicion', link: '/dashboard?tab=reposicion', label: 'Faltantes de Góndola', icon: ListChecks },
 ];
-
 
 interface UserSidebarProps {
   onNavigate?: () => void;
@@ -41,7 +41,8 @@ interface UserSidebarProps {
 }
 
 export function UserSidebar({ onNavigate, className, esAdmin = false }: UserSidebarProps = {}) {
-  const [active, setActive] = useState('Ventas y Operaciones');
+  const searchParams = useSearchParams();
+  const currentTab = searchParams?.get('tab') || 'caja';
 
   return (
     <nav className={cn('flex flex-col h-full bg-white border-r border-[#E8E6DF] w-64', className)}>
@@ -71,14 +72,13 @@ export function UserSidebar({ onNavigate, className, esAdmin = false }: UserSide
 
         {userNavData.map((item) => {
           const Icon = item.icon;
-          const isActive = item.label === active;
+          const isActive = item.id === currentTab;
 
           return (
             <Link
-              key={item.label}
+              key={item.id}
               href={item.link}
               onClick={() => {
-                setActive(item.label);
                 onNavigate?.();
               }}
               className={cn(

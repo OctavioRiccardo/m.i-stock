@@ -21,6 +21,11 @@ import { MetodoPago, EstadoVenta, DetalleVenta, Pago } from '@/models/modelos_do
 // ====================================================================
 
 /**
+ * Módulos / pestañas operativas disponibles en la terminal del vendedor/cajero (POS).
+ */
+export type PestanaOperativaPOS = 'caja' | 'precios' | 'historial' | 'reposicion';
+
+/**
  * Representación optimizada de un producto para listas rápidas en el POS.
  */
 export interface ProductoRapidoPOS {
@@ -31,6 +36,9 @@ export interface ProductoRapidoPOS {
   stock: number;
   stockMinimo?: number;
   codigo: string;
+  descripcion?: string;
+  unidadMedida?: string;
+  oferta?: boolean;
 }
 export type QuickProduct = ProductoRapidoPOS;
 

@@ -6,62 +6,34 @@
  * ====================================================================
  * 
  * Propósito:
- * Pantalla de trabajo principal para el empleado / cajero de mostrador:
- * 1. Búsqueda y escáner de código de barras ultrarrápido con adición directa al ticket (Enter).
- * 2. Catálogo ágil con alternador de vista táctil (Cuadrícula POS) o compacta (Lista).
- * 3. Ticket actual multi-producto en tiempo real con selector de cantidades y subtotales.
- * 4. Cobro inmediato con múltiples medios de pago, cálculo reactivo de vuelto y emisión de ticket.
- * 5. Historial de ventas de la jornada con alternador dual (Tarjetas / Tabla) y filtros por medio de cobro.
+ * Pantalla central modularizada para el vendedor y cajero en mostrador:
+ * 1. Terminal de Cobro: Operativa de caja, escaneo de código de barras y ticket activo.
+ * 2. Consultor de Precios: Verificación rápida de artículos y disponibilidad sin tocar el ticket.
+ * 3. Historial del Día: Auditoría y reimpresión de comprobantes térmicos de 80mm del turno.
+ * 4. Faltantes de Góndola: Monitor de reposición de salón desde depósito (sin costos confidenciales).
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
-  Barcode,
   ShoppingCart,
-  Package,
-  CheckCircle,
-  Clock,
-  WarningCircle,
-  Money,
-  CaretLeft,
-  CaretRight,
-  Receipt,
-  Trash,
-  Plus,
-  Minus,
-  SquaresFour,
-  ListBullets,
-  CreditCard,
-  QrCode,
-  ArrowsLeftRight,
-  Funnel,
   Tag,
+  Receipt,
+  ListChecks,
+  CheckCircle,
+  WarningCircle,
+  Storefront,
 } from '@phosphor-icons/react';
-import { useUserDashboardController } from '@/controllers/userControllers/userDashboardController';
 import { motion, AnimatePresence, MotionConfig } from 'motion/react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useUserDashboardController } from '@/controllers/userControllers/userDashboardController';
+import { VentaRecientePOS, PestanaOperativaPOS } from '@/models/modelos_vista/dashboardModel';
+import { ModuloTerminalCobro } from './ModuloTerminalCobro';
+import { ModuloConsultorPrecios } from './ModuloConsultorPrecios';
+import { ModuloHistorialTickets } from './ModuloHistorialTickets';
+import { ModuloMonitorReposicion } from './ModuloMonitorReposicion';
 import { ModalCobroTicket } from './ModalCobroTicket';
 import { ModalDetalleVenta } from './ModalDetalleVenta';
-import { VentaRecientePOS } from '@/models/modelos_vista/dashboardModel';
 
 interface UserDashboardViewProps {
   controller: ReturnType<typeof useUserDashboardController>;
@@ -69,202 +41,64 @@ interface UserDashboardViewProps {
 
 export function UserDashboardView({ controller }: UserDashboardViewProps) {
   const {
+    pestanaOperativa,
+    setPestanaOperativa,
     data,
-    searchQuery,
-    setSearchQuery,
-    categoriaFiltro,
-    setCategoriaFiltro,
-    categorias,
-    conteosPorCategoria,
-    pagina,
-    setPagina,
-    totalPaginas,
-    inicioPaginacion,
-    itemsPorPagina,
-    filteredProducts,
-    productosPaginados,
-    paginaVentas,
-    setPaginaVentas,
-    totalPaginasVentas,
-    inicioPaginacionVentas,
-    itemsPorPaginaVentas,
-    ventasRecientesPaginadas,
-    ventasFiltradas,
-    metodoPagoFiltroVentas,
-    setMetodoPagoFiltroVentas,
-    conteosPorMetodoPago,
+    monedaSimbolo,
+    config,
+    permitirVentaSinStock,
     saleSuccessMessage,
     saleErrorMessage,
-    monedaSimbolo,
-    permitirVentaSinStock,
-    config,
-    // Operativa del Ticket / Carrito
     carrito,
     totalCarrito,
-    cantidadArticulosCarrito,
-    agregarAlCarrito,
-    actualizarCantidadItem,
-    removerItemCarrito,
-    vaciarCarrito,
     procesarVentaTicket,
+    productosAgotados,
   } = controller;
 
-  // Estados de interfaz
-  const [modoVistaCatalogo, setModoVistaCatalogo] = useState<'grid' | 'table'>('grid');
-  const [modoVistaVentas, setModoVistaVentas] = useState<'grid' | 'table'>('table');
   const [isModalCobroOpen, setIsModalCobroOpen] = useState<boolean>(false);
   const [ventaSeleccionada, setVentaSeleccionada] = useState<VentaRecientePOS | null>(null);
-  const [mostrarHistorial, setMostrarHistorial] = useState<boolean>(true);
-
-  const searchInputRef = useRef<HTMLInputElement>(null);
 
   /**
-   * Opciones de filtro por medio de pago para las ventas recientes
+   * Pestañas operativas disponibles para el vendedor / cajero
    */
-  const opcionesFiltroMetodo = [
-    { id: 'todos', label: 'Todos los medios', icon: Receipt },
-    { id: 'efectivo', label: 'Efectivo', icon: Money },
-    { id: 'mercado_pago', label: 'Mercado Pago', icon: QrCode },
-    { id: 'tarjeta_debito', label: 'Débito', icon: CreditCard },
-    { id: 'tarjeta_credito', label: 'Crédito', icon: CreditCard },
-    { id: 'transferencia', label: 'Transferencia', icon: ArrowsLeftRight },
+  const pestanas: { id: PestanaOperativaPOS; label: string; icon: React.ElementType; badge?: number }[] = [
+    { id: 'caja', label: 'Terminal de Cobro', icon: ShoppingCart, badge: carrito.length > 0 ? carrito.length : undefined },
+    { id: 'precios', label: 'Consultor de Precios', icon: Tag },
+    { id: 'historial', label: 'Historial del Día', icon: Receipt },
+    { id: 'reposicion', label: 'Faltantes de Góndola', icon: ListChecks, badge: productosAgotados.length > 0 ? productosAgotados.length : undefined },
   ];
 
-  /**
-   * Renderiza el badge visual correspondiente a cada método de cobro
-   */
-  const renderBadgeMetodo = (metodo?: string) => {
-    const m = metodo || 'efectivo';
-    switch (m) {
-      case 'efectivo':
-        return (
-          <Badge
-            variant="outline"
-            className="text-[9px] uppercase px-1.5 py-0 font-semibold border-emerald-300 text-emerald-700 bg-emerald-50 gap-1 inline-flex items-center"
-          >
-            <Money className="h-3 w-3" weight="bold" />
-            <span>Efectivo</span>
-          </Badge>
-        );
-      case 'mercado_pago':
-        return (
-          <Badge
-            variant="outline"
-            className="text-[9px] uppercase px-1.5 py-0 font-semibold border-[#009EE3]/40 text-[#009EE3] bg-[#009EE3]/10 gap-1 inline-flex items-center"
-          >
-            <QrCode className="h-3 w-3" weight="bold" />
-            <span>Mercado Pago</span>
-          </Badge>
-        );
-      case 'tarjeta_debito':
-        return (
-          <Badge
-            variant="outline"
-            className="text-[9px] uppercase px-1.5 py-0 font-semibold border-[#2A7A78]/40 text-[#2A7A78] bg-[#E2F1F0]/60 gap-1 inline-flex items-center"
-          >
-            <CreditCard className="h-3 w-3" weight="bold" />
-            <span>Débito</span>
-          </Badge>
-        );
-      case 'tarjeta_credito':
-        return (
-          <Badge
-            variant="outline"
-            className="text-[9px] uppercase px-1.5 py-0 font-semibold border-[#2A7A78]/40 text-[#2A7A78] bg-[#E2F1F0]/60 gap-1 inline-flex items-center"
-          >
-            <CreditCard className="h-3 w-3" weight="bold" />
-            <span>Crédito</span>
-          </Badge>
-        );
-      case 'transferencia':
-        return (
-          <Badge
-            variant="outline"
-            className="text-[9px] uppercase px-1.5 py-0 font-semibold border-gray-300 text-gray-700 bg-gray-50 gap-1 inline-flex items-center"
-          >
-            <ArrowsLeftRight className="h-3 w-3" weight="bold" />
-            <span>Transferencia</span>
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="outline" className="text-[9px] uppercase px-1.5 py-0 font-semibold border-[#E8E6DF] text-[#657373]">
-            {m.replace('_', ' ')}
-          </Badge>
-        );
-    }
-  };
-
-  /**
-   * Manejo de escáner de código de barras o Enter en el buscador:
-   * Si el cajero presiona Enter y hay una coincidencia exacta de código o 1 solo producto filtrado,
-   * lo añade inmediatamente al ticket y limpia el buscador para el siguiente artículo.
-   */
-  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const query = searchQuery.trim().toLowerCase();
-      if (!query) return;
-
-      // Buscar coincidencia exacta por código de barra primero
-      const exactCodeMatch = data.productosPopulares.find(
-        (p) => p.codigo.toLowerCase() === query
-      );
-
-      if (exactCodeMatch) {
-        agregarAlCarrito(exactCodeMatch, 1);
-        setSearchQuery('');
-        return;
-      }
-
-      // Si no es código exacto pero queda 1 solo producto filtrado
-      if (filteredProducts.length === 1) {
-        agregarAlCarrito(filteredProducts[0], 1);
-        setSearchQuery('');
-        return;
-      }
-    }
-  };
-
-  /**
-   * Callback cuando se completa una venta para abrir el visor de ticket térmico.
-   */
   const handleVentaCompletada = (venta: VentaRecientePOS) => {
     setVentaSeleccionada(venta);
   };
 
   return (
     <MotionConfig reducedMotion="user">
-      <motion.div
-        initial={{ opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.22, ease: 'easeOut' }}
-        className="max-w-7xl mx-auto space-y-4"
-      >
+      <div className="max-w-7xl mx-auto space-y-4">
         {/* ==================================================================== */}
-        {/* BARRA SUPERIOR: ESTADO DE CAJA & RESUMEN DE TURNO                     */}
+        {/* BARRA SUPERIOR: ESTADO DE CAJA & ACCESOS MODULARES                   */}
         {/* ==================================================================== */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border border-[#E8E6DF] bg-white shadow-xs">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#2A7A78] text-white shadow-xs">
-              <ShoppingCart className="h-5 w-5" weight="duotone" />
+              <Storefront className="h-5 w-5" weight="duotone" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold text-[#1C2424] tracking-tight">
-                  Terminal de Cobro en Mostrador
+                <h1 className="text-base sm:text-lg font-bold text-[#1C2424] tracking-tight">
+                  Punto de Venta y Salón (POS)
                 </h1>
                 <Badge variant="outline" className="text-[10px] font-bold text-[#2A7A78] border-[#2A7A78]/30 bg-[#E2F1F0]/50">
                   Caja N° {config.pos.numeroCaja || 1}
                 </Badge>
                 {permitirVentaSinStock && (
                   <Badge variant="warning" className="text-[10px]">
-                    Sin límite stock
+                    Venta sin stock activada
                   </Badge>
                 )}
               </div>
               <p className="text-xs text-[#657373]">
-                Punto de Venta operativo • Escaneo de código de barras y cobro inmediato.
+                Operativa comercial en mostrador • Gestión de ventas, precios y reposición de salón.
               </p>
             </div>
           </div>
@@ -288,20 +122,50 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                 {data.ventasDelDia} tickets
               </span>
             </div>
-
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setMostrarHistorial(!mostrarHistorial)}
-              className="text-xs h-9 border-[#E8E6DF] text-[#1C2424] hover:bg-[#F8F7F2] cursor-pointer gap-1.5"
-            >
-              <Receipt className="h-4 w-4 text-[#2A7A78]" weight="duotone" />
-              <span>{mostrarHistorial ? 'Ocultar Historial' : 'Ver Historial'}</span>
-            </Button>
           </div>
         </div>
 
-        {/* Notificaciones de Operación */}
+        {/* ==================================================================== */}
+        {/* SELECTOR SEGMENTADO DE PESTAÑAS OPERATIVAS                           */}
+        {/* ==================================================================== */}
+        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#E8E6DF]/60 border border-[#E8E6DF] overflow-x-auto">
+          {pestanas.map((pestana) => {
+            const Icon = pestana.icon;
+            const esActiva = pestanaOperativa === pestana.id;
+
+            return (
+              <button
+                key={pestana.id}
+                type="button"
+                onClick={() => setPestanaOperativa(pestana.id)}
+                className={`flex-1 min-w-[150px] py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+                  esActiva
+                    ? 'bg-white text-[#1C2424] shadow-xs'
+                    : 'text-[#657373] hover:text-[#1C2424] hover:bg-white/40'
+                }`}
+              >
+                <Icon
+                  className={`h-4 w-4 ${esActiva ? 'text-[#2A7A78]' : 'text-[#657373]'}`}
+                  weight={esActiva ? 'duotone' : 'regular'}
+                />
+                <span>{pestana.label}</span>
+                {pestana.badge !== undefined && (
+                  <span
+                    className={`px-1.5 py-0.2 rounded-full text-[9px] font-bold ${
+                      pestana.id === 'reposicion'
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-[#2A7A78] text-white'
+                    }`}
+                  >
+                    {pestana.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Notificaciones Operativas Globales */}
         <AnimatePresence>
           {saleSuccessMessage && (
             <motion.div
@@ -314,7 +178,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
             >
               <Alert variant="success" className="shadow-xs border-emerald-300 bg-emerald-50">
                 <CheckCircle className="h-4 w-4 text-emerald-700" weight="fill" />
-                <AlertTitle className="text-emerald-900 font-bold">Cobro Registrado con Éxito</AlertTitle>
+                <AlertTitle className="text-emerald-900 font-bold">Operación Registrada</AlertTitle>
                 <AlertDescription className="text-emerald-800 text-xs">{saleSuccessMessage}</AlertDescription>
               </Alert>
             </motion.div>
@@ -331,7 +195,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
             >
               <Alert variant="destructive" className="shadow-xs">
                 <WarningCircle className="h-4 w-4 text-red-600" weight="fill" />
-                <AlertTitle className="font-bold">Aviso de Operación</AlertTitle>
+                <AlertTitle className="font-bold">Aviso Operativo</AlertTitle>
                 <AlertDescription className="text-xs">{saleErrorMessage}</AlertDescription>
               </Alert>
             </motion.div>
@@ -339,743 +203,63 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
         </AnimatePresence>
 
         {/* ==================================================================== */}
-        {/* ÁREA PRINCIPAL: PANTALLA DIVIDIDA POS (CATÁLOGO + TICKET ACTIVO)       */}
+        {/* RENDERIZADO CONDICIONAL DE LA SUB-VISTA ACTIVA                       */}
         {/* ==================================================================== */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* ================================================================== */}
-          {/* COLUMNA IZQUIERDA: CATÁLOGO Y BUSCADOR RÁPIDO (7 de 12 columnas)    */}
-          {/* ================================================================== */}
-          <div className="lg:col-span-7 space-y-3">
-            <Card className="border-[#E8E6DF] shadow-xs">
-              <CardContent className="p-4 space-y-3">
-                {/* Fila de Búsqueda, Filtro Desplegable de Categorías y Modo de Vista */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                  {/* Buscador de Código de Barras y Nombre */}
-                  <div className="relative flex-1">
-                    <Input
-                      ref={searchInputRef}
-                      placeholder="Escanear código de barras o buscar por nombre (presione Enter para agregar)..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      onKeyDown={handleSearchKeyDown}
-                      className="pl-9 h-10 text-xs bg-white border-[#E8E6DF] focus-visible:ring-[#2A7A78]"
-                      autoFocus
-                    />
-                    <Barcode className="absolute left-3 top-2.5 h-5 w-5 text-[#657373]" />
-                    {searchQuery && (
-                      <button
-                        type="button"
-                        onClick={() => setSearchQuery('')}
-                        className="absolute right-2.5 top-2.5 text-xs text-[#657373] hover:text-[#1C2424] cursor-pointer"
-                        title="Limpiar búsqueda"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
+        <AnimatePresence mode="wait">
+          {pestanaOperativa === 'caja' && (
+            <motion.div
+              key="modulo-caja"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.18 }}
+            >
+              <ModuloTerminalCobro
+                controller={controller}
+                onAbrirCobro={() => setIsModalCobroOpen(true)}
+              />
+            </motion.div>
+          )}
 
-                  {/* Lista Desplegable con Todas las Categorías */}
-                  <div className="w-full sm:w-52 shrink-0">
-                    <Select
-                      value={categoriaFiltro}
-                      onValueChange={(val) => setCategoriaFiltro(val)}
-                    >
-                      <SelectTrigger className="h-10 text-xs bg-white border-[#E8E6DF] focus:ring-[#2A7A78] cursor-pointer">
-                        <div className="flex items-center gap-1.5 truncate">
-                          <Funnel className="h-3.5 w-3.5 text-[#2A7A78] shrink-0" weight="duotone" />
-                          <SelectValue placeholder="Todas las categorías" />
-                        </div>
-                      </SelectTrigger>
-                      <SelectContent className="max-h-72">
-                        <SelectItem value="todas">
-                          Todas las categorías ({data.productosPopulares.length})
-                        </SelectItem>
-                        {categorias.map((cat) => (
-                          <SelectItem key={cat} value={cat}>
-                            {cat} ({conteosPorCategoria[cat] || 0})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+          {pestanaOperativa === 'precios' && (
+            <motion.div
+              key="modulo-precios"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.18 }}
+            >
+              <ModuloConsultorPrecios controller={controller} />
+            </motion.div>
+          )}
 
-                  {/* Alternador de Vista de Catálogo (Cuadrícula Táctil vs Tabla Lista) */}
-                  <div className="flex items-center border border-[#E8E6DF] rounded-lg bg-white p-0.5 shrink-0 shadow-2xs self-end sm:self-auto">
-                    <button
-                      type="button"
-                      onClick={() => setModoVistaCatalogo('grid')}
-                      className={`p-2 rounded-md transition-colors cursor-pointer ${
-                        modoVistaCatalogo === 'grid'
-                          ? 'bg-[#2A7A78] text-white'
-                          : 'text-[#657373] hover:text-[#1C2424]'
-                      }`}
-                      title="Vista cuadrícula táctil"
-                    >
-                      <SquaresFour className="h-4 w-4" weight={modoVistaCatalogo === 'grid' ? 'bold' : 'regular'} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setModoVistaCatalogo('table')}
-                      className={`p-2 rounded-md transition-colors cursor-pointer ${
-                        modoVistaCatalogo === 'table'
-                          ? 'bg-[#2A7A78] text-white'
-                          : 'text-[#657373] hover:text-[#1C2424]'
-                      }`}
-                      title="Vista lista compacta"
-                    >
-                      <ListBullets className="h-4 w-4" weight={modoVistaCatalogo === 'table' ? 'bold' : 'regular'} />
-                    </button>
-                  </div>
-                </div>
+          {pestanaOperativa === 'historial' && (
+            <motion.div
+              key="modulo-historial"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.18 }}
+            >
+              <ModuloHistorialTickets
+                controller={controller}
+                onVerVenta={(sale) => setVentaSeleccionada(sale)}
+              />
+            </motion.div>
+          )}
 
-                {/* Píldoras de Categorías Rápidas */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-                  <span className="text-[11px] font-semibold text-[#657373] shrink-0 hidden md:inline-flex items-center gap-1 mr-0.5">
-                    <Tag className="h-3 w-3 text-[#2A7A78]" weight="duotone" />
-                    <span>Rápido:</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setCategoriaFiltro('todas')}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all shrink-0 cursor-pointer ${
-                      categoriaFiltro === 'todas'
-                        ? 'bg-[#2A7A78] text-white shadow-xs font-semibold'
-                        : 'bg-[#F8F7F2] text-[#657373] hover:text-[#1C2424] hover:bg-[#E8E6DF] border border-[#E8E6DF]'
-                    }`}
-                  >
-                    <span>Todas</span>
-                    <span className={`px-1.5 py-0.2 rounded-full text-[9px] ${
-                      categoriaFiltro === 'todas' ? 'bg-white/20 text-white' : 'bg-[#E8E6DF] text-[#657373]'
-                    }`}>
-                      {data.productosPopulares.length}
-                    </span>
-                  </button>
-
-                  {categorias.map((cat) => {
-                    const esActiva = categoriaFiltro.toLowerCase() === cat.toLowerCase();
-                    const cantidad = conteosPorCategoria[cat] || 0;
-                    return (
-                      <button
-                        key={cat}
-                        type="button"
-                        onClick={() => setCategoriaFiltro(cat)}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-all shrink-0 cursor-pointer ${
-                          esActiva
-                            ? 'bg-[#2A7A78] text-white shadow-xs font-semibold'
-                            : 'bg-[#F8F7F2] text-[#657373] hover:text-[#1C2424] hover:bg-[#E8E6DF] border border-[#E8E6DF]'
-                        }`}
-                      >
-                        <span>{cat}</span>
-                        <span className={`px-1.5 py-0.2 rounded-full text-[9px] ${
-                          esActiva ? 'bg-white/20 text-white' : 'bg-[#E8E6DF] text-[#657373]'
-                        }`}>
-                          {cantidad}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* ============================================================== */}
-                {/* CONTENIDO DEL CATÁLOGO (GRID TÁCTIL O TABLA COMPACTA)           */}
-                {/* ============================================================== */}
-                {filteredProducts.length === 0 ? (
-                  <div className="p-8 text-center text-[#657373] border border-dashed border-[#E8E6DF] rounded-xl">
-                    <Package className="h-8 w-8 mx-auto text-[#A0A8A8] mb-1.5" weight="duotone" />
-                    <p className="text-xs font-medium">No se encontraron productos coincidentes.</p>
-                    <p className="text-[11px] text-[#A0A8A8] mt-0.5">
-                      Verifique el código escaneado o la categoría seleccionada.
-                    </p>
-                    {(searchQuery || categoriaFiltro !== 'todas') && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setSearchQuery('');
-                          setCategoriaFiltro('todas');
-                        }}
-                        className="text-xs h-7 text-[#2A7A78] hover:underline cursor-pointer mt-2"
-                      >
-                        Limpiar filtros
-                      </Button>
-                    )}
-                  </div>
-                ) : modoVistaCatalogo === 'grid' ? (
-                  /* VISTA 1: CUADRÍCULA TÁCTIL (GRID POS) */
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-[500px] overflow-y-auto p-0.5">
-                    {productosPaginados.map((prod) => {
-                      const sinStock = prod.stock <= 0 && !permitirVentaSinStock;
-                      const umbral = prod.stockMinimo ?? 5;
-                      const esStockBajo = prod.stock > 0 && prod.stock <= umbral;
-
-                      return (
-                        <motion.div
-                          key={prod.id}
-                          whileHover={{ y: -2, scale: 1.01 }}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={() => !sinStock && agregarAlCarrito(prod, 1)}
-                          className={`p-3 rounded-xl border transition-all text-left flex flex-col justify-between shadow-2xs ${
-                            sinStock
-                              ? 'border-gray-200 bg-gray-50/60 opacity-60 cursor-not-allowed'
-                              : 'border-[#E8E6DF] bg-white hover:border-[#2A7A78] hover:shadow-xs cursor-pointer'
-                          }`}
-                        >
-                          <div>
-                            <div className="flex items-start justify-between gap-1 mb-1">
-                              <span className="text-[10px] font-semibold text-[#657373] uppercase tracking-wider truncate">
-                                {prod.categoria}
-                              </span>
-                              <Badge
-                                variant={
-                                  prod.stock <= 0
-                                    ? 'destructive'
-                                    : esStockBajo
-                                    ? 'warning'
-                                    : 'outline'
-                                }
-                                className="text-[9px] px-1.5 py-0 shrink-0"
-                              >
-                                {prod.stock <= 0 ? 'Sin stock' : `${prod.stock} un.`}
-                              </Badge>
-                            </div>
-                            <h3 className="text-xs font-bold text-[#1C2424] leading-snug line-clamp-2">
-                              {prod.nombre}
-                            </h3>
-                            <p className="text-[10px] text-[#657373] mt-0.5 font-mono">
-                              Cód: {prod.codigo}
-                            </p>
-                          </div>
-
-                          <div className="flex items-center justify-between pt-2.5 mt-2 border-t border-[#E8E6DF]/60">
-                            <span className="text-sm font-black text-[#1C2424]">
-                              {monedaSimbolo} {prod.precio.toLocaleString('es-AR')}
-                            </span>
-                            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78] group-hover:bg-[#2A7A78] group-hover:text-white transition-colors">
-                              <Plus className="h-3.5 w-3.5" weight="bold" />
-                            </div>
-                          </div>
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  /* VISTA 2: LISTA / TABLA COMPACTA */
-                  <div className="rounded-lg border border-[#E8E6DF] overflow-hidden max-h-[500px] overflow-y-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-[#F8F7F2]/60">
-                          <TableHead className="text-xs">Producto / Cód.</TableHead>
-                          <TableHead className="text-xs">Stock</TableHead>
-                          <TableHead className="text-xs">Precio</TableHead>
-                          <TableHead className="text-right text-xs">Acción</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {productosPaginados.map((prod) => {
-                          const sinStock = prod.stock <= 0 && !permitirVentaSinStock;
-                          const umbral = prod.stockMinimo ?? 5;
-                          const esStockBajo = prod.stock > 0 && prod.stock <= umbral;
-
-                          return (
-                            <TableRow key={prod.id} className="hover:bg-[#F8F7F2]/50">
-                              <TableCell className="py-2">
-                                <div className="font-semibold text-xs text-[#1C2424]">{prod.nombre}</div>
-                                <div className="text-[10px] text-[#657373]">
-                                  {prod.categoria} • Cód: {prod.codigo}
-                                </div>
-                              </TableCell>
-                              <TableCell className="py-2">
-                                <Badge
-                                  variant={
-                                    prod.stock <= 0
-                                      ? 'destructive'
-                                      : esStockBajo
-                                      ? 'warning'
-                                      : 'outline'
-                                  }
-                                  className="text-[10px]"
-                                >
-                                  {prod.stock <= 0 ? '0 un.' : `${prod.stock} un.`}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="py-2 font-bold text-xs text-[#1C2424]">
-                                {monedaSimbolo} {prod.precio.toLocaleString('es-AR')}
-                              </TableCell>
-                              <TableCell className="py-2 text-right">
-                                <Button
-                                  size="sm"
-                                  type="button"
-                                  disabled={sinStock}
-                                  onClick={() => agregarAlCarrito(prod, 1)}
-                                  className="h-7 px-2.5 text-xs bg-[#2A7A78] hover:bg-[#205E5D] text-white shadow-2xs gap-1 cursor-pointer font-medium disabled:opacity-40"
-                                >
-                                  <Plus className="h-3 w-3" weight="bold" />
-                                  <span>Agregar</span>
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-
-                {/* Paginación del Catálogo */}
-                {filteredProducts.length > 0 && (
-                  <div className="flex items-center justify-between pt-2 border-t border-[#E8E6DF] text-xs text-[#657373]">
-                    <div>
-                      Mostrando{' '}
-                      <span className="font-semibold text-[#1C2424]">
-                        {inicioPaginacion + 1}
-                      </span>{' '}
-                      a{' '}
-                      <span className="font-semibold text-[#1C2424]">
-                        {Math.min(inicioPaginacion + itemsPorPagina, filteredProducts.length)}
-                      </span>{' '}
-                      de{' '}
-                      <span className="font-semibold text-[#1C2424]">{filteredProducts.length}</span>{' '}
-                      productos
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setPagina((p) => Math.max(p - 1, 1))}
-                        disabled={pagina <= 1}
-                        className="h-7 px-2 text-xs border-[#E8E6DF] hover:bg-[#F8F7F2] text-[#1C2424] disabled:opacity-40 cursor-pointer gap-1"
-                      >
-                        <CaretLeft className="h-3.5 w-3.5" />
-                        <span>Ant.</span>
-                      </Button>
-
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded bg-[#F8F7F2] text-[#1C2424] border border-[#E8E6DF]">
-                        {pagina} / {totalPaginas}
-                      </span>
-
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setPagina((p) => Math.min(p + 1, totalPaginas))}
-                        disabled={pagina >= totalPaginas}
-                        className="h-7 px-2 text-xs border-[#E8E6DF] hover:bg-[#F8F7F2] text-[#1C2424] disabled:opacity-40 cursor-pointer gap-1"
-                      >
-                        <span>Sig.</span>
-                        <CaretRight className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* ================================================================== */}
-          {/* COLUMNA DERECHA: TICKET ACTUAL EN MOSTRADOR (5 de 12 columnas)       */}
-          {/* ================================================================== */}
-          <div className="lg:col-span-5 space-y-3">
-            <Card className="border-[#E8E6DF] shadow-sm sticky top-4">
-              <CardHeader className="pb-3 border-b border-[#E8E6DF] bg-[#F8F7F2]/60">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Receipt className="h-5 w-5 text-[#2A7A78]" weight="duotone" />
-                    <div>
-                      <CardTitle className="text-sm font-bold text-[#1C2424]">
-                        Ticket en Mostrador
-                      </CardTitle>
-                      <p className="text-[11px] text-[#657373]">
-                        Orden de venta en curso para el cliente actual
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    <Badge variant="outline" className="text-xs font-bold text-[#2A7A78] border-[#2A7A78]/30 bg-[#E2F1F0]/50">
-                      {cantidadArticulosCarrito} {cantidadArticulosCarrito === 1 ? 'ítem' : 'ítems'}
-                    </Badge>
-                    {carrito.length > 0 && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={vaciarCarrito}
-                        className="h-7 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 cursor-pointer gap-1"
-                        title="Vaciar ticket"
-                      >
-                        <Trash className="h-3.5 w-3.5" />
-                        <span className="sr-only sm:not-sr-only">Vaciar</span>
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-
-              <CardContent className="p-4 space-y-4">
-                {/* Lista de Renglones en el Carrito */}
-                {carrito.length === 0 ? (
-                  <div className="py-12 px-4 text-center border border-dashed border-[#E8E6DF] rounded-xl space-y-2">
-                    <div className="flex h-12 w-12 mx-auto items-center justify-center rounded-2xl bg-[#E2F1F0] text-[#2A7A78]">
-                      <ShoppingCart className="h-6 w-6" weight="duotone" />
-                    </div>
-                    <p className="text-xs font-bold text-[#1C2424]">El ticket está vacío</p>
-                    <p className="text-[11px] text-[#657373] max-w-xs mx-auto">
-                      Escanee un código de barras o seleccione productos del catálogo izquierdo para armar la venta.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
-                    <AnimatePresence initial={false}>
-                      {carrito.map((item) => (
-                        <motion.div
-                          key={item.producto.id}
-                          layout
-                          initial={{ opacity: 0, y: 4, scale: 0.98 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.15 } }}
-                          transition={{ duration: 0.2 }}
-                          className="p-2.5 rounded-xl border border-[#E8E6DF] bg-white shadow-2xs hover:border-[#2A7A78]/40 transition-colors"
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1">
-                              <p className="text-xs font-bold text-[#1C2424] leading-snug">
-                                {item.producto.nombre}
-                              </p>
-                              <p className="text-[10px] text-[#657373] font-mono mt-0.5">
-                                Cód: {item.producto.codigo} • P. Unit: {monedaSimbolo} {item.producto.precio.toLocaleString('es-AR')}
-                              </p>
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={() => removerItemCarrito(item.producto.id)}
-                              className="text-[#657373] hover:text-red-600 transition-colors p-1 cursor-pointer"
-                              title="Quitar artículo"
-                            >
-                              <Trash className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-
-                          <div className="flex items-center justify-between pt-2 mt-1.5 border-t border-[#E8E6DF]/50">
-                            {/* Selector de Cantidad +/- */}
-                            <div className="flex items-center border border-[#E8E6DF] rounded-lg bg-[#F8F7F2]/60 overflow-hidden">
-                              <button
-                                type="button"
-                                onClick={() => actualizarCantidadItem(item.producto.id, item.cantidad - 1)}
-                                className="h-7 w-7 flex items-center justify-center hover:bg-[#E8E6DF] text-[#1C2424] cursor-pointer transition-colors"
-                                title="Restar 1"
-                              >
-                                <Minus className="h-3 w-3" />
-                              </button>
-                              <span className="w-8 text-center text-xs font-bold text-[#1C2424] select-none">
-                                {item.cantidad}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => actualizarCantidadItem(item.producto.id, item.cantidad + 1)}
-                                className="h-7 w-7 flex items-center justify-center hover:bg-[#E8E6DF] text-[#1C2424] cursor-pointer transition-colors"
-                                title="Sumar 1"
-                              >
-                                <Plus className="h-3 w-3" />
-                              </button>
-                            </div>
-
-                            {/* Subtotal del Renglón */}
-                            <div className="text-right">
-                              <span className="text-xs font-black text-[#1C2424]">
-                                {monedaSimbolo} {item.subtotal.toLocaleString('es-AR')}
-                              </span>
-                            </div>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </AnimatePresence>
-                  </div>
-                )}
-
-                {/* Resumen Financiero y Botón de Cobro */}
-                <div className="pt-3 border-t border-[#E8E6DF] space-y-3">
-                  <div className="space-y-1 text-xs">
-                    <div className="flex justify-between text-[#657373]">
-                      <span>Subtotal ({cantidadArticulosCarrito} artículos):</span>
-                      <span className="font-semibold text-[#1C2424]">
-                        {monedaSimbolo} {totalCarrito.toLocaleString('es-AR')}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-baseline pt-1 border-t border-dashed border-[#E8E6DF]">
-                      <span className="text-sm font-bold text-[#1C2424]">TOTAL A COBRAR:</span>
-                      <span className="text-2xl font-black text-emerald-800 tracking-tight">
-                        {monedaSimbolo} {totalCarrito.toLocaleString('es-AR')}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Botón Principal de Cobro */}
-                  <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
-                    <Button
-                      type="button"
-                      disabled={carrito.length === 0}
-                      onClick={() => setIsModalCobroOpen(true)}
-                      className="w-full h-12 text-sm bg-emerald-700 hover:bg-emerald-800 text-white font-bold gap-2 cursor-pointer disabled:opacity-40 shadow-sm transition-all"
-                    >
-                      <Money className="h-5 w-5" weight="bold" />
-                      <span>Cobrar Ticket ({monedaSimbolo} {totalCarrito.toLocaleString('es-AR')})</span>
-                    </Button>
-                  </motion.div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* ==================================================================== */}
-        {/* SECCIÓN: HISTORIAL DE VENTAS RECIENTES EN CAJA CON FILTROS Y VISTAS   */}
-        {/* ==================================================================== */}
-        {mostrarHistorial && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.22 }}
-            id="historial"
-          >
-            <Card className="border-[#E8E6DF] shadow-xs">
-              <CardHeader className="pb-3 border-b border-[#E8E6DF] bg-[#F8F7F2]/60">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <Receipt className="h-5 w-5 text-[#2A7A78]" weight="duotone" />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <CardTitle className="text-sm font-bold text-[#1C2424]">
-                          Historial de Ventas Recientes en Caja
-                        </CardTitle>
-                        <Badge variant="outline" className="text-xs text-[#2A7A78] border-[#2A7A78]/30 bg-[#E2F1F0]/50 font-semibold">
-                          {ventasFiltradas.length} {ventasFiltradas.length === 1 ? 'ticket' : 'tickets'}
-                        </Badge>
-                      </div>
-                      <p className="text-[11px] text-[#657373]">
-                        Registro de tickets emitidos en la jornada. Haga clic en cualquier venta para ver o imprimir el ticket térmico.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Alternador de Vista para Historial (Tarjetas vs Tabla) */}
-                  <div className="flex items-center border border-[#E8E6DF] rounded-lg bg-white p-0.5 shrink-0 shadow-2xs self-end sm:self-auto">
-                    <button
-                      type="button"
-                      onClick={() => setModoVistaVentas('grid')}
-                      className={`p-1.5 rounded-md transition-colors cursor-pointer flex items-center gap-1 text-xs ${
-                        modoVistaVentas === 'grid'
-                          ? 'bg-[#2A7A78] text-white font-medium'
-                          : 'text-[#657373] hover:text-[#1C2424]'
-                      }`}
-                      title="Vista cuadrícula de tarjetas"
-                    >
-                      <SquaresFour className="h-4 w-4" weight={modoVistaVentas === 'grid' ? 'bold' : 'regular'} />
-                      <span className="hidden sm:inline">Tarjetas</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setModoVistaVentas('table')}
-                      className={`p-1.5 rounded-md transition-colors cursor-pointer flex items-center gap-1 text-xs ${
-                        modoVistaVentas === 'table'
-                          ? 'bg-[#2A7A78] text-white font-medium'
-                          : 'text-[#657373] hover:text-[#1C2424]'
-                      }`}
-                      title="Vista tabla detallada"
-                    >
-                      <ListBullets className="h-4 w-4" weight={modoVistaVentas === 'table' ? 'bold' : 'regular'} />
-                      <span className="hidden sm:inline">Tabla</span>
-                    </button>
-                  </div>
-                </div>
-              </CardHeader>
-
-              <CardContent className="p-4 space-y-3.5">
-                {/* Filtros Rápidos por Medio de Cobro */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-                  {opcionesFiltroMetodo.map((op) => {
-                    const esActivo = metodoPagoFiltroVentas === op.id;
-                    const cantidad = conteosPorMetodoPago[op.id] || 0;
-                    const IconComponent = op.icon;
-
-                    return (
-                      <button
-                        key={op.id}
-                        type="button"
-                        onClick={() => setMetodoPagoFiltroVentas(op.id)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-all shrink-0 cursor-pointer ${
-                          esActivo
-                            ? 'bg-[#2A7A78] text-white shadow-xs font-semibold'
-                            : 'bg-[#F8F7F2] text-[#657373] hover:text-[#1C2424] hover:bg-[#E8E6DF] border border-[#E8E6DF]'
-                        }`}
-                      >
-                        <IconComponent className="h-3.5 w-3.5" weight={esActivo ? 'bold' : 'regular'} />
-                        <span>{op.label}</span>
-                        <span
-                          className={`px-1.5 py-0.2 rounded-full text-[9px] ${
-                            esActivo ? 'bg-white/20 text-white font-bold' : 'bg-[#E8E6DF] text-[#657373]'
-                          }`}
-                        >
-                          {cantidad}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Contenido del Historial: Vista Tarjetas vs Vista Tabla */}
-                {ventasFiltradas.length === 0 ? (
-                  <div className="py-10 px-4 text-center border border-dashed border-[#E8E6DF] rounded-xl space-y-1.5">
-                    <Receipt className="h-8 w-8 mx-auto text-[#A0A8A8]" weight="duotone" />
-                    <p className="text-xs font-bold text-[#1C2424]">
-                      No se encontraron ventas para este medio de cobro
-                    </p>
-                    <p className="text-[11px] text-[#657373]">
-                      No hay registros correspondientes al filtro seleccionado.
-                    </p>
-                    {metodoPagoFiltroVentas !== 'todos' && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setMetodoPagoFiltroVentas('todos')}
-                        className="text-xs h-7 text-[#2A7A78] hover:underline cursor-pointer mt-1"
-                      >
-                        Ver todos los medios de pago
-                      </Button>
-                    )}
-                  </div>
-                ) : modoVistaVentas === 'grid' ? (
-                  /* VISTA 1: TARJETAS EN CUADRÍCULA */
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                    {ventasRecientesPaginadas.map((sale) => (
-                      <motion.div
-                        key={sale.id}
-                        whileHover={{ y: -2, scale: 1.01 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => setVentaSeleccionada(sale)}
-                        className="p-3 rounded-xl border border-[#E8E6DF] bg-white hover:border-[#2A7A78] cursor-pointer shadow-2xs transition-all hover:bg-[#F8F7F2]/60 flex flex-col justify-between"
-                        title="Ver detalle del comprobante / reimprimir ticket"
-                      >
-                        <div>
-                          <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-xs font-bold text-[#1C2424] font-mono">{sale.id}</span>
-                            {renderBadgeMetodo(sale.metodoPago)}
-                          </div>
-                          <p className="text-[11px] text-[#657373] mt-1 flex items-center gap-1 font-mono">
-                            <Clock className="h-3 w-3 text-[#2A7A78]" weight="duotone" />
-                            <span>{sale.hora} {sale.fecha ? `• ${sale.fecha}` : ''}</span>
-                          </p>
-                          <p className="text-[11px] text-[#657373] mt-0.5">
-                            {sale.cantidadItems} {sale.cantidadItems === 1 ? 'artículo' : 'artículos'} • {sale.vendedor || 'Caja'}
-                          </p>
-                        </div>
-                        <div className="flex items-center justify-between pt-2.5 mt-2 border-t border-[#E8E6DF]/60">
-                          <span className="text-[11px] text-[#657373] font-medium">Total:</span>
-                          <span className="text-sm font-black text-[#2A7A78]">
-                            {monedaSimbolo} {sale.montoTotal.toLocaleString('es-AR')}
-                          </span>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                ) : (
-                  /* VISTA 2: TABLA DETALLADA */
-                  <div className="rounded-lg border border-[#E8E6DF] overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-[#F8F7F2]/60">
-                          <TableHead className="text-xs">Comprobante</TableHead>
-                          <TableHead className="text-xs">Fecha y Hora</TableHead>
-                          <TableHead className="text-xs">Medio de Cobro</TableHead>
-                          <TableHead className="text-xs">Cajero / Vendedor</TableHead>
-                          <TableHead className="text-xs">Artículos</TableHead>
-                          <TableHead className="text-xs text-right">Total Cobrado</TableHead>
-                          <TableHead className="text-xs text-right">Acción</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {ventasRecientesPaginadas.map((sale) => (
-                          <TableRow key={sale.id} className="hover:bg-[#F8F7F2]/50">
-                            <TableCell className="py-2.5 font-bold text-xs text-[#1C2424] font-mono">
-                              {sale.id}
-                            </TableCell>
-                            <TableCell className="py-2.5 text-xs text-[#657373]">
-                              {sale.hora} {sale.fecha ? `• ${sale.fecha}` : ''}
-                            </TableCell>
-                            <TableCell className="py-2.5">
-                              {renderBadgeMetodo(sale.metodoPago)}
-                            </TableCell>
-                            <TableCell className="py-2.5 text-xs text-[#1C2424]">
-                              {sale.vendedor || 'Cajero en Turno'}
-                            </TableCell>
-                            <TableCell className="py-2.5 text-xs text-[#657373]">
-                              {sale.cantidadItems} {sale.cantidadItems === 1 ? 'ítem' : 'ítems'}
-                            </TableCell>
-                            <TableCell className="py-2.5 text-xs font-black text-[#2A7A78] text-right">
-                              {monedaSimbolo} {sale.montoTotal.toLocaleString('es-AR')}
-                            </TableCell>
-                            <TableCell className="py-2.5 text-right">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setVentaSeleccionada(sale)}
-                                className="h-7 px-2.5 text-xs border-[#E8E6DF] hover:bg-[#E2F1F0] text-[#2A7A78] hover:text-[#205E5D] font-medium gap-1 cursor-pointer"
-                              >
-                                <Receipt className="h-3.5 w-3.5" weight="duotone" />
-                                <span>Ver Ticket</span>
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-
-                {/* Paginación del Historial */}
-                {ventasFiltradas.length > 0 && (
-                  <div className="flex items-center justify-between pt-3 border-t border-[#E8E6DF] text-xs text-[#657373]">
-                    <div>
-                      Mostrando {inicioPaginacionVentas + 1} a{' '}
-                      {Math.min(inicioPaginacionVentas + itemsPorPaginaVentas, ventasFiltradas.length)} de{' '}
-                      {ventasFiltradas.length} tickets
-                      {metodoPagoFiltroVentas !== 'todos' && (
-                        <span className="ml-1 text-[11px] text-[#2A7A78] font-semibold">
-                          (filtrado por {opcionesFiltroMetodo.find((o) => o.id === metodoPagoFiltroVentas)?.label})
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setPaginaVentas((p) => Math.max(p - 1, 1))}
-                        disabled={paginaVentas <= 1}
-                        className="h-7 px-2 text-xs border-[#E8E6DF] hover:bg-[#F8F7F2] text-[#1C2424] cursor-pointer"
-                      >
-                        <CaretLeft className="h-3.5 w-3.5" />
-                        <span>Ant.</span>
-                      </Button>
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded bg-[#F8F7F2] text-[#1C2424] border border-[#E8E6DF]">
-                        {paginaVentas} / {totalPaginasVentas}
-                      </span>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setPaginaVentas((p) => Math.min(p + 1, totalPaginasVentas))}
-                        disabled={paginaVentas >= totalPaginasVentas}
-                        className="h-7 px-2 text-xs border-[#E8E6DF] hover:bg-[#F8F7F2] text-[#1C2424] cursor-pointer"
-                      >
-                        <span>Sig.</span>
-                        <CaretRight className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
+          {pestanaOperativa === 'reposicion' && (
+            <motion.div
+              key="modulo-reposicion"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.18 }}
+            >
+              <ModuloMonitorReposicion controller={controller} />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Modal de Cobro Multi-Ítem del Ticket */}
         <ModalCobroTicket
@@ -1095,7 +279,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
           venta={ventaSeleccionada}
           monedaSimbolo={monedaSimbolo}
         />
-      </motion.div>
+      </div>
     </MotionConfig>
   );
 }
