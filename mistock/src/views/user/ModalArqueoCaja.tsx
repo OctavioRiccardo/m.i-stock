@@ -99,7 +99,7 @@ export function ModalArqueoCaja({
                   Cierre de Caja
                 </DialogTitle>
                 <p className="text-xs text-[#657373]">
-                  Caja N° {config.pos.numeroCaja || 1} • {cantidadTicketsValidos} tickets hoy
+                  {cantidadTicketsValidos} tickets registrados hoy
                 </p>
               </div>
             </div>

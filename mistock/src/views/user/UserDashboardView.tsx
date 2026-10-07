@@ -96,9 +96,6 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                 <h1 className="text-base sm:text-lg font-bold text-[#1C2424] tracking-tight">
                   Punto de Venta y Salón (POS)
                 </h1>
-                <Badge variant="outline" className="text-[10px] font-bold text-[#2A7A78] border-[#2A7A78]/30 bg-[#E2F1F0]/50">
-                  Caja N° {config.pos.numeroCaja || 1}
-                </Badge>
                 {permitirVentaSinStock && (
                   <Badge variant="warning" className="text-[10px]">
                     Venta sin stock activada

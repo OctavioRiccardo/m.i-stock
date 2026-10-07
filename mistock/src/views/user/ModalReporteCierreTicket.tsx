@@ -110,7 +110,7 @@ export function ModalReporteCierreTicket({
                   Comprobante de Cierre (Z)
                 </DialogTitle>
                 <DialogDescription className="text-xs text-[#657373]">
-                  {cierre.idCierre} • Caja N° {cierre.numeroCaja}
+                  {cierre.idCierre}
                 </DialogDescription>
               </div>
             </div>
@@ -170,10 +170,6 @@ export function ModalReporteCierreTicket({
             <div className="flex justify-between">
               <span className="text-gray-600">Fecha Cierre:</span>
               <span>{cierre.fechaCierre}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Terminal:</span>
-              <span className="font-bold">Caja N° {cierre.numeroCaja}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Cajero / Operador:</span>
