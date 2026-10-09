@@ -31,7 +31,6 @@ import {
   WifiHigh,
   XCircle,
   Check,
-  Sparkle,
 } from '@phosphor-icons/react';
 import { PointDevice } from '@/services/mercadopago';
 import {
@@ -90,7 +89,12 @@ export function ModalCobroTicket({
   const [devicesPoint, setDevicesPoint] = useState<PointDevice[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
   const [estadoPoint, setEstadoPoint] = useState<EstadoPoint>('idle');
-  const [intentActivo, setIntentActivo] = useState<{ id: string; status: string; deviceId?: string } | null>(null);
+  const [intentActivo, setIntentActivo] = useState<{
+    id: string;
+    status: string;
+    deviceId?: string;
+    paymentId?: number;
+  } | null>(null);
   const [mensajePoint, setMensajePoint] = useState<string>('');
   const [buscoDispositivos, setBuscoDispositivos] = useState<boolean>(false);
 
@@ -196,17 +200,7 @@ export function ModalCobroTicket({
     setMensajePoint('Cobro cancelado en la terminal.');
   };
 
-  // Simular cobro aprobado para pruebas en desarrollo / Sandbox
-  const handleSimularAprobacionPoint = () => {
-    setEstadoPoint('procesando');
-    setMensajePoint('Simulando lectura de chip / contactless...');
-    setTimeout(() => {
-      setEstadoPoint('aprobado');
-      setMensajePoint(`¡Cobro de ${monedaSimbolo} ${total.toLocaleString('es-AR')} Aprobado en Point Smart!`);
-    }, 1100);
-  };
-
-  // Polling automático para detectar lectura de tarjeta o aprobación en Point Smart
+  // Polling automático para detectar cobro completado en el postnet de Mercado Pago
   useEffect(() => {
     if (!intentActivo || (estadoPoint !== 'esperando_tarjeta' && estadoPoint !== 'procesando')) {
       return;
@@ -220,16 +214,19 @@ export function ModalCobroTicket({
           const status = data.intent?.status;
           if (status === 'PROCESSED') {
             setEstadoPoint('aprobado');
-            setMensajePoint('¡Pago Aprobado exitosamente en el Point Smart!');
+            setMensajePoint('Operación completada con éxito en el postnet.');
+            setIntentActivo((prev) =>
+              prev ? { ...prev, status: 'PROCESSED', paymentId: data.intent?.payment?.id } : null
+            );
             clearInterval(intervalId);
           } else if (status === 'PROCESSING') {
             setEstadoPoint('procesando');
-            setMensajePoint('Tarjeta detectada. Autorizando con el banco emisor...');
+            setMensajePoint('Tarjeta detectada. Autorizando transacción con el banco emisor...');
           } else if (status === 'ERROR' || status === 'ABANDONED' || status === 'CANCELED') {
             setEstadoPoint('rechazado');
             setMensajePoint(
               status === 'ABANDONED'
-                ? 'Operación cancelada o tiempo expirado en el Point.'
+                ? 'Operación cancelada o tiempo expirado en el postnet.'
                 : status === 'CANCELED'
                 ? 'Cobro cancelado desde el sistema.'
                 : 'Pago rechazado por el banco emisor (fondos insuficientes o denegado).'
@@ -508,10 +505,10 @@ export function ModalCobroTicket({
                   </div>
                   <div>
                     <span className="text-xs font-bold text-[#1C2424] block leading-tight">
-                      Mercado Pago Point Smart
+                      Postnet Mercado Pago (Point Smart)
                     </span>
                     <span className="text-[10px] text-[#657373]">
-                      Cobro con tarjeta física (Chip / Contactless)
+                      Cobro presencial con tarjeta (Chip / Contactless)
                     </span>
                   </div>
                 </div>
@@ -520,16 +517,17 @@ export function ModalCobroTicket({
                 {estadoPoint === 'cargando_terminales' ? (
                   <span className="inline-flex items-center gap-1 text-[11px] text-[#657373]">
                     <CircleNotch className="h-3.5 w-3.5 animate-spin text-[#009EE3]" />
-                    Buscando lector...
+                    Verificando postnet...
                   </span>
                 ) : devicesPoint.length > 0 ? (
                   <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
                     <WifiHigh className="h-3.5 w-3.5 text-emerald-600" weight="bold" />
-                    {devicesPoint.length === 1 ? 'Point en línea' : `${devicesPoint.length} terminales`}
+                    {devicesPoint.length === 1 ? 'Postnet en línea' : `${devicesPoint.length} terminales`}
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
-                    {selectedDeviceId ? 'Terminal configurada' : 'Modo Directo / Test'}
+                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                    <WifiHigh className="h-3.5 w-3.5 text-emerald-600" weight="bold" />
+                    Terminal lista para cobro
                   </span>
                 )}
               </div>
@@ -552,13 +550,13 @@ export function ModalCobroTicket({
                 </div>
               )}
 
-              {/* ESTADO 1: IDLE (Listo para enviar cobro) */}
+              {/* ESTADO 1: IDLE (Listo para enviar cobro al postnet) */}
               {estadoPoint === 'idle' && (
                 <div className="space-y-3 pt-0.5">
                   <div className="p-3.5 rounded-xl bg-white border border-[#009EE3]/30 flex items-center justify-between shadow-2xs">
                     <div className="space-y-0.5">
                       <span className="text-[10px] text-[#657373] uppercase font-semibold block">
-                        Monto a Cobrar en Terminal
+                        Monto a Cobrar en Postnet
                       </span>
                       <span className="text-xl font-black text-[#009EE3] tracking-tight">
                         {monedaSimbolo} {total.toLocaleString('es-AR')}
@@ -571,7 +569,7 @@ export function ModalCobroTicket({
                       className="h-9 px-4 text-xs font-bold bg-[#009EE3] hover:bg-[#0082BD] text-white gap-2 cursor-pointer shadow-xs"
                     >
                       <DeviceMobile className="h-4 w-4" weight="bold" />
-                      <span>Enviar al Point</span>
+                      <span>Enviar al Postnet</span>
                     </Button>
                   </div>
 
@@ -580,19 +578,6 @@ export function ModalCobroTicket({
                       {mensajePoint}
                     </p>
                   )}
-
-                  {/* Acceso para pruebas y modo simulación */}
-                  <div className="pt-2 flex items-center justify-between border-t border-[#009EE3]/15">
-                    <span className="text-[10px] text-[#657373]">¿Probando sin lector físico conectado?</span>
-                    <button
-                      type="button"
-                      onClick={handleSimularAprobacionPoint}
-                      className="text-[11px] text-[#009EE3] hover:text-[#0082BD] font-bold hover:underline cursor-pointer inline-flex items-center gap-1"
-                    >
-                      <Sparkle className="h-3 w-3" weight="fill" />
-                      <span>Simular Cobro Aprobado (Test)</span>
-                    </button>
-                  </div>
                 </div>
               )}
 
@@ -600,12 +585,12 @@ export function ModalCobroTicket({
               {estadoPoint === 'creando_intencion' && (
                 <div className="py-6 text-center space-y-2 bg-white rounded-xl border border-[#009EE3]/30">
                   <CircleNotch className="h-8 w-8 mx-auto animate-spin text-[#009EE3]" />
-                  <p className="text-xs font-bold text-[#1C2424]">Transmitiendo orden al Point Smart...</p>
+                  <p className="text-xs font-bold text-[#1C2424]">Transmitiendo orden al postnet...</p>
                   <p className="text-[11px] text-[#657373]">{mensajePoint}</p>
                 </div>
               )}
 
-              {/* ESTADO 3: ESPERANDO TARJETA / PROCESANDO EN LECTOR */}
+              {/* ESTADO 3: ESPERANDO TARJETA / PROCESANDO EN POSTNET */}
               {(estadoPoint === 'esperando_tarjeta' || estadoPoint === 'procesando') && (
                 <div className="py-3 px-4 rounded-xl bg-white border border-[#009EE3]/40 space-y-3 shadow-xs">
                   <div className="flex items-center justify-between">
@@ -615,7 +600,7 @@ export function ModalCobroTicket({
                         <span className="relative inline-flex rounded-full h-3 w-3 bg-[#009EE3]"></span>
                       </span>
                       <span className="text-xs font-bold text-[#1C2424]">
-                        {estadoPoint === 'procesando' ? 'Procesando Tarjeta...' : 'Esperando Tarjeta en Point Smart'}
+                        {estadoPoint === 'procesando' ? 'Procesando Tarjeta...' : 'Esperando Tarjeta en Postnet'}
                       </span>
                     </div>
                     {intentActivo?.id && (
@@ -627,7 +612,7 @@ export function ModalCobroTicket({
 
                   <div className="text-center py-2.5 px-3 space-y-1 bg-[#009EE3]/5 rounded-xl border border-[#009EE3]/20">
                     <span className="text-[10px] text-[#657373] uppercase font-semibold block">
-                      Monto Mostrado en Pantalla
+                      Monto Mostrado en Pantalla del Postnet
                     </span>
                     <div className="text-2xl font-black text-[#009EE3] tracking-tight">
                       {monedaSimbolo} {total.toLocaleString('es-AR')}
@@ -635,11 +620,11 @@ export function ModalCobroTicket({
                     <p className="text-xs font-semibold text-[#1C2424]">
                       {estadoPoint === 'procesando'
                         ? 'Autorizando transacción con la entidad bancaria...'
-                        : 'Acerque, inserte o deslice la tarjeta en la terminal Point Smart'}
+                        : 'Pídale al cliente que acerque, inserte o deslice la tarjeta en el postnet'}
                     </p>
                   </div>
 
-                  <div className="flex items-center justify-between pt-1 gap-2">
+                  <div className="flex items-center justify-end pt-1">
                     <Button
                       type="button"
                       variant="outline"
@@ -648,41 +633,43 @@ export function ModalCobroTicket({
                       className="h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 cursor-pointer gap-1"
                     >
                       <XCircle className="h-3.5 w-3.5" weight="bold" />
-                      <span>Cancelar en Terminal</span>
-                    </Button>
-
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleSimularAprobacionPoint}
-                      className="h-8 text-[11px] text-[#009EE3] hover:text-[#0082BD] hover:bg-[#009EE3]/10 cursor-pointer gap-1 font-semibold"
-                    >
-                      <Sparkle className="h-3.5 w-3.5" weight="fill" />
-                      <span>Simular Aprobado (Test)</span>
+                      <span>Cancelar cobro en Postnet</span>
                     </Button>
                   </div>
                 </div>
               )}
 
-              {/* ESTADO 4: APROBADO */}
+              {/* ESTADO 4: APROBADO / OPERACIÓN COMPLETADA */}
               {estadoPoint === 'aprobado' && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.96 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-center space-y-2"
+                  className="p-4 rounded-xl bg-emerald-50 border-2 border-emerald-400 text-center space-y-2.5 shadow-xs"
                 >
-                  <CheckCircle className="h-10 w-10 mx-auto text-emerald-600" weight="fill" />
+                  <div className="flex h-11 w-11 mx-auto items-center justify-center rounded-full bg-emerald-600 text-white shadow-xs">
+                    <CheckCircle className="h-7 w-7" weight="fill" />
+                  </div>
                   <div>
-                    <h4 className="text-sm font-extrabold text-emerald-950">
-                      ¡Pago Aprobado en Point Smart!
+                    <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-200 text-emerald-950 mb-1">
+                      Operación Completada
+                    </span>
+                    <h4 className="text-base font-black text-emerald-950">
+                      Cobro Aprobado en Postnet
                     </h4>
-                    <p className="text-xs text-emerald-800">
-                      {mensajePoint || `Cobro de ${monedaSimbolo} ${total.toLocaleString('es-AR')} acreditado exitosamente.`}
+                    <p className="text-xs text-emerald-800 font-medium mt-0.5">
+                      {monedaSimbolo} {total.toLocaleString('es-AR')} acreditado exitosamente en Mercado Pago.
                     </p>
                   </div>
+
+                  {intentActivo?.paymentId && (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/90 rounded-md border border-emerald-200 text-[11px] font-mono text-emerald-900 shadow-2xs">
+                      <span className="font-bold">Comprobante MP:</span>
+                      <span>#{intentActivo.paymentId}</span>
+                    </div>
+                  )}
+
                   <p className="text-[11px] text-emerald-700 font-medium">
-                    Haga clic en el botón inferior para finalizar la venta y emitir el ticket.
+                    Presione el botón inferior para finalizar la venta y emitir el ticket.
                   </p>
                 </motion.div>
               )}
@@ -693,7 +680,7 @@ export function ModalCobroTicket({
                   <div className="flex items-start gap-2 text-red-800">
                     <WarningCircle className="h-5 w-5 shrink-0 mt-0.5 text-red-600" weight="fill" />
                     <div className="space-y-0.5">
-                      <span className="text-xs font-bold block">No se completó el cobro en el Point</span>
+                      <span className="text-xs font-bold block">No se completó el cobro en el Postnet</span>
                       <p className="text-[11px] text-red-700 leading-snug">{mensajePoint}</p>
                     </div>
                   </div>
@@ -771,7 +758,7 @@ export function ModalCobroTicket({
                     className="w-full text-xs h-10 bg-emerald-600 hover:bg-emerald-700 text-white gap-2 font-bold cursor-pointer shadow-sm"
                   >
                     <CheckCircle className="h-4 w-4" weight="bold" />
-                    <span>Finalizar y Emitir Ticket ({monedaSimbolo} {total.toLocaleString('es-AR')})</span>
+                    <span>Operación Completada • Emitir Ticket ({monedaSimbolo} {total.toLocaleString('es-AR')})</span>
                   </Button>
                 ) : estadoPoint === 'esperando_tarjeta' || estadoPoint === 'procesando' || estadoPoint === 'creando_intencion' ? (
                   <Button
@@ -780,7 +767,7 @@ export function ModalCobroTicket({
                     className="w-full text-xs h-10 bg-[#009EE3]/80 text-white gap-2 font-bold cursor-wait"
                   >
                     <CircleNotch className="h-4 w-4 animate-spin" />
-                    <span>Esperando cobro en Point Smart...</span>
+                    <span>Esperando cobro en Postnet...</span>
                   </Button>
                 ) : (
                   <Button
@@ -789,7 +776,7 @@ export function ModalCobroTicket({
                     className="w-full text-xs h-10 bg-[#009EE3] hover:bg-[#0082BD] text-white gap-2 font-bold cursor-pointer shadow-sm"
                   >
                     <DeviceMobile className="h-4 w-4" weight="bold" />
-                    <span>Enviar Cobro al Point Smart ({monedaSimbolo} {total.toLocaleString('es-AR')})</span>
+                    <span>Cobrar en Postnet ({monedaSimbolo} {total.toLocaleString('es-AR')})</span>
                   </Button>
                 )}
               </motion.div>
