@@ -25,7 +25,15 @@ import {
   Receipt,
   Coins,
   Package,
+  DeviceMobile,
+  CircleNotch,
+  ArrowClockwise,
+  WifiHigh,
+  XCircle,
+  Check,
+  Sparkle,
 } from '@phosphor-icons/react';
+import { PointDevice } from '@/services/mercadopago';
 import {
   Dialog,
   DialogContent,
@@ -67,19 +75,184 @@ export function ModalCobroTicket({
   const [metodoSeleccionado, setMetodoSeleccionado] = useState<MetodoPago>('efectivo');
   const [montoRecibido, setMontoRecibido] = useState<string>('');
 
+  // ------------------------------------------------------------------
+  // ESTADOS REACTIVOS DE MERCADO PAGO POINT SMART
+  // ------------------------------------------------------------------
+  type EstadoPoint =
+    | 'idle'
+    | 'cargando_terminales'
+    | 'creando_intencion'
+    | 'esperando_tarjeta'
+    | 'procesando'
+    | 'aprobado'
+    | 'rechazado';
+
+  const [devicesPoint, setDevicesPoint] = useState<PointDevice[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
+  const [estadoPoint, setEstadoPoint] = useState<EstadoPoint>('idle');
+  const [intentActivo, setIntentActivo] = useState<{ id: string; status: string; deviceId?: string } | null>(null);
+  const [mensajePoint, setMensajePoint] = useState<string>('');
+  const [buscoDispositivos, setBuscoDispositivos] = useState<boolean>(false);
+
   // Reiniciar estado al abrir modal o cambiar total
   useEffect(() => {
     if (isOpen) {
       setMetodoSeleccionado('efectivo');
       setMontoRecibido('');
+      setEstadoPoint('idle');
+      setIntentActivo(null);
+      setMensajePoint('');
+    } else {
+      // Si se cierra el modal mientras hay intención activa en Point, cancelarla para liberar el lector
+      if (intentActivo) {
+        fetch(`/api/mercadopago/point/intent/${intentActivo.id}?deviceId=${intentActivo.deviceId || selectedDeviceId}`, {
+          method: 'DELETE',
+        }).catch(() => {});
+      }
     }
   }, [isOpen, total]);
+
+  // Consultar terminales cuando el cajero selecciona Mercado Pago
+  const consultarTerminalesPoint = async () => {
+    setEstadoPoint('cargando_terminales');
+    setMensajePoint('');
+    try {
+      const res = await fetch('/api/mercadopago/point/devices');
+      const data = await res.json();
+      if (res.ok && Array.isArray(data.devices) && data.devices.length > 0) {
+        setDevicesPoint(data.devices);
+        setSelectedDeviceId(data.devices[0].id);
+        setEstadoPoint('idle');
+      } else {
+        setDevicesPoint([]);
+        setEstadoPoint('idle');
+        if (data.error) {
+          setMensajePoint(data.error);
+        }
+      }
+    } catch {
+      setEstadoPoint('idle');
+      setMensajePoint('No se pudo verificar la conexión con terminales Point.');
+    } finally {
+      setBuscoDispositivos(true);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && metodoSeleccionado === 'mercado_pago' && !buscoDispositivos) {
+      consultarTerminalesPoint();
+    }
+  }, [isOpen, metodoSeleccionado, buscoDispositivos]);
+
+  // Transmitir orden de cobro al lector físico Point Smart
+  const handleEnviarCobroPoint = async () => {
+    setEstadoPoint('creando_intencion');
+    setMensajePoint('Transmitiendo orden a la pantalla del Point Smart...');
+    try {
+      const res = await fetch('/api/mercadopago/point/intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: total,
+          deviceId: selectedDeviceId || undefined,
+          description: `Cobro en Mostrador (${items.length} items)`,
+          ticketNumber: `TKT-${Date.now().toString().slice(-4)}`,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.intent) {
+        setIntentActivo({
+          id: data.intent.id,
+          status: data.intent.status || 'OPEN',
+          deviceId: selectedDeviceId,
+        });
+        setEstadoPoint('esperando_tarjeta');
+        setMensajePoint('Terminal Point Smart activa: Pídale al cliente que acerque, inserte o deslice su tarjeta.');
+      } else {
+        setEstadoPoint('rechazado');
+        setMensajePoint(data.error || 'No se pudo enviar la orden al lector Point Smart.');
+      }
+    } catch {
+      setEstadoPoint('rechazado');
+      setMensajePoint('Error de conexión al enviar el cobro a Mercado Pago.');
+    }
+  };
+
+  // Cancelar cobro activo en la terminal
+  const handleCancelarCobroPoint = async () => {
+    if (intentActivo) {
+      try {
+        await fetch(
+          `/api/mercadopago/point/intent/${intentActivo.id}?deviceId=${intentActivo.deviceId || selectedDeviceId}`,
+          { method: 'DELETE' }
+        );
+      } catch {
+        // Silencioso
+      }
+    }
+    setIntentActivo(null);
+    setEstadoPoint('idle');
+    setMensajePoint('Cobro cancelado en la terminal.');
+  };
+
+  // Simular cobro aprobado para pruebas en desarrollo / Sandbox
+  const handleSimularAprobacionPoint = () => {
+    setEstadoPoint('procesando');
+    setMensajePoint('Simulando lectura de chip / contactless...');
+    setTimeout(() => {
+      setEstadoPoint('aprobado');
+      setMensajePoint(`¡Cobro de ${monedaSimbolo} ${total.toLocaleString('es-AR')} Aprobado en Point Smart!`);
+    }, 1100);
+  };
+
+  // Polling automático para detectar lectura de tarjeta o aprobación en Point Smart
+  useEffect(() => {
+    if (!intentActivo || (estadoPoint !== 'esperando_tarjeta' && estadoPoint !== 'procesando')) {
+      return;
+    }
+
+    const intervalId = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/mercadopago/point/intent/${intentActivo.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          const status = data.intent?.status;
+          if (status === 'PROCESSED') {
+            setEstadoPoint('aprobado');
+            setMensajePoint('¡Pago Aprobado exitosamente en el Point Smart!');
+            clearInterval(intervalId);
+          } else if (status === 'PROCESSING') {
+            setEstadoPoint('procesando');
+            setMensajePoint('Tarjeta detectada. Autorizando con el banco emisor...');
+          } else if (status === 'ERROR' || status === 'ABANDONED' || status === 'CANCELED') {
+            setEstadoPoint('rechazado');
+            setMensajePoint(
+              status === 'ABANDONED'
+                ? 'Operación cancelada o tiempo expirado en el Point.'
+                : status === 'CANCELED'
+                ? 'Cobro cancelado desde el sistema.'
+                : 'Pago rechazado por el banco emisor (fondos insuficientes o denegado).'
+            );
+            clearInterval(intervalId);
+          }
+        }
+      } catch {
+        // Silencioso ante fallos temporales de sondeo
+      }
+    }, 2000);
+
+    return () => clearInterval(intervalId);
+  }, [intentActivo, estadoPoint]);
 
   // Cálculos de vuelto para pago en efectivo
   const montoRecibidoNum = parseFloat(montoRecibido) || 0;
   const vuelto = Math.max(0, montoRecibidoNum - total);
   const faltante = Math.max(0, total - montoRecibidoNum);
-  const esMontoSuficiente = metodoSeleccionado !== 'efectivo' || montoRecibidoNum >= total;
+  const esMontoSuficiente =
+    metodoSeleccionado === 'mercado_pago'
+      ? estadoPoint === 'aprobado'
+      : metodoSeleccionado !== 'efectivo' || montoRecibidoNum >= total;
 
   // Atajos de billetes sugeridos
   const sugerenciasBilletes = [
@@ -101,7 +274,17 @@ export function ModalCobroTicket({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!esMontoSuficiente) return;
+    if (metodoSeleccionado === 'mercado_pago') {
+      if (estadoPoint === 'idle') {
+        handleEnviarCobroPoint();
+        return;
+      }
+      if (estadoPoint !== 'aprobado') {
+        return;
+      }
+    } else if (!esMontoSuficiente) {
+      return;
+    }
 
     const venta = onConfirmarCobro(
       metodoSeleccionado,
@@ -316,12 +499,217 @@ export function ModalCobroTicket({
           )}
 
           {metodoSeleccionado === 'mercado_pago' && (
-            <div className="p-4 rounded-xl border border-[#009EE3]/30 bg-[#009EE3]/5 space-y-2 text-center">
-              <QrCode className="h-8 w-8 mx-auto text-[#009EE3]" weight="duotone" />
-              <p className="text-xs font-bold text-[#1C2424]">Cobro Digital con Mercado Pago</p>
-              <p className="text-[11px] text-[#657373]">
-                Presente el código QR en mostrador o procese el cobro en la terminal Point Smart.
-              </p>
+            <div className="p-4 rounded-xl border border-[#009EE3]/40 bg-[#009EE3]/5 space-y-3">
+              {/* Cabecera del Módulo Point Smart */}
+              <div className="flex items-center justify-between pb-2 border-b border-[#009EE3]/20">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#009EE3] text-white shadow-xs">
+                    <DeviceMobile className="h-4 w-4" weight="bold" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-[#1C2424] block leading-tight">
+                      Mercado Pago Point Smart
+                    </span>
+                    <span className="text-[10px] text-[#657373]">
+                      Cobro con tarjeta física (Chip / Contactless)
+                    </span>
+                  </div>
+                </div>
+
+                {/* Estado de Conectividad de la Terminal */}
+                {estadoPoint === 'cargando_terminales' ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] text-[#657373]">
+                    <CircleNotch className="h-3.5 w-3.5 animate-spin text-[#009EE3]" />
+                    Buscando lector...
+                  </span>
+                ) : devicesPoint.length > 0 ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                    <WifiHigh className="h-3.5 w-3.5 text-emerald-600" weight="bold" />
+                    {devicesPoint.length === 1 ? 'Point en línea' : `${devicesPoint.length} terminales`}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
+                    {selectedDeviceId ? 'Terminal configurada' : 'Modo Directo / Test'}
+                  </span>
+                )}
+              </div>
+
+              {/* Selector si hay múltiples terminales en la cuenta */}
+              {devicesPoint.length > 1 && estadoPoint === 'idle' && (
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <label className="text-[11px] text-[#657373] font-medium">Terminal destino:</label>
+                  <select
+                    value={selectedDeviceId}
+                    onChange={(e) => setSelectedDeviceId(e.target.value)}
+                    className="text-xs bg-white border border-[#E8E6DF] rounded-md px-2 py-1 font-mono text-[#1C2424]"
+                  >
+                    {devicesPoint.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.id} ({d.operating_mode})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* ESTADO 1: IDLE (Listo para enviar cobro) */}
+              {estadoPoint === 'idle' && (
+                <div className="space-y-3 pt-0.5">
+                  <div className="p-3.5 rounded-xl bg-white border border-[#009EE3]/30 flex items-center justify-between shadow-2xs">
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] text-[#657373] uppercase font-semibold block">
+                        Monto a Cobrar en Terminal
+                      </span>
+                      <span className="text-xl font-black text-[#009EE3] tracking-tight">
+                        {monedaSimbolo} {total.toLocaleString('es-AR')}
+                      </span>
+                    </div>
+
+                    <Button
+                      type="button"
+                      onClick={handleEnviarCobroPoint}
+                      className="h-9 px-4 text-xs font-bold bg-[#009EE3] hover:bg-[#0082BD] text-white gap-2 cursor-pointer shadow-xs"
+                    >
+                      <DeviceMobile className="h-4 w-4" weight="bold" />
+                      <span>Enviar al Point</span>
+                    </Button>
+                  </div>
+
+                  {mensajePoint && (
+                    <p className="text-[11px] text-[#657373] text-center italic">
+                      {mensajePoint}
+                    </p>
+                  )}
+
+                  {/* Acceso para pruebas y modo simulación */}
+                  <div className="pt-2 flex items-center justify-between border-t border-[#009EE3]/15">
+                    <span className="text-[10px] text-[#657373]">¿Probando sin lector físico conectado?</span>
+                    <button
+                      type="button"
+                      onClick={handleSimularAprobacionPoint}
+                      className="text-[11px] text-[#009EE3] hover:text-[#0082BD] font-bold hover:underline cursor-pointer inline-flex items-center gap-1"
+                    >
+                      <Sparkle className="h-3 w-3" weight="fill" />
+                      <span>Simular Cobro Aprobado (Test)</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ESTADO 2: CREANDO INTENCIÓN */}
+              {estadoPoint === 'creando_intencion' && (
+                <div className="py-6 text-center space-y-2 bg-white rounded-xl border border-[#009EE3]/30">
+                  <CircleNotch className="h-8 w-8 mx-auto animate-spin text-[#009EE3]" />
+                  <p className="text-xs font-bold text-[#1C2424]">Transmitiendo orden al Point Smart...</p>
+                  <p className="text-[11px] text-[#657373]">{mensajePoint}</p>
+                </div>
+              )}
+
+              {/* ESTADO 3: ESPERANDO TARJETA / PROCESANDO EN LECTOR */}
+              {(estadoPoint === 'esperando_tarjeta' || estadoPoint === 'procesando') && (
+                <div className="py-3 px-4 rounded-xl bg-white border border-[#009EE3]/40 space-y-3 shadow-xs">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="relative flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#009EE3] opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-[#009EE3]"></span>
+                      </span>
+                      <span className="text-xs font-bold text-[#1C2424]">
+                        {estadoPoint === 'procesando' ? 'Procesando Tarjeta...' : 'Esperando Tarjeta en Point Smart'}
+                      </span>
+                    </div>
+                    {intentActivo?.id && (
+                      <Badge variant="outline" className="font-mono text-[9px] text-[#657373] border-[#E8E6DF]">
+                        ID: {intentActivo.id.slice(0, 14)}...
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="text-center py-2.5 px-3 space-y-1 bg-[#009EE3]/5 rounded-xl border border-[#009EE3]/20">
+                    <span className="text-[10px] text-[#657373] uppercase font-semibold block">
+                      Monto Mostrado en Pantalla
+                    </span>
+                    <div className="text-2xl font-black text-[#009EE3] tracking-tight">
+                      {monedaSimbolo} {total.toLocaleString('es-AR')}
+                    </div>
+                    <p className="text-xs font-semibold text-[#1C2424]">
+                      {estadoPoint === 'procesando'
+                        ? 'Autorizando transacción con la entidad bancaria...'
+                        : 'Acerque, inserte o deslice la tarjeta en la terminal Point Smart'}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1 gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCancelarCobroPoint}
+                      className="h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 cursor-pointer gap-1"
+                    >
+                      <XCircle className="h-3.5 w-3.5" weight="bold" />
+                      <span>Cancelar en Terminal</span>
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSimularAprobacionPoint}
+                      className="h-8 text-[11px] text-[#009EE3] hover:text-[#0082BD] hover:bg-[#009EE3]/10 cursor-pointer gap-1 font-semibold"
+                    >
+                      <Sparkle className="h-3.5 w-3.5" weight="fill" />
+                      <span>Simular Aprobado (Test)</span>
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* ESTADO 4: APROBADO */}
+              {estadoPoint === 'aprobado' && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-center space-y-2"
+                >
+                  <CheckCircle className="h-10 w-10 mx-auto text-emerald-600" weight="fill" />
+                  <div>
+                    <h4 className="text-sm font-extrabold text-emerald-950">
+                      ¡Pago Aprobado en Point Smart!
+                    </h4>
+                    <p className="text-xs text-emerald-800">
+                      {mensajePoint || `Cobro de ${monedaSimbolo} ${total.toLocaleString('es-AR')} acreditado exitosamente.`}
+                    </p>
+                  </div>
+                  <p className="text-[11px] text-emerald-700 font-medium">
+                    Haga clic en el botón inferior para finalizar la venta y emitir el ticket.
+                  </p>
+                </motion.div>
+              )}
+
+              {/* ESTADO 5: RECHAZADO / ERROR */}
+              {estadoPoint === 'rechazado' && (
+                <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 space-y-2">
+                  <div className="flex items-start gap-2 text-red-800">
+                    <WarningCircle className="h-5 w-5 shrink-0 mt-0.5 text-red-600" weight="fill" />
+                    <div className="space-y-0.5">
+                      <span className="text-xs font-bold block">No se completó el cobro en el Point</span>
+                      <p className="text-[11px] text-red-700 leading-snug">{mensajePoint}</p>
+                    </div>
+                  </div>
+                  <div className="pt-1 flex justify-end gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleEnviarCobroPoint}
+                      className="h-8 text-xs font-bold bg-red-600 hover:bg-red-700 text-white gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <ArrowClockwise className="h-3.5 w-3.5" weight="bold" />
+                      <span>Reintentar Cobro</span>
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -375,16 +763,48 @@ export function ModalCobroTicket({
             >
               Cancelar
             </Button>
-            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} className="inline-block flex-1 sm:flex-initial">
-              <Button
-                type="submit"
-                disabled={!esMontoSuficiente}
-                className="w-full text-xs h-10 bg-emerald-700 hover:bg-emerald-800 text-white gap-2 font-bold cursor-pointer disabled:opacity-50 shadow-sm"
-              >
-                <CheckCircle className="h-4 w-4" weight="bold" />
-                <span>Confirmar y Finalizar Venta ({monedaSimbolo} {total.toLocaleString('es-AR')})</span>
-              </Button>
-            </motion.div>
+            {metodoSeleccionado === 'mercado_pago' ? (
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} className="inline-block flex-1 sm:flex-initial">
+                {estadoPoint === 'aprobado' ? (
+                  <Button
+                    type="submit"
+                    className="w-full text-xs h-10 bg-emerald-600 hover:bg-emerald-700 text-white gap-2 font-bold cursor-pointer shadow-sm"
+                  >
+                    <CheckCircle className="h-4 w-4" weight="bold" />
+                    <span>Finalizar y Emitir Ticket ({monedaSimbolo} {total.toLocaleString('es-AR')})</span>
+                  </Button>
+                ) : estadoPoint === 'esperando_tarjeta' || estadoPoint === 'procesando' || estadoPoint === 'creando_intencion' ? (
+                  <Button
+                    type="button"
+                    disabled
+                    className="w-full text-xs h-10 bg-[#009EE3]/80 text-white gap-2 font-bold cursor-wait"
+                  >
+                    <CircleNotch className="h-4 w-4 animate-spin" />
+                    <span>Esperando cobro en Point Smart...</span>
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    onClick={handleEnviarCobroPoint}
+                    className="w-full text-xs h-10 bg-[#009EE3] hover:bg-[#0082BD] text-white gap-2 font-bold cursor-pointer shadow-sm"
+                  >
+                    <DeviceMobile className="h-4 w-4" weight="bold" />
+                    <span>Enviar Cobro al Point Smart ({monedaSimbolo} {total.toLocaleString('es-AR')})</span>
+                  </Button>
+                )}
+              </motion.div>
+            ) : (
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} className="inline-block flex-1 sm:flex-initial">
+                <Button
+                  type="submit"
+                  disabled={!esMontoSuficiente}
+                  className="w-full text-xs h-10 bg-emerald-700 hover:bg-emerald-800 text-white gap-2 font-bold cursor-pointer disabled:opacity-50 shadow-sm"
+                >
+                  <CheckCircle className="h-4 w-4" weight="bold" />
+                  <span>Confirmar y Finalizar Venta ({monedaSimbolo} {total.toLocaleString('es-AR')})</span>
+                </Button>
+              </motion.div>
+            )}
           </DialogFooter>
         </form>
       </DialogContent>

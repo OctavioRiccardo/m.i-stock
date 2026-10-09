@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   obtenerEstadoIntencionPoint,
   cancelarIntencionPagoPoint,
+  MP_CONFIG,
 } from '@/services/mercadopago';
 
 interface RouteContext {
@@ -46,11 +47,11 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
   try {
     const { id } = await context.params;
     const { searchParams } = new URL(req.url);
-    const deviceId = searchParams.get('deviceId');
+    const deviceId = searchParams.get('deviceId') || MP_CONFIG.defaultDeviceId;
 
     if (!id || !deviceId) {
       return NextResponse.json(
-        { error: 'Se requiere tanto el intentId como el deviceId para cancelar el cobro.' },
+        { error: 'Se requiere tanto el intentId como el deviceId (o configurar MERCADOPAGO_POINT_DEVICE_ID en el entorno).' },
         { status: 400 }
       );
     }
