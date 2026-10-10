@@ -552,7 +552,7 @@ export function ModalCobroTicket({
 
               {/* ESTADO 1: IDLE (Listo para enviar cobro al postnet) */}
               {estadoPoint === 'idle' && (
-                <div className="space-y-3 pt-0.5">
+                <div className="space-y-2 pt-0.5">
                   <div className="p-3.5 rounded-xl bg-white border border-[#009EE3]/30 flex items-center justify-between shadow-2xs">
                     <div className="space-y-0.5">
                       <span className="text-[10px] text-[#657373] uppercase font-semibold block">
@@ -563,14 +563,9 @@ export function ModalCobroTicket({
                       </span>
                     </div>
 
-                    <Button
-                      type="button"
-                      onClick={handleEnviarCobroPoint}
-                      className="h-9 px-4 text-xs font-bold bg-[#009EE3] hover:bg-[#0082BD] text-white gap-2 cursor-pointer shadow-xs"
-                    >
-                      <DeviceMobile className="h-4 w-4" weight="bold" />
-                      <span>Enviar al Postnet</span>
-                    </Button>
+                    <span className="text-[11px] text-[#657373] font-medium text-right max-w-[210px] leading-snug">
+                      Presione el botón inferior para enviar la orden al lector
+                    </span>
                   </div>
 
                   {mensajePoint && (
@@ -684,17 +679,9 @@ export function ModalCobroTicket({
                       <p className="text-[11px] text-red-700 leading-snug">{mensajePoint}</p>
                     </div>
                   </div>
-                  <div className="pt-1 flex justify-end gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={handleEnviarCobroPoint}
-                      className="h-8 text-xs font-bold bg-red-600 hover:bg-red-700 text-white gap-1.5 cursor-pointer shadow-xs"
-                    >
-                      <ArrowClockwise className="h-3.5 w-3.5" weight="bold" />
-                      <span>Reintentar Cobro</span>
-                    </Button>
-                  </div>
+                  <p className="text-[11px] text-red-700 font-medium text-right">
+                    Presione el botón inferior para reintentar el cobro en la terminal
+                  </p>
                 </div>
               )}
             </div>
@@ -768,6 +755,15 @@ export function ModalCobroTicket({
                   >
                     <CircleNotch className="h-4 w-4 animate-spin" />
                     <span>Esperando cobro en Postnet...</span>
+                  </Button>
+                ) : estadoPoint === 'rechazado' ? (
+                  <Button
+                    type="button"
+                    onClick={handleEnviarCobroPoint}
+                    className="w-full text-xs h-10 bg-red-600 hover:bg-red-700 text-white gap-2 font-bold cursor-pointer shadow-sm"
+                  >
+                    <ArrowClockwise className="h-4 w-4" weight="bold" />
+                    <span>Reintentar Cobro en Postnet ({monedaSimbolo} {total.toLocaleString('es-AR')})</span>
                   </Button>
                 ) : (
                   <Button
