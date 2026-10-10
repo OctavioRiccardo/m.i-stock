@@ -709,7 +709,7 @@ export function ModalCobroTicket({
                     className="w-full text-xs h-10 bg-emerald-600 hover:bg-emerald-700 text-white gap-2 font-bold cursor-pointer shadow-sm"
                   >
                     <CheckCircle className="h-4 w-4" weight="bold" />
-                    <span>Operación Completada • Emitir Ticket ({monedaSimbolo} {total.toLocaleString('es-AR')})</span>
+                    <span>Operación Completada • Emitir Ticket</span>
                   </Button>
                 ) : estadoPoint === 'esperando_tarjeta' || estadoPoint === 'procesando' || estadoPoint === 'creando_intencion' ? (
                   <Button
@@ -727,7 +727,7 @@ export function ModalCobroTicket({
                     className="w-full text-xs h-10 bg-red-600 hover:bg-red-700 text-white gap-2 font-bold cursor-pointer shadow-sm"
                   >
                     <ArrowClockwise className="h-4 w-4" weight="bold" />
-                    <span>Reintentar en Point Smart ({monedaSimbolo} {total.toLocaleString('es-AR')})</span>
+                    <span>Reintentar en Point Smart</span>
                   </Button>
                 ) : (
                   <Button
@@ -736,7 +736,7 @@ export function ModalCobroTicket({
                     className="w-full text-xs h-10 bg-[#009EE3] hover:bg-[#0082BD] text-white gap-2 font-bold cursor-pointer shadow-sm"
                   >
                     <DeviceMobile className="h-4 w-4" weight="bold" />
-                    <span>Cobrar en Point Smart ({monedaSimbolo} {total.toLocaleString('es-AR')})</span>
+                    <span>Cobrar en Point Smart</span>
                   </Button>
                 )}
               </motion.div>
@@ -748,7 +748,7 @@ export function ModalCobroTicket({
                   className="w-full text-xs h-10 bg-emerald-700 hover:bg-emerald-800 text-white gap-2 font-bold cursor-pointer disabled:opacity-50 shadow-sm"
                 >
                   <CheckCircle className="h-4 w-4" weight="bold" />
-                  <span>Confirmar y Finalizar Venta ({monedaSimbolo} {total.toLocaleString('es-AR')})</span>
+                  <span>Confirmar y Finalizar Venta</span>
                 </Button>
               </motion.div>
             )}
