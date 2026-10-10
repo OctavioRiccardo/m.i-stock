@@ -126,18 +126,13 @@ export function ModalCobroTicket({
       if (res.ok && Array.isArray(data.devices) && data.devices.length > 0) {
         setDevicesPoint(data.devices);
         setSelectedDeviceId(data.devices[0].id);
-        setEstadoPoint('idle');
       } else {
         setDevicesPoint([]);
-        setEstadoPoint('idle');
-        if (data.error) {
-          setMensajePoint(data.error);
-        }
       }
     } catch {
-      setEstadoPoint('idle');
-      setMensajePoint('No se pudo verificar la conexión con terminales Point.');
+      setDevicesPoint([]);
     } finally {
+      setEstadoPoint('idle');
       setBuscoDispositivos(true);
     }
   };
@@ -175,7 +170,12 @@ export function ModalCobroTicket({
         setMensajePoint('Terminal Point Smart activa: Pídale al cliente que acerque, inserte o deslice su tarjeta.');
       } else {
         setEstadoPoint('rechazado');
-        setMensajePoint(data.error || 'No se pudo enviar la orden al lector Point Smart.');
+        const err = data.error || '';
+        if (err.includes('MERCADOPAGO_ACCESS_TOKEN')) {
+          setMensajePoint('No se encontraron credenciales de Point configuradas en el sistema.');
+        } else {
+          setMensajePoint(err || 'No se pudo enviar la orden al lector Point Smart.');
+        }
       }
     } catch {
       setEstadoPoint('rechazado');
@@ -357,8 +357,8 @@ export function ModalCobroTicket({
                       : 'border-[#E8E6DF] bg-white text-[#657373] hover:text-[#1C2424] hover:bg-[#F8F7F2]'
                   }`}
                 >
-                  <QrCode className="h-5 w-5" weight={metodoSeleccionado === 'mercado_pago' ? 'duotone' : 'regular'} />
-                  <span className="text-xs">Mercado Pago</span>
+                  <DeviceMobile className="h-5 w-5" weight={metodoSeleccionado === 'mercado_pago' ? 'duotone' : 'regular'} />
+                  <span className="text-xs">Point Smart</span>
                 </button>
               )}
 
@@ -496,45 +496,35 @@ export function ModalCobroTicket({
           )}
 
           {metodoSeleccionado === 'mercado_pago' && (
-            <div className="p-4 rounded-xl border border-[#009EE3]/40 bg-[#009EE3]/5 space-y-3">
+            <div className="p-3.5 rounded-xl border border-[#009EE3]/30 bg-[#009EE3]/5 space-y-3">
               {/* Cabecera del Módulo Point Smart */}
-              <div className="flex items-center justify-between pb-2 border-b border-[#009EE3]/20">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#009EE3] text-white shadow-xs">
                     <DeviceMobile className="h-4 w-4" weight="bold" />
                   </div>
-                  <div>
-                    <span className="text-xs font-bold text-[#1C2424] block leading-tight">
-                      Postnet Mercado Pago (Point Smart)
-                    </span>
-                    <span className="text-[10px] text-[#657373]">
-                      Cobro presencial con tarjeta (Chip / Contactless)
-                    </span>
-                  </div>
+                  <span className="text-xs font-bold text-[#1C2424]">
+                    Point Smart
+                  </span>
                 </div>
 
-                {/* Estado de Conectividad de la Terminal */}
+                {/* Estado de Conectividad (solo si se detectaron terminales) */}
                 {estadoPoint === 'cargando_terminales' ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] text-[#657373]">
-                    <CircleNotch className="h-3.5 w-3.5 animate-spin text-[#009EE3]" />
-                    Verificando postnet...
+                  <span className="inline-flex items-center gap-1 text-[10px] text-[#657373]">
+                    <CircleNotch className="h-3 w-3 animate-spin text-[#009EE3]" />
+                    Conectando...
                   </span>
                 ) : devicesPoint.length > 0 ? (
                   <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
-                    <WifiHigh className="h-3.5 w-3.5 text-emerald-600" weight="bold" />
-                    {devicesPoint.length === 1 ? 'Postnet en línea' : `${devicesPoint.length} terminales`}
+                    <WifiHigh className="h-3 w-3 text-emerald-600" weight="bold" />
+                    En línea
                   </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
-                    <WifiHigh className="h-3.5 w-3.5 text-emerald-600" weight="bold" />
-                    Terminal lista para cobro
-                  </span>
-                )}
+                ) : null}
               </div>
 
               {/* Selector si hay múltiples terminales en la cuenta */}
               {devicesPoint.length > 1 && estadoPoint === 'idle' && (
-                <div className="flex items-center justify-between gap-2 text-xs">
+                <div className="flex items-center justify-between gap-2 text-xs pt-1">
                   <label className="text-[11px] text-[#657373] font-medium">Terminal destino:</label>
                   <select
                     value={selectedDeviceId}
@@ -550,85 +540,67 @@ export function ModalCobroTicket({
                 </div>
               )}
 
-              {/* ESTADO 1: IDLE (Listo para enviar cobro al postnet) */}
+              {/* ESTADO 1: IDLE (Listo para cobrar) */}
               {estadoPoint === 'idle' && (
-                <div className="space-y-2 pt-0.5">
-                  <div className="p-3.5 rounded-xl bg-white border border-[#009EE3]/30 flex items-center justify-between shadow-2xs">
-                    <div className="space-y-0.5">
-                      <span className="text-[10px] text-[#657373] uppercase font-semibold block">
-                        Monto a Cobrar en Postnet
-                      </span>
-                      <span className="text-xl font-black text-[#009EE3] tracking-tight">
-                        {monedaSimbolo} {total.toLocaleString('es-AR')}
-                      </span>
-                    </div>
-
-                    <span className="text-[11px] text-[#657373] font-medium text-right max-w-[210px] leading-snug">
-                      Presione el botón inferior para enviar la orden al lector
-                    </span>
-                  </div>
-
-                  {mensajePoint && (
-                    <p className="text-[11px] text-[#657373] text-center italic">
-                      {mensajePoint}
-                    </p>
-                  )}
+                <div className="p-3 rounded-xl bg-white border border-[#009EE3]/20 flex items-center justify-between shadow-2xs">
+                  <span className="text-xs text-[#657373] font-medium">
+                    Total a cobrar
+                  </span>
+                  <span className="text-xl font-black text-[#009EE3] tracking-tight">
+                    {monedaSimbolo} {total.toLocaleString('es-AR')}
+                  </span>
                 </div>
               )}
 
               {/* ESTADO 2: CREANDO INTENCIÓN */}
               {estadoPoint === 'creando_intencion' && (
-                <div className="py-6 text-center space-y-2 bg-white rounded-xl border border-[#009EE3]/30">
-                  <CircleNotch className="h-8 w-8 mx-auto animate-spin text-[#009EE3]" />
-                  <p className="text-xs font-bold text-[#1C2424]">Transmitiendo orden al postnet...</p>
-                  <p className="text-[11px] text-[#657373]">{mensajePoint}</p>
+                <div className="py-4 text-center space-y-1.5 bg-white rounded-xl border border-[#009EE3]/20">
+                  <CircleNotch className="h-5 w-5 mx-auto animate-spin text-[#009EE3]" />
+                  <p className="text-xs font-semibold text-[#1C2424]">Enviando al Point Smart...</p>
                 </div>
               )}
 
-              {/* ESTADO 3: ESPERANDO TARJETA / PROCESANDO EN POSTNET */}
+              {/* ESTADO 3: ESPERANDO TARJETA / PROCESANDO EN POINT SMART */}
               {(estadoPoint === 'esperando_tarjeta' || estadoPoint === 'procesando') && (
-                <div className="py-3 px-4 rounded-xl bg-white border border-[#009EE3]/40 space-y-3 shadow-xs">
+                <div className="py-3 px-3.5 rounded-xl bg-white border border-[#009EE3]/30 space-y-2.5 shadow-xs">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="relative flex h-3 w-3">
+                      <span className="relative flex h-2 w-2">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#009EE3] opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-[#009EE3]"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-[#009EE3]"></span>
                       </span>
                       <span className="text-xs font-bold text-[#1C2424]">
-                        {estadoPoint === 'procesando' ? 'Procesando Tarjeta...' : 'Esperando Tarjeta en Postnet'}
+                        {estadoPoint === 'procesando' ? 'Procesando tarjeta...' : 'Esperando tarjeta'}
                       </span>
                     </div>
                     {intentActivo?.id && (
                       <Badge variant="outline" className="font-mono text-[9px] text-[#657373] border-[#E8E6DF]">
-                        ID: {intentActivo.id.slice(0, 14)}...
+                        ID: {intentActivo.id.slice(0, 10)}...
                       </Badge>
                     )}
                   </div>
 
-                  <div className="text-center py-2.5 px-3 space-y-1 bg-[#009EE3]/5 rounded-xl border border-[#009EE3]/20">
-                    <span className="text-[10px] text-[#657373] uppercase font-semibold block">
-                      Monto Mostrado en Pantalla del Postnet
-                    </span>
-                    <div className="text-2xl font-black text-[#009EE3] tracking-tight">
+                  <div className="text-center py-2 px-3 bg-[#009EE3]/5 rounded-lg border border-[#009EE3]/15">
+                    <div className="text-xl font-black text-[#009EE3] tracking-tight">
                       {monedaSimbolo} {total.toLocaleString('es-AR')}
                     </div>
-                    <p className="text-xs font-semibold text-[#1C2424]">
+                    <p className="text-[11px] text-[#657373] font-medium mt-0.5">
                       {estadoPoint === 'procesando'
-                        ? 'Autorizando transacción con la entidad bancaria...'
-                        : 'Pídale al cliente que acerque, inserte o deslice la tarjeta en el postnet'}
+                        ? 'Autorizando transacción...'
+                        : 'Acerque, inserte o deslice la tarjeta en el lector'}
                     </p>
                   </div>
 
-                  <div className="flex items-center justify-end pt-1">
+                  <div className="flex items-center justify-end">
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       onClick={handleCancelarCobroPoint}
-                      className="h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 cursor-pointer gap-1"
+                      className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 cursor-pointer gap-1"
                     >
                       <XCircle className="h-3.5 w-3.5" weight="bold" />
-                      <span>Cancelar cobro en Postnet</span>
+                      <span>Cancelar</span>
                     </Button>
                   </div>
                 </div>
@@ -637,51 +609,43 @@ export function ModalCobroTicket({
               {/* ESTADO 4: APROBADO / OPERACIÓN COMPLETADA */}
               {estadoPoint === 'aprobado' && (
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.96 }}
+                  initial={{ opacity: 0, scale: 0.98 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="p-4 rounded-xl bg-emerald-50 border-2 border-emerald-400 text-center space-y-2.5 shadow-xs"
+                  className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-400 text-center space-y-1.5 shadow-xs"
                 >
-                  <div className="flex h-11 w-11 mx-auto items-center justify-center rounded-full bg-emerald-600 text-white shadow-xs">
-                    <CheckCircle className="h-7 w-7" weight="fill" />
+                  <div className="flex h-8 w-8 mx-auto items-center justify-center rounded-full bg-emerald-600 text-white">
+                    <CheckCircle className="h-5 w-5" weight="fill" />
                   </div>
                   <div>
-                    <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-200 text-emerald-950 mb-1">
+                    <h4 className="text-sm font-black text-emerald-950">
                       Operación Completada
-                    </span>
-                    <h4 className="text-base font-black text-emerald-950">
-                      Cobro Aprobado en Postnet
                     </h4>
-                    <p className="text-xs text-emerald-800 font-medium mt-0.5">
-                      {monedaSimbolo} {total.toLocaleString('es-AR')} acreditado exitosamente en Mercado Pago.
+                    <p className="text-xs text-emerald-800 font-medium">
+                      Cobro aprobado ({monedaSimbolo} {total.toLocaleString('es-AR')})
                     </p>
                   </div>
 
                   {intentActivo?.paymentId && (
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/90 rounded-md border border-emerald-200 text-[11px] font-mono text-emerald-900 shadow-2xs">
-                      <span className="font-bold">Comprobante MP:</span>
+                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-white/90 rounded border border-emerald-200 text-[10px] font-mono text-emerald-900">
+                      <span className="font-semibold">Comp:</span>
                       <span>#{intentActivo.paymentId}</span>
                     </div>
                   )}
-
-                  <p className="text-[11px] text-emerald-700 font-medium">
-                    Presione el botón inferior para finalizar la venta y emitir el ticket.
-                  </p>
                 </motion.div>
               )}
 
               {/* ESTADO 5: RECHAZADO / ERROR */}
               {estadoPoint === 'rechazado' && (
-                <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 space-y-2">
+                <div className="p-3 rounded-xl bg-red-50 border border-red-200 space-y-1">
                   <div className="flex items-start gap-2 text-red-800">
-                    <WarningCircle className="h-5 w-5 shrink-0 mt-0.5 text-red-600" weight="fill" />
+                    <WarningCircle className="h-4 w-4 shrink-0 mt-0.5 text-red-600" weight="fill" />
                     <div className="space-y-0.5">
-                      <span className="text-xs font-bold block">No se completó el cobro en el Postnet</span>
-                      <p className="text-[11px] text-red-700 leading-snug">{mensajePoint}</p>
+                      <span className="text-xs font-bold block">No se completó el cobro</span>
+                      <p className="text-[11px] text-red-700 leading-snug">
+                        {mensajePoint || 'No se pudo procesar el cobro en el Point Smart.'}
+                      </p>
                     </div>
                   </div>
-                  <p className="text-[11px] text-red-700 font-medium text-right">
-                    Presione el botón inferior para reintentar el cobro en la terminal
-                  </p>
                 </div>
               )}
             </div>
@@ -754,7 +718,7 @@ export function ModalCobroTicket({
                     className="w-full text-xs h-10 bg-[#009EE3]/80 text-white gap-2 font-bold cursor-wait"
                   >
                     <CircleNotch className="h-4 w-4 animate-spin" />
-                    <span>Esperando cobro en Postnet...</span>
+                    <span>Esperando cobro en Point Smart...</span>
                   </Button>
                 ) : estadoPoint === 'rechazado' ? (
                   <Button
@@ -763,7 +727,7 @@ export function ModalCobroTicket({
                     className="w-full text-xs h-10 bg-red-600 hover:bg-red-700 text-white gap-2 font-bold cursor-pointer shadow-sm"
                   >
                     <ArrowClockwise className="h-4 w-4" weight="bold" />
-                    <span>Reintentar Cobro en Postnet ({monedaSimbolo} {total.toLocaleString('es-AR')})</span>
+                    <span>Reintentar en Point Smart ({monedaSimbolo} {total.toLocaleString('es-AR')})</span>
                   </Button>
                 ) : (
                   <Button
@@ -772,7 +736,7 @@ export function ModalCobroTicket({
                     className="w-full text-xs h-10 bg-[#009EE3] hover:bg-[#0082BD] text-white gap-2 font-bold cursor-pointer shadow-sm"
                   >
                     <DeviceMobile className="h-4 w-4" weight="bold" />
-                    <span>Cobrar en Postnet ({monedaSimbolo} {total.toLocaleString('es-AR')})</span>
+                    <span>Cobrar en Point Smart ({monedaSimbolo} {total.toLocaleString('es-AR')})</span>
                   </Button>
                 )}
               </motion.div>
