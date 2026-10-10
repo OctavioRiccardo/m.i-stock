@@ -1,22 +1,13 @@
-'use client';
-
 /**
  * ====================================================================
  * RUTA RAÍZ: / (Página de Inicio)
  * ====================================================================
  * 
- * Redirige/renderiza inicialmente la vista de login dentro de `AuthLayout`.
+ * Redirección canónica inicial hacia la pantalla de acceso (/login).
  */
 
-import React from 'react';
-import AuthLayout from '@/app/(auth)/layout';
-import LoginPage from '@/app/(auth)/login/page';
+import { redirect } from 'next/navigation';
 
 export default function Home() {
-  return (
-    <AuthLayout>
-      <LoginPage />
-    </AuthLayout>
-  );
+  redirect('/login');
 }
-

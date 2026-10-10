@@ -15,12 +15,6 @@ import React from 'react';
 import {
   Receipt,
   Printer,
-  CheckCircle,
-  WarningCircle,
-  Clock,
-  User,
-  Storefront,
-  Vault,
 } from '@phosphor-icons/react';
 import {
   Dialog,
@@ -61,7 +55,6 @@ export function ModalReporteCierreTicket({
 
   const esExacto = cierre.estadoBalance === 'exacto';
   const esSobrante = cierre.estadoBalance === 'sobrante';
-  const esFaltante = cierre.estadoBalance === 'faltante';
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>

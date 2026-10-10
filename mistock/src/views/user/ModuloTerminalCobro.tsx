@@ -30,7 +30,6 @@ import {
   CaretRight,
   Money,
   Lock,
-  WarningCircle,
 } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Card, CardContent } from '@/components/ui/card';

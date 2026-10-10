@@ -33,7 +33,6 @@ import {
   Package as Boxes,
   CheckCircle as PackageCheck,
   MagnifyingGlass as PackageSearch,
-  X,
 } from '@phosphor-icons/react';
 import {
   useAdminInventarioController,

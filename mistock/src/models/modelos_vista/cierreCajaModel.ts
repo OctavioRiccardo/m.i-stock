@@ -9,8 +9,6 @@
  * (Reporte Z) para la terminal de mostrador mono-caja.
  */
 
-import { MetodoPago } from '@/models/modelos_dominio/ventaModel';
-
 /**
  * Desglose numérico acumulado por cada método de cobro durante el turno.
  */

@@ -4,7 +4,7 @@
 "use client"
 
 import React from "react"
-import { RiArrowLeftSLine, RiArrowRightSLine } from "@remixicon/react"
+import { CaretLeft, CaretRight } from "@phosphor-icons/react"
 import {
   CartesianGrid,
   Dot,
@@ -290,7 +290,7 @@ const Legend = React.forwardRef<HTMLOListElement, LegendProps>((props, ref) => {
             )}
           >
             <ScrollButton
-              icon={RiArrowLeftSLine}
+              icon={CaretLeft}
               onClick={() => {
                 setIsKeyDowned(null)
                 scrollToTest("left")
@@ -298,7 +298,7 @@ const Legend = React.forwardRef<HTMLOListElement, LegendProps>((props, ref) => {
               disabled={!hasScroll?.left}
             />
             <ScrollButton
-              icon={RiArrowRightSLine}
+              icon={CaretRight}
               onClick={() => {
                 setIsKeyDowned(null)
                 scrollToTest("right")

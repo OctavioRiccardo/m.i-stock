@@ -8,9 +8,9 @@
  * Propósito:
  * Pantalla central modularizada para el vendedor y cajero en mostrador:
  * 1. Terminal de Cobro: Operativa de caja, escaneo de código de barras y ticket activo.
- * 2. Consultor de Precios: Verificación rápida de artículos y disponibilidad sin tocar el ticket.
- * 3. Historial del Día: Auditoría y reimpresión de comprobantes térmicos de 80mm del turno.
- * 4. Faltantes de Góndola: Monitor de reposición de salón desde depósito (sin costos confidenciales).
+ * 2. Catálogo de Productos: Catálogo general de artículos con existencias en tiempo real.
+ * 3. Consultor de Precios: Verificación rápida de artículos y disponibilidad sin tocar el ticket.
+ * 4. Historial del Día: Auditoría y reimpresión de comprobantes térmicos de 80mm del turno.
  */
 
 import React, { useState } from 'react';
@@ -51,7 +51,6 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
     setPestanaOperativa,
     data,
     monedaSimbolo,
-    config,
     permitirVentaSinStock,
     saleSuccessMessage,
     saleErrorMessage,
@@ -59,7 +58,6 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
     totalCarrito,
     procesarVentaTicket,
     cajaAbierta,
-    fechaApertura,
     isModalAperturaOpen,
     setIsModalAperturaOpen,
     isModalArqueoOpen,

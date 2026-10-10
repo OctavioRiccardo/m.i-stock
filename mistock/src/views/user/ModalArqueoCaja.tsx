@@ -50,7 +50,6 @@ export function ModalArqueoCaja({
     cantidadTicketsValidos,
     efectivoEsperado,
     confirmarCierreCaja,
-    config,
   } = controller;
 
   const [efectivoContado, setEfectivoContado] = useState<string>('');

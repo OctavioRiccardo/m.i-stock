@@ -45,7 +45,7 @@ import {
 } from '@/components/ui/table';
 import { VentaRecientePOS } from '@/models/modelos_vista/dashboardModel';
 import { useConfiguracionData } from '@/services/configuracionService';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 
 export interface ModalDetalleVentaProps {
   isOpen: boolean;

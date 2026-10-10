@@ -431,11 +431,6 @@ export function useUserDashboardController() {
     });
   }, [data.ventasRecientes, metodoPagoFiltroVentas, busquedaHistorial]);
 
-  // Reset de página al cambiar filtros en historial
-  useEffect(() => {
-    setPaginaVentas(1);
-  }, [metodoPagoFiltroVentas, busquedaHistorial]);
-
   // Paginación para Ventas Recientes en Caja
   const [paginaVentas, setPaginaVentas] = useState<number>(1);
   const itemsPorPaginaVentas = 6;
@@ -445,6 +440,11 @@ export function useUserDashboardController() {
     inicioPaginacionVentas,
     inicioPaginacionVentas + itemsPorPaginaVentas
   );
+
+  // Reset de página al cambiar filtros en historial
+  useEffect(() => {
+    setPaginaVentas(1);
+  }, [metodoPagoFiltroVentas, busquedaHistorial]);
 
   // ====================================================================
   // ====================================================================

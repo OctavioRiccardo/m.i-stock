@@ -26,7 +26,6 @@ import {
   Plus,
   CaretLeft,
   CaretRight,
-  Sparkle,
   Stack,
 } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'motion/react';

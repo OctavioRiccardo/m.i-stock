@@ -18,7 +18,6 @@ import React, { useState, useEffect } from 'react';
 import {
   Key,
   Coins,
-  Clock,
   User,
   CheckCircle,
   Storefront,

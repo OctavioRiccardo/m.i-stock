@@ -14,23 +14,20 @@
  * 5. Al confirmar, emitir la venta y habilitar la impresión inmediata del ticket térmico.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Money,
   CreditCard,
-  QrCode,
   ArrowsLeftRight,
   CheckCircle,
   WarningCircle,
   Receipt,
   Coins,
-  Package,
   DeviceMobile,
   CircleNotch,
   ArrowClockwise,
   WifiHigh,
   XCircle,
-  Check,
 } from '@phosphor-icons/react';
 import { PointDevice } from '@/services/mercadopago';
 import {
@@ -98,6 +95,11 @@ export function ModalCobroTicket({
   const [mensajePoint, setMensajePoint] = useState<string>('');
   const [buscoDispositivos, setBuscoDispositivos] = useState<boolean>(false);
 
+  const intentActivoRef = useRef(intentActivo);
+  intentActivoRef.current = intentActivo;
+  const selectedDeviceIdRef = useRef(selectedDeviceId);
+  selectedDeviceIdRef.current = selectedDeviceId;
+
   // Reiniciar estado al abrir modal o cambiar total
   useEffect(() => {
     if (isOpen) {
@@ -108,8 +110,8 @@ export function ModalCobroTicket({
       setMensajePoint('');
     } else {
       // Si se cierra el modal mientras hay intención activa en Point, cancelarla para liberar el lector
-      if (intentActivo) {
-        fetch(`/api/mercadopago/point/intent/${intentActivo.id}?deviceId=${intentActivo.deviceId || selectedDeviceId}`, {
+      if (intentActivoRef.current) {
+        fetch(`/api/mercadopago/point/intent/${intentActivoRef.current.id}?deviceId=${intentActivoRef.current.deviceId || selectedDeviceIdRef.current}`, {
           method: 'DELETE',
         }).catch(() => {});
       }

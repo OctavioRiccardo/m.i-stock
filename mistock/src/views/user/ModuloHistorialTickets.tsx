@@ -29,7 +29,6 @@ import {
   Printer,
   CalendarBlank,
   Vault,
-  Key,
 } from '@phosphor-icons/react';
 import { motion } from 'motion/react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
