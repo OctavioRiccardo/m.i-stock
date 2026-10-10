@@ -239,7 +239,7 @@ export function ModuloHistorialTickets({
                 </Button>
               )}
 
-              {controller.cajaAbierta ? (
+              {controller.cajaAbierta && (
                 <Button
                   type="button"
                   size="sm"
@@ -248,16 +248,6 @@ export function ModuloHistorialTickets({
                 >
                   <Vault className="h-3.5 w-3.5" weight="duotone" />
                   <span>Arqueo y Cierre</span>
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => controller.setIsModalAperturaOpen(true)}
-                  className="h-8 text-xs font-bold bg-emerald-700 hover:bg-emerald-800 text-white gap-1.5 cursor-pointer shadow-xs"
-                >
-                  <Key className="h-3.5 w-3.5" weight="bold" />
-                  <span>Abrir Caja</span>
                 </Button>
               )}
 

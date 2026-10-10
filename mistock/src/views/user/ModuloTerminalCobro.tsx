@@ -29,7 +29,7 @@ import {
   CaretLeft,
   CaretRight,
   Money,
-  Key,
+  Lock,
   WarningCircle,
 } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -101,6 +101,7 @@ export function ModuloTerminalCobro({
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
+      if (!controller.cajaAbierta) return;
       const query = searchQuery.trim().toLowerCase();
       if (!query) return;
 
@@ -136,11 +137,16 @@ export function ModuloTerminalCobro({
               <div className="relative flex-1">
                 <Input
                   ref={searchInputRef}
-                  placeholder="Escanear código de barras o buscar por nombre (presione Enter)..."
+                  disabled={!controller.cajaAbierta}
+                  placeholder={
+                    controller.cajaAbierta
+                      ? "Escanear código de barras o buscar por nombre (presione Enter)..."
+                      : "Caja cerrada • Abra la caja desde la barra superior para operar"
+                  }
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={handleSearchKeyDown}
-                  className="pl-9 h-10 text-xs bg-white border-[#E8E6DF] focus-visible:ring-[#2A7A78]"
+                  className="pl-9 h-10 text-xs bg-white border-[#E8E6DF] focus-visible:ring-[#2A7A78] disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
                   autoFocus
                 />
                 <Barcode className="absolute left-3 top-2.5 h-5 w-5 text-[#657373]" />
@@ -285,20 +291,21 @@ export function ModuloTerminalCobro({
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
                 {productosPaginados.map((product) => {
                   const sinStock = product.stock <= 0 && !permitirVentaSinStock;
+                  const deshabilitado = sinStock || !controller.cajaAbierta;
                   const itemEnCarrito = carrito.find((it) => it.producto.id === product.id);
 
                   return (
                     <motion.div
                       key={product.id}
-                      whileHover={sinStock ? {} : { y: -2, scale: 1.01 }}
-                      whileTap={sinStock ? {} : { scale: 0.98 }}
-                      onClick={() => !sinStock && agregarAlCarrito(product, 1)}
-                      className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between relative group ${
-                        sinStock
+                      whileHover={deshabilitado ? {} : { y: -2, scale: 1.01 }}
+                      whileTap={deshabilitado ? {} : { scale: 0.98 }}
+                      onClick={() => !deshabilitado && agregarAlCarrito(product, 1)}
+                      className={`p-3 rounded-xl border transition-all flex flex-col justify-between relative group ${
+                        deshabilitado
                           ? 'bg-gray-50 border-gray-200 opacity-60 cursor-not-allowed'
                           : itemEnCarrito
-                          ? 'bg-[#E2F1F0]/40 border-[#2A7A78] shadow-xs'
-                          : 'bg-white border-[#E8E6DF] hover:border-[#2A7A78] hover:bg-[#F8F7F2]/60 shadow-2xs'
+                          ? 'bg-[#E2F1F0]/40 border-[#2A7A78] shadow-xs cursor-pointer'
+                          : 'bg-white border-[#E8E6DF] hover:border-[#2A7A78] hover:bg-[#F8F7F2]/60 shadow-2xs cursor-pointer'
                       }`}
                     >
                       {itemEnCarrito && (
@@ -346,19 +353,25 @@ export function ModuloTerminalCobro({
                         <Button
                           type="button"
                           size="sm"
-                          disabled={sinStock}
+                          disabled={deshabilitado}
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (!sinStock) agregarAlCarrito(product, 1);
+                            if (!deshabilitado) agregarAlCarrito(product, 1);
                           }}
-                          className={`h-7 px-2.5 text-xs font-bold gap-1 shadow-xs transition-all cursor-pointer ${
-                            sinStock
+                          className={`h-7 px-2.5 text-xs font-bold gap-1 shadow-xs transition-all ${
+                            deshabilitado
                               ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                              : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                              : 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
                           }`}
                         >
                           <Plus className="h-3.5 w-3.5" weight="bold" />
-                          <span>{itemEnCarrito ? `Sumar (${itemEnCarrito.cantidad})` : 'Agregar'}</span>
+                          <span>
+                            {!controller.cajaAbierta
+                              ? 'Caja cerrada'
+                              : itemEnCarrito
+                              ? `Sumar (${itemEnCarrito.cantidad})`
+                              : 'Agregar'}
+                          </span>
                         </Button>
                       </div>
                     </motion.div>
@@ -382,12 +395,13 @@ export function ModuloTerminalCobro({
                   <TableBody>
                     {productosPaginados.map((product) => {
                       const sinStock = product.stock <= 0 && !permitirVentaSinStock;
+                      const deshabilitado = sinStock || !controller.cajaAbierta;
                       const itemEnCarrito = carrito.find((it) => it.producto.id === product.id);
 
                       return (
                         <TableRow
                           key={product.id}
-                          className={`hover:bg-[#F8F7F2]/50 ${sinStock ? 'opacity-60 bg-gray-50/50' : ''}`}
+                          className={`hover:bg-[#F8F7F2]/50 ${deshabilitado ? 'opacity-60 bg-gray-50/50' : ''}`}
                         >
                           <TableCell className="py-2 text-xs font-mono text-[#657373]">
                             {product.codigo}
@@ -421,16 +435,22 @@ export function ModuloTerminalCobro({
                           <TableCell className="py-2.5 text-right">
                             <Button
                               size="sm"
-                              disabled={sinStock}
-                              onClick={() => agregarAlCarrito(product, 1)}
-                              className={`h-7 px-3 text-xs font-bold gap-1 shadow-2xs cursor-pointer ${
-                                sinStock
+                              disabled={deshabilitado}
+                              onClick={() => !deshabilitado && agregarAlCarrito(product, 1)}
+                              className={`h-7 px-3 text-xs font-bold gap-1 shadow-2xs ${
+                                deshabilitado
                                   ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                                  : 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
                               }`}
                             >
                               <Plus className="h-3.5 w-3.5" weight="bold" />
-                              <span>{itemEnCarrito ? `Sumar (${itemEnCarrito.cantidad})` : 'Agregar'}</span>
+                              <span>
+                                {!controller.cajaAbierta
+                                  ? 'Caja cerrada'
+                                  : itemEnCarrito
+                                  ? `Sumar (${itemEnCarrito.cantidad})`
+                                  : 'Agregar'}
+                              </span>
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -504,8 +524,9 @@ export function ModuloTerminalCobro({
               <Button
                 size="sm"
                 variant="ghost"
+                disabled={!controller.cajaAbierta}
                 onClick={vaciarCarrito}
-                className="h-7 px-2 text-[11px] text-red-600 hover:text-red-700 hover:bg-red-50 cursor-pointer gap-1"
+                className="h-7 px-2 text-[11px] text-red-600 hover:text-red-700 hover:bg-red-50 cursor-pointer gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
                 title="Vaciar ticket completo"
               >
                 <Trash className="h-3.5 w-3.5" />
@@ -551,8 +572,9 @@ export function ModuloTerminalCobro({
 
                         <button
                           type="button"
+                          disabled={!controller.cajaAbierta}
                           onClick={() => removerItemCarrito(item.producto.id)}
-                          className="text-[#657373] hover:text-red-600 transition-colors p-1 cursor-pointer"
+                          className="text-[#657373] hover:text-red-600 transition-colors p-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                           title="Quitar artículo"
                         >
                           <Trash className="h-3.5 w-3.5" />
@@ -564,8 +586,9 @@ export function ModuloTerminalCobro({
                         <div className="flex items-center border border-[#E8E6DF] rounded-lg bg-[#F8F7F2]/60 overflow-hidden shadow-2xs">
                           <button
                             type="button"
+                            disabled={!controller.cajaAbierta}
                             onClick={() => actualizarCantidadItem(item.producto.id, item.cantidad - 1)}
-                            className="h-7 w-7 flex items-center justify-center hover:bg-[#E8E6DF] text-[#1C2424] cursor-pointer transition-colors"
+                            className="h-7 w-7 flex items-center justify-center hover:bg-[#E8E6DF] text-[#1C2424] cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             title="Restar 1"
                           >
                             <Minus className="h-3 w-3" />
@@ -575,8 +598,9 @@ export function ModuloTerminalCobro({
                           </span>
                           <button
                             type="button"
+                            disabled={!controller.cajaAbierta}
                             onClick={() => actualizarCantidadItem(item.producto.id, item.cantidad + 1)}
-                            className="h-7 w-7 flex items-center justify-center hover:bg-[#E8E6DF] text-[#1C2424] cursor-pointer transition-colors"
+                            className="h-7 w-7 flex items-center justify-center hover:bg-[#E8E6DF] text-[#1C2424] cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             title="Sumar 1"
                           >
                             <Plus className="h-3 w-3" />
@@ -613,23 +637,21 @@ export function ModuloTerminalCobro({
                 </div>
               </div>
 
-              {/* Botón Principal de Cobro o Apertura de Caja */}
+              {/* Botón Principal de Cobro o Caja Cerrada */}
               {!controller.cajaAbierta ? (
                 <div className="space-y-2">
-                  <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 flex items-center gap-2 text-xs text-amber-800">
-                    <WarningCircle className="h-4 w-4 shrink-0 text-amber-600" weight="fill" />
-                    <span>Caja cerrada. Se requiere apertura para procesar ventas.</span>
+                  <div className="p-2.5 rounded-lg bg-gray-100 border border-gray-200 flex items-center gap-2 text-xs text-gray-700">
+                    <Lock className="h-4 w-4 shrink-0 text-gray-500" weight="bold" />
+                    <span>Caja cerrada. Abra el turno desde el botón superior para operar.</span>
                   </div>
-                  <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
-                    <Button
-                      type="button"
-                      onClick={() => controller.setIsModalAperturaOpen(true)}
-                      className="w-full h-12 text-sm bg-emerald-700 hover:bg-emerald-800 text-white font-bold gap-2 cursor-pointer shadow-sm transition-all"
-                    >
-                      <Key className="h-5 w-5" weight="bold" />
-                      <span>Abrir Caja para Habilitar Cobro</span>
-                    </Button>
-                  </motion.div>
+                  <Button
+                    type="button"
+                    disabled
+                    className="w-full h-12 text-sm bg-gray-200 text-gray-500 font-bold gap-2 cursor-not-allowed shadow-none"
+                  >
+                    <Lock className="h-5 w-5" weight="bold" />
+                    <span>Caja Cerrada</span>
+                  </Button>
                 </div>
               ) : (
                 <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>

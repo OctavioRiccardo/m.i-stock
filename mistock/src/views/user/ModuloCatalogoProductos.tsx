@@ -357,16 +357,19 @@ export function ModuloCatalogoProductos({ controller }: ModuloCatalogoProductosP
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {productosCatalogoPaginados.map((product) => {
                 const sinStock = product.stock <= 0 && !permitirVentaSinStock;
+                const deshabilitado = sinStock || !controller.cajaAbierta;
                 const enTicket = carrito.find((it) => it.producto.id === product.id);
 
                 return (
                   <motion.div
                     key={product.id}
-                    whileHover={{ y: -2 }}
-                    className={`p-3.5 rounded-xl border bg-white flex flex-col justify-between transition-all shadow-2xs relative ${
-                      enTicket
+                    whileHover={deshabilitado ? {} : { y: -2 }}
+                    className={`p-3.5 rounded-xl border flex flex-col justify-between transition-all shadow-2xs relative ${
+                      deshabilitado
+                        ? 'bg-gray-50 border-gray-200 opacity-60 cursor-not-allowed'
+                        : enTicket
                         ? 'border-[#2A7A78] bg-[#E2F1F0]/20 ring-1 ring-[#2A7A78]/30'
-                        : 'border-[#E8E6DF] hover:border-[#2A7A78]/60 hover:shadow-xs'
+                        : 'bg-white border-[#E8E6DF] hover:border-[#2A7A78]/60 hover:shadow-xs'
                     }`}
                   >
                     {/* Badge en ticket */}
@@ -424,16 +427,22 @@ export function ModuloCatalogoProductos({ controller }: ModuloCatalogoProductosP
 
                       <Button
                         size="sm"
-                        disabled={sinStock}
-                        onClick={() => handleAgregar(product)}
-                        className={`h-8 px-3 text-xs font-bold gap-1 shadow-xs transition-all cursor-pointer ${
-                          sinStock
+                        disabled={deshabilitado}
+                        onClick={() => !deshabilitado && handleAgregar(product)}
+                        className={`h-8 px-3 text-xs font-bold gap-1 shadow-xs transition-all ${
+                          deshabilitado
                             ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                            : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                            : 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
                         }`}
                       >
                         <Plus className="h-3.5 w-3.5" weight="bold" />
-                        <span>{enTicket ? `Sumar (${enTicket.cantidad})` : 'Agregar'}</span>
+                        <span>
+                          {!controller.cajaAbierta
+                            ? 'Caja cerrada'
+                            : enTicket
+                            ? `Sumar (${enTicket.cantidad})`
+                            : 'Agregar'}
+                        </span>
                       </Button>
                     </div>
                   </motion.div>
@@ -458,12 +467,13 @@ export function ModuloCatalogoProductos({ controller }: ModuloCatalogoProductosP
                 <TableBody>
                   {productosCatalogoPaginados.map((product) => {
                     const sinStock = product.stock <= 0 && !permitirVentaSinStock;
+                    const deshabilitado = sinStock || !controller.cajaAbierta;
                     const enTicket = carrito.find((it) => it.producto.id === product.id);
 
                     return (
                       <TableRow
                         key={product.id}
-                        className={`hover:bg-[#F8F7F2]/50 ${enTicket ? 'bg-[#E2F1F0]/20' : ''}`}
+                        className={`hover:bg-[#F8F7F2]/50 ${deshabilitado ? 'opacity-60 bg-gray-50/50' : enTicket ? 'bg-[#E2F1F0]/20' : ''}`}
                       >
                         <TableCell className="py-2.5 text-xs font-mono text-[#657373]">
                           {product.codigo}
@@ -511,16 +521,22 @@ export function ModuloCatalogoProductos({ controller }: ModuloCatalogoProductosP
                         <TableCell className="py-2.5 text-right">
                           <Button
                             size="sm"
-                            disabled={sinStock}
-                            onClick={() => handleAgregar(product)}
-                            className={`h-7 px-3 text-xs font-bold gap-1 shadow-2xs cursor-pointer ${
-                              sinStock
+                            disabled={deshabilitado}
+                            onClick={() => !deshabilitado && handleAgregar(product)}
+                            className={`h-7 px-3 text-xs font-bold gap-1 shadow-2xs ${
+                              deshabilitado
                                 ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                                : 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
                             }`}
                           >
                             <Plus className="h-3.5 w-3.5" weight="bold" />
-                            <span>{enTicket ? `Sumar (${enTicket.cantidad})` : 'Agregar'}</span>
+                            <span>
+                              {!controller.cajaAbierta
+                                ? 'Caja cerrada'
+                                : enTicket
+                                ? `Sumar (${enTicket.cantidad})`
+                                : 'Agregar'}
+                            </span>
                           </Button>
                         </TableCell>
                       </TableRow>

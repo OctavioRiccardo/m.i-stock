@@ -748,6 +748,12 @@ export function useUserDashboardController() {
    * Agrega un producto al carrito de la venta en curso (o incrementa su cantidad).
    */
   const agregarAlCarrito = (producto: ProductoRapidoPOS, cantidadAAgregar: number = 1): boolean => {
+    if (!cajaAbierta) {
+      setSaleErrorMessage('La caja está cerrada. Abra la caja desde el botón superior antes de armar el carrito.');
+      setTimeout(() => setSaleErrorMessage(null), 3000);
+      return false;
+    }
+
     if (producto.stock <= 0 && !permitirVentaSinStock) {
       setSaleErrorMessage(`"${producto.nombre}" no tiene unidades disponibles en stock.`);
       setTimeout(() => setSaleErrorMessage(null), 3000);
@@ -801,6 +807,8 @@ export function useUserDashboardController() {
    * Modifica la cantidad de un ítem en el carrito.
    */
   const actualizarCantidadItem = (productoId: string, nuevaCantidad: number) => {
+    if (!cajaAbierta) return;
+
     if (nuevaCantidad <= 0) {
       removerItemCarrito(productoId);
       return;
@@ -835,6 +843,7 @@ export function useUserDashboardController() {
    * Quita un renglón del carrito.
    */
   const removerItemCarrito = (productoId: string) => {
+    if (!cajaAbierta) return;
     setCarrito((prev) => prev.filter((item) => item.producto.id !== productoId));
   };
 
@@ -842,6 +851,7 @@ export function useUserDashboardController() {
    * Vacía todos los ítems del ticket actual.
    */
   const vaciarCarrito = () => {
+    if (!cajaAbierta) return;
     setCarrito([]);
   };
 
@@ -853,9 +863,8 @@ export function useUserDashboardController() {
     montoRecibido?: number
   ): VentaRecientePOS | null => {
     if (!cajaAbierta) {
-      setSaleErrorMessage('La caja está cerrada. Debe realizar la Apertura de Caja para habilitar el cobro de ventas.');
-      setTimeout(() => setSaleErrorMessage(null), 4000);
-      setIsModalAperturaOpen(true);
+      setSaleErrorMessage('La caja está cerrada. Abra la caja desde el botón superior de apertura.');
+      setTimeout(() => setSaleErrorMessage(null), 3000);
       return null;
     }
 

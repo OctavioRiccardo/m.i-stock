@@ -279,11 +279,13 @@ export function ModuloConsultorPrecios({ controller }: ModuloConsultorPreciosPro
                     <Button
                       type="button"
                       onClick={() => handleAgregarAlTicket(productoConsultado)}
-                      disabled={productoConsultado.stock <= 0}
+                      disabled={productoConsultado.stock <= 0 || !controller.cajaAbierta}
                       className="w-full h-11 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 cursor-pointer shadow-xs disabled:opacity-40"
                     >
                       <Plus className="h-4 w-4" weight="bold" />
-                      <span>Cargar al Ticket Actual</span>
+                      <span>
+                        {!controller.cajaAbierta ? 'Caja Cerrada (Sin apertura)' : 'Cargar al Ticket Actual'}
+                      </span>
                     </Button>
                     <p className="text-[10px] text-[#657373]">
                       Añade 1 unidad al ticket en curso de la caja principal
