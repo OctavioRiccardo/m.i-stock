@@ -51,11 +51,26 @@ export interface ArqueoCajaDTO {
 }
 
 /**
+ * DTO para el registro de Apertura de Caja (Inicio de Turno / Sesión).
+ */
+export interface AperturaCajaDTO {
+  idApertura: string;
+  fechaApertura: string;
+  cajero: string;
+  numeroCaja: number;
+  fondoInicial: number;
+  observaciones?: string;
+}
+
+/**
  * Estado reactivo de la sesión de caja en la terminal.
  */
 export interface EstadoSesionCaja {
   fondoInicial: number;
-  fechaApertura: string;
+  fechaApertura: string | null;
   estaAbierta: boolean;
+  cajero: string;
+  numeroCaja: number;
+  observacionesApertura?: string;
   ultimoCierre: ArqueoCajaDTO | null;
 }

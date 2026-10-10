@@ -23,6 +23,7 @@ import {
   WarningCircle,
   Storefront,
   Vault,
+  Key,
 } from '@phosphor-icons/react';
 import { motion, AnimatePresence, MotionConfig } from 'motion/react';
 import { Badge } from '@/components/ui/badge';
@@ -36,6 +37,7 @@ import { ModuloConsultorPrecios } from './ModuloConsultorPrecios';
 import { ModuloHistorialTickets } from './ModuloHistorialTickets';
 import { ModalCobroTicket } from './ModalCobroTicket';
 import { ModalDetalleVenta } from './ModalDetalleVenta';
+import { ModalAperturaCaja } from './ModalAperturaCaja';
 import { ModalArqueoCaja } from './ModalArqueoCaja';
 import { ModalReporteCierreTicket } from './ModalReporteCierreTicket';
 
@@ -56,6 +58,10 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
     carrito,
     totalCarrito,
     procesarVentaTicket,
+    cajaAbierta,
+    fechaApertura,
+    isModalAperturaOpen,
+    setIsModalAperturaOpen,
     isModalArqueoOpen,
     setIsModalArqueoOpen,
     isModalTicketCierreOpen,
@@ -96,6 +102,17 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                 <h1 className="text-base sm:text-lg font-bold text-[#1C2424] tracking-tight">
                   Punto de Venta
                 </h1>
+                {cajaAbierta ? (
+                  <Badge variant="outline" className="text-[10px] font-bold bg-emerald-50 text-emerald-800 border-emerald-300 gap-1 inline-flex items-center">
+                    <CheckCircle className="h-3 w-3 text-emerald-600" weight="fill" />
+                    <span>Caja Abierta</span>
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-[10px] font-bold bg-amber-50 text-amber-800 border-amber-300 gap-1 inline-flex items-center">
+                    <WarningCircle className="h-3 w-3 text-amber-600" weight="fill" />
+                    <span>Caja Cerrada</span>
+                  </Badge>
+                )}
                 {permitirVentaSinStock && (
                   <Badge variant="warning" className="text-[10px]">
                     Venta sin stock activada
@@ -128,17 +145,29 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
               </span>
             </div>
 
-            {/* Acceso a Cierre de Turno y Arqueo */}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setIsModalArqueoOpen(true)}
-              className="h-10 px-3 text-xs font-bold text-[#2A7A78] border-[#2A7A78]/30 hover:bg-[#E2F1F0] hover:text-[#205E5C] gap-1.5 cursor-pointer shadow-xs"
-            >
-              <Vault className="h-4 w-4" weight="duotone" />
-              <span>Arqueo y Cierre</span>
-            </Button>
+            {/* Acceso a Apertura o Cierre de Caja según estado */}
+            {cajaAbierta ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsModalArqueoOpen(true)}
+                className="h-10 px-3 text-xs font-bold text-[#2A7A78] border-[#2A7A78]/30 hover:bg-[#E2F1F0] hover:text-[#205E5C] gap-1.5 cursor-pointer shadow-xs"
+              >
+                <Vault className="h-4 w-4" weight="duotone" />
+                <span>Arqueo y Cierre</span>
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setIsModalAperturaOpen(true)}
+                className="h-10 px-3.5 text-xs font-bold bg-emerald-700 hover:bg-emerald-800 text-white gap-2 cursor-pointer shadow-xs"
+              >
+                <Key className="h-4 w-4" weight="bold" />
+                <span>Abrir Caja</span>
+              </Button>
+            )}
           </div>
         </div>
 
@@ -289,6 +318,13 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
           onClose={() => setVentaSeleccionada(null)}
           venta={ventaSeleccionada}
           monedaSimbolo={monedaSimbolo}
+        />
+
+        {/* Modal de Apertura de Caja (Inicio de Turno / Sesión) */}
+        <ModalAperturaCaja
+          isOpen={isModalAperturaOpen}
+          onClose={() => setIsModalAperturaOpen(false)}
+          controller={controller}
         />
 
         {/* Modal de Arqueo y Conciliación de Efectivo (Mono-caja) */}

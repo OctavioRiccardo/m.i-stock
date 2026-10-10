@@ -29,6 +29,8 @@ import {
   CaretLeft,
   CaretRight,
   Money,
+  Key,
+  WarningCircle,
 } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -611,18 +613,37 @@ export function ModuloTerminalCobro({
                 </div>
               </div>
 
-              {/* Botón Principal de Cobro */}
-              <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
-                <Button
-                  type="button"
-                  disabled={carrito.length === 0}
-                  onClick={onAbrirCobro}
-                  className="w-full h-12 text-sm bg-emerald-700 hover:bg-emerald-800 text-white font-bold gap-2 cursor-pointer disabled:opacity-40 shadow-sm transition-all"
-                >
-                  <Money className="h-5 w-5" weight="bold" />
-                  <span>Cobrar Ticket ({monedaSimbolo} {totalCarrito.toLocaleString('es-AR')})</span>
-                </Button>
-              </motion.div>
+              {/* Botón Principal de Cobro o Apertura de Caja */}
+              {!controller.cajaAbierta ? (
+                <div className="space-y-2">
+                  <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 flex items-center gap-2 text-xs text-amber-800">
+                    <WarningCircle className="h-4 w-4 shrink-0 text-amber-600" weight="fill" />
+                    <span>Caja cerrada. Se requiere apertura para procesar ventas.</span>
+                  </div>
+                  <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
+                    <Button
+                      type="button"
+                      onClick={() => controller.setIsModalAperturaOpen(true)}
+                      className="w-full h-12 text-sm bg-emerald-700 hover:bg-emerald-800 text-white font-bold gap-2 cursor-pointer shadow-sm transition-all"
+                    >
+                      <Key className="h-5 w-5" weight="bold" />
+                      <span>Abrir Caja para Habilitar Cobro</span>
+                    </Button>
+                  </motion.div>
+                </div>
+              ) : (
+                <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
+                  <Button
+                    type="button"
+                    disabled={carrito.length === 0}
+                    onClick={onAbrirCobro}
+                    className="w-full h-12 text-sm bg-emerald-700 hover:bg-emerald-800 text-white font-bold gap-2 cursor-pointer disabled:opacity-40 shadow-sm transition-all"
+                  >
+                    <Money className="h-5 w-5" weight="bold" />
+                    <span>Cobrar Ticket</span>
+                  </Button>
+                </motion.div>
+              )}
             </div>
           </CardContent>
         </Card>

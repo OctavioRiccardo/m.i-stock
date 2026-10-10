@@ -29,6 +29,7 @@ import {
   Printer,
   CalendarBlank,
   Vault,
+  Key,
 } from '@phosphor-icons/react';
 import { motion } from 'motion/react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -238,15 +239,27 @@ export function ModuloHistorialTickets({
                 </Button>
               )}
 
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => setIsModalArqueoOpen(true)}
-                className="h-8 text-xs font-bold bg-[#2A7A78] hover:bg-[#205E5C] text-white gap-1.5 cursor-pointer shadow-xs"
-              >
-                <Vault className="h-3.5 w-3.5" weight="duotone" />
-                <span>Arqueo y Cierre</span>
-              </Button>
+              {controller.cajaAbierta ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => setIsModalArqueoOpen(true)}
+                  className="h-8 text-xs font-bold bg-[#2A7A78] hover:bg-[#205E5C] text-white gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <Vault className="h-3.5 w-3.5" weight="duotone" />
+                  <span>Arqueo y Cierre</span>
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => controller.setIsModalAperturaOpen(true)}
+                  className="h-8 text-xs font-bold bg-emerald-700 hover:bg-emerald-800 text-white gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <Key className="h-3.5 w-3.5" weight="bold" />
+                  <span>Abrir Caja</span>
+                </Button>
+              )}
 
               {/* Alternador de Vista (Tarjetas vs Tabla) */}
               <div className="flex items-center border border-[#E8E6DF] rounded-lg bg-white p-0.5 shrink-0 shadow-2xs">

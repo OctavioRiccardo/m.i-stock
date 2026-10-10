@@ -447,12 +447,83 @@ export function useUserDashboardController() {
   );
 
   // ====================================================================
-  // OPERATIVA DE ARQUEO Y CIERRE DE CAJA (MONO-CAJA)
   // ====================================================================
-  const [fondoInicial, setFondoInicial] = useState<number>(10000); // Fondo de gaveta inicial para dar cambio ($10.000 default)
+  // OPERATIVA DE SESIÓN DE CAJA: APERTURA Y CIERRE (MONO-CAJA)
+  // ====================================================================
+  const [cajaAbierta, setCajaAbierta] = useState<boolean>(false);
+  const [fondoInicial, setFondoInicial] = useState<number>(10000); // Fondo de gaveta inicial para dar cambio
+  const [fechaApertura, setFechaApertura] = useState<string | null>(null);
+  const [cajeroApertura, setCajeroApertura] = useState<string>('Lucas Benítez');
+  const [observacionesApertura, setObservacionesApertura] = useState<string>('');
+  const [isModalAperturaOpen, setIsModalAperturaOpen] = useState<boolean>(false);
   const [isModalArqueoOpen, setIsModalArqueoOpen] = useState<boolean>(false);
   const [isModalTicketCierreOpen, setIsModalTicketCierreOpen] = useState<boolean>(false);
   const [ultimoCierre, setUltimoCierre] = useState<ArqueoCajaDTO | null>(null);
+
+  // Cargar sesión de caja persistida desde localStorage al montar
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('mistock_sesion_caja_v1');
+      if (stored) {
+        const sesion = JSON.parse(stored);
+        if (sesion && typeof sesion.cajaAbierta === 'boolean') {
+          setCajaAbierta(sesion.cajaAbierta);
+          if (sesion.fondoInicial !== undefined) setFondoInicial(sesion.fondoInicial);
+          if (sesion.fechaApertura) setFechaApertura(sesion.fechaApertura);
+          if (sesion.cajeroApertura) setCajeroApertura(sesion.cajeroApertura);
+          if (sesion.observacionesApertura) setObservacionesApertura(sesion.observacionesApertura);
+          if (sesion.ultimoCierre) setUltimoCierre(sesion.ultimoCierre);
+          return;
+        }
+      }
+      // Por defecto la caja inicia cerrada requiriendo apertura explícita
+      setCajaAbierta(false);
+    } catch {
+      setCajaAbierta(false);
+    }
+  }, []);
+
+  /**
+   * Ejecuta la Apertura de Caja para habilitar la operativa de ventas en el turno.
+   */
+  const abrirCaja = (montoInicial: number, observaciones?: string) => {
+    const ahora = new Date();
+    const fechaFormateada = ahora.toLocaleDateString('es-AR');
+    const horaFormateada = ahora.toLocaleTimeString('es-AR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    const strFechaApertura = `${fechaFormateada} ${horaFormateada}`;
+    const cajeroActual = data.ventasRecientes[0]?.vendedor || 'Lucas Benítez';
+
+    setCajaAbierta(true);
+    setFondoInicial(montoInicial);
+    setFechaApertura(strFechaApertura);
+    setCajeroApertura(cajeroActual);
+    setObservacionesApertura(observaciones || '');
+    setIsModalAperturaOpen(false);
+
+    try {
+      localStorage.setItem(
+        'mistock_sesion_caja_v1',
+        JSON.stringify({
+          cajaAbierta: true,
+          fondoInicial: montoInicial,
+          fechaApertura: strFechaApertura,
+          cajeroApertura: cajeroActual,
+          observacionesApertura: observaciones || '',
+          ultimoCierre,
+        })
+      );
+    } catch {
+      // Silencioso
+    }
+
+    setSaleSuccessMessage(
+      `Caja abierta con éxito. Fondo inicial: ${monedaSimbolo} ${montoInicial.toLocaleString('es-AR')}`
+    );
+    setTimeout(() => setSaleSuccessMessage(null), 4000);
+  };
 
   // Desglose de ingresos por medio de cobro acumulado en el turno actual
   const resumenMediosTurno: ResumenMediosPagoCierre = useMemo(() => {
@@ -511,9 +582,9 @@ export function useUserDashboardController() {
 
     const nuevoCierre: ArqueoCajaDTO = {
       idCierre: `CR-${Date.now().toString().slice(-6)}`,
-      fechaApertura: `${fechaFormateada} 08:30`,
+      fechaApertura: fechaApertura || `${fechaFormateada} 08:30`,
       fechaCierre: `${fechaFormateada} ${horaFormateada}`,
-      cajero: data.ventasRecientes[0]?.vendedor || 'Lucas Benítez',
+      cajero: cajeroApertura || data.ventasRecientes[0]?.vendedor || 'Lucas Benítez',
       numeroCaja: config.pos.numeroCaja || 1,
       fondoInicial,
       totalVentasEfectivo,
@@ -528,9 +599,27 @@ export function useUserDashboardController() {
       observaciones: observaciones?.trim() || undefined,
     };
 
+    setCajaAbierta(false);
     setUltimoCierre(nuevoCierre);
     setIsModalArqueoOpen(false);
     setIsModalTicketCierreOpen(true);
+
+    try {
+      localStorage.setItem(
+        'mistock_sesion_caja_v1',
+        JSON.stringify({
+          cajaAbierta: false,
+          fondoInicial,
+          fechaApertura: null,
+          cajeroApertura,
+          observacionesApertura: '',
+          ultimoCierre: nuevoCierre,
+        })
+      );
+    } catch {
+      // Silencioso
+    }
+
     setSaleSuccessMessage(
       `Cierre de Caja ${nuevoCierre.idCierre} emitido. Diferencia: ${monedaSimbolo} ${diferencia.toLocaleString('es-AR')}`
     );
@@ -763,6 +852,13 @@ export function useUserDashboardController() {
     metodoPago: MetodoPago = 'efectivo',
     montoRecibido?: number
   ): VentaRecientePOS | null => {
+    if (!cajaAbierta) {
+      setSaleErrorMessage('La caja está cerrada. Debe realizar la Apertura de Caja para habilitar el cobro de ventas.');
+      setTimeout(() => setSaleErrorMessage(null), 4000);
+      setIsModalAperturaOpen(true);
+      return null;
+    }
+
     if (carrito.length === 0) {
       setSaleErrorMessage('El ticket está vacío. Agregue productos antes de cobrar.');
       setTimeout(() => setSaleErrorMessage(null), 3000);
@@ -1133,7 +1229,15 @@ export function useUserDashboardController() {
     totalUnidadesEnStock,
     productosAgotadosCount,
     productosConStockCount,
-    // Operativa de Arqueo y Cierre de Caja (Mono-caja)
+    // Operativa de Sesión de Caja (Apertura, Arqueo y Cierre Mono-caja)
+    cajaAbierta,
+    setCajaAbierta,
+    fechaApertura,
+    cajeroApertura,
+    observacionesApertura,
+    isModalAperturaOpen,
+    setIsModalAperturaOpen,
+    abrirCaja,
     fondoInicial,
     setFondoInicial,
     isModalArqueoOpen,
