@@ -638,20 +638,14 @@ export function ModuloTerminalCobro({
 
               {/* Botón Principal de Cobro o Caja Cerrada */}
               {!controller.cajaAbierta ? (
-                <div className="space-y-2">
-                  <div className="p-2.5 rounded-lg bg-gray-100 border border-gray-200 flex items-center gap-2 text-xs text-gray-700">
-                    <Lock className="h-4 w-4 shrink-0 text-gray-500" weight="bold" />
-                    <span>Caja cerrada. Abra el turno desde el botón superior para operar.</span>
-                  </div>
-                  <Button
-                    type="button"
-                    disabled
-                    className="w-full h-12 text-sm bg-gray-200 text-gray-500 font-bold gap-2 cursor-not-allowed shadow-none"
-                  >
-                    <Lock className="h-5 w-5" weight="bold" />
-                    <span>Caja Cerrada</span>
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  disabled
+                  className="w-full h-12 text-sm bg-gray-200 text-gray-500 font-bold gap-2 cursor-not-allowed shadow-none"
+                >
+                  <Lock className="h-5 w-5" weight="bold" />
+                  <span>Caja Cerrada</span>
+                </Button>
               ) : (
                 <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
                   <Button
