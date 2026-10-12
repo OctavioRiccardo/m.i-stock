@@ -9,9 +9,9 @@
 En arquitecturas web modernas con **React 19**, **Next.js (App Router)** y **TypeScript**, el patrón **Modelo-Vista-Controlador (MVC)** se adapta implementando los **Controladores como Custom Hooks**.
 
 > [!INFO] **Principio de Responsabilidad Única (SRP)**
-> - **La Vista (`View`)**: Se encarga únicamente del renderizado visual (UI), componentes Mantine, CSS Modules y accesibilidad.
-> - **El Controlador (`Controller`)**: Actúa como el cerebro de la aplicación. Maneja el estado reactivo, las validaciones de negocio, la conexión con Supabase/APIs y el enrutamiento.
-> - **El Modelo (`Model`)**: Define los tipos de datos, interfaces TypeScript y esquemas de base de datos.
+> - **La Vista (`View`)**: Se encarga únicamente del renderizado visual (UI), componentes accesibles (Radix UI / shadcn), estilos atómicos (Tailwind CSS v4), animaciones y accesibilidad.
+> - **El Controlador (`Controller`)**: Actúa como el cerebro operacional. Maneja el estado reactivo (`useState`), las validaciones de negocio, la conexión con Supabase/APIs y el enrutamiento (`useRouter`).
+> - **El Modelo (`Model`)**: Define las entidades de negocio (`modelos_dominio/`), ViewModels de formulario (`modelos_vista/`) y esquemas tipados con TypeScript.
 
 ---
 
@@ -24,15 +24,17 @@ flowchart TD
     
     subgraph Controlador
         C --> D["1. Activa Loading & Limpia Errores"]
-        C --> E["2. Aplica Validaciones"]
-        C --> F["3. Consulta a Supabase Client"]
+        C --> E["2. Aplica Validaciones Locales (Regex, largo)"]
+        C --> F["3. Consulta a Supabase Auth"]
     end
     
     F -- "Respuesta Autenticación" --> G{"¿Éxito o Error?"}
-    G -- "Error" --> H["Asigna estado: error"]
+    G -- "Error" --> H["Asigna estado: error amigable"]
     H --> B
-    G -- "Éxito" --> I["Redirige a la ruta raíz /"]
-    I --> J["🚀 Dashboard Principal"]
+    G -- "Éxito" --> I["Consulta rol (public.usuario)"]
+    I --> J{"Rol de Usuario"}
+    J -- "admin" --> K["🚀 router.push('/admin')"]
+    J -- "vendedor" --> L["🛒 router.push('/dashboard')"]
 ```
 
 ---
@@ -42,26 +44,25 @@ flowchart TD
 Todo controlador profesional en TypeScript se organiza en **3 partes fundamentales**:
 
 ### 1. El Estado (State)
-Define la información reactiva que la vista necesita reflejar en pantalla.
+Define la información reactiva que la vista necesita reflejar en pantalla (`values`, `fieldErrors`, `loading`, `error`).
 
 ### 2. Las Acciones / Lógica de Negocio (Handlers)
-Funciones asíncronas que procesan los eventos del usuario, aplican reglas de validación y llaman a la infraestructura.
+Funciones que procesan los eventos del usuario, aplican reglas de validación y llaman a la infraestructura (`handleSubmit`, `setFieldValue`, `validate`).
 
 ### 3. El Contrato de Salida (Return Contract)
-El objeto retornado que consume la vista de forma segura con autocompletado en TypeScript.
+El objeto retornado que consume la vista de forma segura con tipado estricto e inmutable en TypeScript.
 
 ---
 
-## 💻 Código de Referencia Didáctico
+## 💻 Código de Referencia Didáctico (`src/controllers/authController.ts`)
 
 ```typescript
 'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm } from '@mantine/form';
 import { createClient } from '@/lib/supabase/client';
-import { LoginFormValues } from '@/models/authModel';
+import { LoginFormValues } from '@/models/modelos_vista/authModel';
 
 /**
  * Custom Hook: useLoginController
@@ -72,24 +73,41 @@ export function useLoginController() {
   // =========================================================================
   // PASO 1: ESTADO REACTIVO (State)
   // =========================================================================
+  const [values, setValues] = useState<LoginFormValues>({
+    email: '',
+    password: '',
+    rememberMe: false,
+  });
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof LoginFormValues, string>>>({});
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Formulario con validaciones declarativas de Mantine Form
-  const form = useForm<LoginFormValues>({
-    initialValues: { email: '', password: '', rememberMe: false },
-    validate: {
-      email: (val) => (/^\S+@\S+$/.test(val) ? null : 'Email inválido'),
-      password: (val) => (val.length >= 6 ? null : 'Mínimo 6 caracteres'),
-    },
-  });
+  // =========================================================================
+  // PASO 2: ACCIONES Y LÓGICA DE NEGOCIO (Handlers & Validaciones)
+  // =========================================================================
+  const setFieldValue = <K extends keyof LoginFormValues>(field: K, value: LoginFormValues[K]) => {
+    setValues((prev) => ({ ...prev, [field]: value }));
+    setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
 
-  // =========================================================================
-  // PASO 2: ACCIONES Y LÓGICA DE NEGOCIO (Handlers)
-  // =========================================================================
-  const handleSubmit = async (values: LoginFormValues) => {
-    setLoading(true);   // A. Iniciar carga
-    setError(null);      // B. Limpiar errores previos
+  const validate = (): boolean => {
+    const errors: Partial<Record<keyof LoginFormValues, string>> = {};
+    if (!values.email || !/^\S+@\S+$/.test(values.email)) {
+      errors.email = 'Correo electrónico no válido';
+    }
+    if (!values.password || values.password.length < 6) {
+      errors.password = 'La contraseña debe tener al menos 6 caracteres';
+    }
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!validate()) return;
+
+    setLoading(true);
+    setError(null);
 
     try {
       const supabase = createClient();
@@ -99,31 +117,48 @@ export function useLoginController() {
       });
 
       if (authError) {
-        setError('Correo electrónico o contraseña incorrectos.');
+        if (authError.message.includes('Invalid login credentials')) {
+          setError('Correo electrónico o contraseña incorrectos.');
+        } else {
+          setError(authError.message || 'Error al iniciar sesión.');
+        }
         return;
       }
 
       if (data.session) {
-        router.push('/'); // C. Redirección al Dashboard
+        const { data: usuarioData } = await supabase
+          .from('usuario')
+          .select('rol')
+          .eq('id_usuario', data.session.user.id)
+          .maybeSingle();
+
+        if (usuarioData?.rol === 'vendedor') {
+          router.push('/dashboard');
+        } else {
+          router.push('/admin');
+        }
         router.refresh();
       }
-    } catch (err: any) {
-      setError(err?.message || 'Error inesperado de conexión.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error inesperado de conexión.';
+      setError(message);
     } finally {
-      setLoading(false);  // D. Finalizar carga
+      setLoading(false);
     }
   };
 
   const clearError = () => setError(null);
 
   // =========================================================================
-  // PASO 3: CONTRATO EXPORTADO A LA VISTA (Return)
+  // PASO 3: CONTRATO EXPORTADO A LA VISTA (Return Contract)
   // =========================================================================
   return {
-    form,
+    values,
+    fieldErrors,
+    setFieldValue,
     loading,
     error,
-    handleSubmit: form.onSubmit(handleSubmit),
+    handleSubmit,
     clearError,
   };
 }
@@ -136,15 +171,16 @@ export function useLoginController() {
 | Responsabilidad | Vista (`View`) | Controlador (`Controller`) | Modelo (`Model`) |
 | :--- | :---: | :---: | :---: |
 | Renderizar HTML / JSX | ✅ | ❌ | ❌ |
-| Aplicar CSS Modules y Estilos | ✅ | ❌ | ❌ |
-| Guardar estado `loading` y `error` | ❌ | ✅ | ❌ |
-| Llamar a `supabase.auth` / APIs | ❌ | ✅ | ❌ |
-| Definir Interfaces TypeScript | ❌ | ❌ | ✅ |
+| Aplicar Tailwind CSS y Radix UI | ✅ | ❌ | ❌ |
+| Guardar estado reactivo (`loading`, `error`, filtros) | ❌ | ✅ | ❌ |
+| Validar reglas de negocio y campos | ❌ | ✅ | ❌ |
+| Llamar a `supabase` / APIs externas | ❌ | ✅ | ❌ |
+| Definir Interfaces TypeScript y DTOs | ❌ | ❌ | ✅ |
 | Redirigir páginas (`router.push`) | ❌ | ✅ | ❌ |
 
 ---
 
-> [!TIP] **Ventajas de esta Arquitectura**
-> 1. **Mantenibilidad**: Si cambias el diseño de Mantine UI, no tocas una sola línea de código del controlador.
-> 2. **Testeabilidad**: Puedes hacer tests unitarios sobre el controlador sin montar componentes visuales.
-> 3. **Tipado Estricto**: Evita errores de tipo en tiempo de desarrollo.
+> [!TIP] **Ventajas de esta Arquitectura en miStock**
+> 1. **Mantenibilidad**: Si se rediseña la UI en Tailwind o shadcn/ui, no se toca una sola línea del controlador.
+> 2. **Testeabilidad**: Se pueden testear las reglas comerciales y flujos de cobro sin montar elementos visuales en el DOM.
+> 3. **Tipado Estricto de Extremo a Extremo**: El contrato de retorno (`controller`) provee autocompletado y validación de tipos en tiempo de compilación.
