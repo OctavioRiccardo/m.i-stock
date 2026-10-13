@@ -16,255 +16,40 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { UserDashboardData, ProductoRapidoPOS, VentaRecientePOS, ItemCarritoPOS, PestanaOperativaPOS, } from '@/models/modelos_vista/dashboardModel';
-import { initialProductos } from '@/models/mock_data/inventarioMock';
 import { useInventarioData, inventarioService } from '@/services/inventarioService';
 import { MetodoPago, DetalleVenta } from '@/models/modelos_dominio/ventaModel';
 import { useConfiguracionData } from '@/services/configuracionService';
 import { ArqueoCajaDTO, ResumenMediosPagoCierre, EstadoBalanceCaja, } from '@/models/modelos_vista/cierreCajaModel';
 
-/**
- * Mapeo de artículos del catálogo maestro para listas rápidas en el mostrador.
- */
-const initialProductosPOS: ProductoRapidoPOS[] = initialProductos.map((p) => ({
-  id: p.id,
-  nombre: p.nombre,
-  categoria: p.categoria?.nombre || 'General',
-  precio: p.precioVenta,
-  stock: p.stockActual,
-  stockMinimo: p.stockMinimo,
-  codigo: p.codigo,
-  descripcion: p.descripcion,
-  unidadMedida: p.unidadMedida,
-  oferta: p.oferta,
-}));
+export const VENTAS_STORAGE_KEY = 'mistock_ventas_historial_test_v1';
 
-/**
- * Datos simulados iniciales para la terminal de ventas del cajero con renglones (DetalleVenta).
- */
-const initialMockUserData: UserDashboardData = {
-  ventasDelDia: 14,
-  recaudacionDelDia: 48500,
-  totalProductosEnStock: initialProductosPOS.reduce((acc, p) => acc + p.stock, 0),
-  ventasRecientes: [
-    {
-      id: 'VNT-101',
-      hora: '10:45',
-      fecha: '26/09/2026',
-      montoTotal: 3500,
-      cantidadItems: 2,
-      metodoPago: 'efectivo',
-      vendedor: 'Lucas Benítez',
-      items: [
-        {
-          id: 'DET-101-1',
-          ventaId: 'VNT-101',
-          productoId: 'prod-1',
-          nombreProducto: 'Aceite de Girasol 1.5L',
-          codigoProducto: '779001',
-          cantidad: 1,
-          precioUnitario: 2450,
-          subtotal: 2450,
-        },
-        {
-          id: 'DET-101-2',
-          ventaId: 'VNT-101',
-          productoId: 'prod-2',
-          nombreProducto: 'Fideos Guiseros 500g',
-          codigoProducto: '779002',
-          cantidad: 1,
-          precioUnitario: 1050,
-          subtotal: 1050,
-        },
-      ],
-      estado: 'completada',
-    },
-    {
-      id: 'VNT-102',
-      hora: '11:15',
-      fecha: '26/09/2026',
-      montoTotal: 12000,
-      cantidadItems: 5,
-      metodoPago: 'tarjeta_debito',
-      vendedor: 'Camila Fernández',
-      items: [
-        {
-          id: 'DET-102-1',
-          ventaId: 'VNT-102',
-          productoId: 'prod-7',
-          nombreProducto: 'Jabón Líquido Ropa 3L',
-          codigoProducto: '779007',
-          cantidad: 2,
-          precioUnitario: 4500,
-          subtotal: 9000,
-        },
-        {
-          id: 'DET-102-2',
-          ventaId: 'VNT-102',
-          productoId: 'prod-8',
-          nombreProducto: 'Lavandina Clásica 1L',
-          codigoProducto: '779008',
-          cantidad: 3,
-          precioUnitario: 1000,
-          subtotal: 3000,
-        },
-      ],
-      estado: 'completada',
-    },
-    {
-      id: 'VNT-103',
-      hora: '12:00',
-      fecha: '26/09/2026',
-      montoTotal: 4800,
-      cantidadItems: 4,
-      metodoPago: 'transferencia',
-      vendedor: 'Lucas Benítez',
-      items: [
-        {
-          id: 'DET-103-1',
-          ventaId: 'VNT-103',
-          productoId: 'prod-5',
-          nombreProducto: 'Leche Entera Larga Vida 1L',
-          codigoProducto: '779005',
-          cantidad: 4,
-          precioUnitario: 1200,
-          subtotal: 4800,
-        },
-      ],
-      estado: 'completada',
-    },
-    {
-      id: 'VNT-104',
-      hora: '13:20',
-      fecha: '26/09/2026',
-      montoTotal: 5800,
-      cantidadItems: 2,
-      metodoPago: 'efectivo',
-      vendedor: 'Mateo Rossi',
-      items: [
-        {
-          id: 'DET-104-1',
-          ventaId: 'VNT-104',
-          productoId: 'prod-4',
-          nombreProducto: 'Café Tostado Molido 250g',
-          codigoProducto: '779004',
-          cantidad: 2,
-          precioUnitario: 2900,
-          subtotal: 5800,
-        },
-      ],
-      estado: 'completada',
-    },
-    {
-      id: 'VNT-105',
-      hora: '14:10',
-      fecha: '26/09/2026',
-      montoTotal: 2700,
-      cantidadItems: 2,
-      metodoPago: 'efectivo',
-      vendedor: 'Camila Fernández',
-      items: [
-        {
-          id: 'DET-105-1',
-          ventaId: 'VNT-105',
-          productoId: 'prod-6',
-          nombreProducto: 'Galletitas Surtidas 400g',
-          codigoProducto: '779006',
-          cantidad: 2,
-          precioUnitario: 1350,
-          subtotal: 2700,
-        },
-      ],
-      estado: 'completada',
-    },
-    {
-      id: 'VNT-106',
-      hora: '15:05',
-      fecha: '26/09/2026',
-      montoTotal: 7200,
-      cantidadItems: 3,
-      metodoPago: 'tarjeta_credito',
-      vendedor: 'Lucas Benítez',
-      items: [
-        {
-          id: 'DET-106-1',
-          ventaId: 'VNT-106',
-          productoId: 'prod-9',
-          nombreProducto: 'Detergente Lavavajillas 750ml',
-          codigoProducto: '779009',
-          cantidad: 1,
-          precioUnitario: 1800,
-          subtotal: 1800,
-        },
-        {
-          id: 'DET-106-2',
-          ventaId: 'VNT-106',
-          productoId: 'prod-10',
-          nombreProducto: 'Papel Higiénico 4u',
-          codigoProducto: '779010',
-          cantidad: 2,
-          precioUnitario: 2700,
-          subtotal: 5400,
-        },
-      ],
-      estado: 'completada',
-    },
-    {
-      id: 'VNT-107',
-      hora: '16:30',
-      fecha: '26/09/2026',
-      montoTotal: 3600,
-      cantidadItems: 3,
-      metodoPago: 'efectivo',
-      vendedor: 'Mateo Rossi',
-      items: [
-        {
-          id: 'DET-107-1',
-          ventaId: 'VNT-107',
-          productoId: 'prod-11',
-          nombreProducto: 'Gaseosa Cola 1.5L',
-          codigoProducto: '779011',
-          cantidad: 3,
-          precioUnitario: 1200,
-          subtotal: 3600,
-        },
-      ],
-      estado: 'completada',
-    },
-    {
-      id: 'VNT-108',
-      hora: '17:15',
-      fecha: '26/09/2026',
-      montoTotal: 6900,
-      cantidadItems: 2,
-      metodoPago: 'mercado_pago',
-      vendedor: 'Camila Fernández',
-      items: [
-        {
-          id: 'DET-108-1',
-          ventaId: 'VNT-108',
-          productoId: 'prod-1',
-          nombreProducto: 'Aceite de Girasol 1.5L',
-          codigoProducto: '779001',
-          cantidad: 2,
-          precioUnitario: 2450,
-          subtotal: 4900,
-        },
-        {
-          id: 'DET-108-2',
-          ventaId: 'VNT-108',
-          productoId: 'prod-3',
-          nombreProducto: 'Arroz Largo Fino 1kg',
-          codigoProducto: '779003',
-          cantidad: 2,
-          precioUnitario: 1000,
-          subtotal: 2000,
-        },
-      ],
-      estado: 'completada',
-    },
-  ],
-  productosPopulares: initialProductosPOS,
-};
+export interface VentasHistorialStore {
+  ventasDelDia: number;
+  recaudacionDelDia: number;
+  ventasRecientes: VentaRecientePOS[];
+}
+
+export function inicializarVentasCliente(): VentasHistorialStore {
+  if (typeof window === 'undefined') {
+    return { ventasDelDia: 0, recaudacionDelDia: 0, ventasRecientes: [] };
+  }
+  try {
+    const raw = window.localStorage.getItem(VENTAS_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed.ventasRecientes)) {
+        return {
+          ventasDelDia: parsed.ventasDelDia ?? parsed.ventasRecientes.length,
+          recaudacionDelDia:
+            parsed.recaudacionDelDia ??
+            parsed.ventasRecientes.reduce((acc: number, v: VentaRecientePOS) => acc + (v.montoTotal || 0), 0),
+          ventasRecientes: parsed.ventasRecientes,
+        };
+      }
+    }
+  } catch {}
+  return { ventasDelDia: 0, recaudacionDelDia: 0, ventasRecientes: [] };
+}
 
 export function useUserDashboardController() {
   const router = useRouter();
@@ -309,11 +94,7 @@ export function useUserDashboardController() {
       }));
   }, [storeProductos]);
 
-  const [ventasState, setVentasState] = useState({
-    ventasDelDia: initialMockUserData.ventasDelDia,
-    recaudacionDelDia: initialMockUserData.recaudacionDelDia,
-    ventasRecientes: initialMockUserData.ventasRecientes,
-  });
+  const [ventasState, setVentasState] = useState<VentasHistorialStore>(inicializarVentasCliente);
 
   const data: UserDashboardData = useMemo(() => ({
     ventasDelDia: ventasState.ventasDelDia,
@@ -443,7 +224,18 @@ export function useUserDashboardController() {
   const [cajaAbierta, setCajaAbierta] = useState<boolean>(false);
   const [fondoInicial, setFondoInicial] = useState<number>(10000); // Fondo de gaveta inicial para dar cambio
   const [fechaApertura, setFechaApertura] = useState<string | null>(null);
-  const [cajeroApertura, setCajeroApertura] = useState<string>('Lucas Benítez');
+  const [cajeroApertura, setCajeroApertura] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const u = window.localStorage.getItem('mistock_usuario_activo');
+        if (u) {
+          const parsed = JSON.parse(u);
+          if (parsed.nombre) return parsed.nombre;
+        }
+      } catch {}
+    }
+    return 'Administrador';
+  });
   const [observacionesApertura, setObservacionesApertura] = useState<string>('');
   const [isModalAperturaOpen, setIsModalAperturaOpen] = useState<boolean>(false);
   const [isModalArqueoOpen, setIsModalArqueoOpen] = useState<boolean>(false);
@@ -484,7 +276,7 @@ export function useUserDashboardController() {
       minute: '2-digit',
     });
     const strFechaApertura = `${fechaFormateada} ${horaFormateada}`;
-    const cajeroActual = data.ventasRecientes[0]?.vendedor || 'Lucas Benítez';
+    const cajeroActual = cajeroApertura || 'Administrador';
 
     setCajaAbierta(true);
     setFondoInicial(montoInicial);
@@ -574,7 +366,7 @@ export function useUserDashboardController() {
       idCierre: `CR-${Date.now().toString().slice(-6)}`,
       fechaApertura: fechaApertura || `${fechaFormateada} 08:30`,
       fechaCierre: `${fechaFormateada} ${horaFormateada}`,
-      cajero: cajeroApertura || data.ventasRecientes[0]?.vendedor || 'Lucas Benítez',
+      cajero: cajeroApertura || 'Administrador',
       numeroCaja: config.pos.numeroCaja || 1,
       fondoInicial,
       totalVentasEfectivo,
@@ -909,7 +701,7 @@ export function useUserDashboardController() {
       montoTotal: totalVenta,
       cantidadItems: cantidadArticulosCarrito,
       metodoPago,
-      vendedor: 'Cajero en Turno',
+      vendedor: cajeroApertura || 'Administrador',
       items: itemsVenta,
       pagos: [
         {
@@ -927,12 +719,21 @@ export function useUserDashboardController() {
       inventarioService.descontarStock(item.producto.id, item.cantidad);
     }
 
-    setVentasState((prev) => ({
-      ...prev,
-      ventasDelDia: prev.ventasDelDia + 1,
-      recaudacionDelDia: prev.recaudacionDelDia + totalVenta,
-      ventasRecientes: [newSale, ...prev.ventasRecientes],
-    }));
+    setVentasState((prev) => {
+      const updated = {
+        ...prev,
+        ventasDelDia: prev.ventasDelDia + 1,
+        recaudacionDelDia: prev.recaudacionDelDia + totalVenta,
+        ventasRecientes: [newSale, ...prev.ventasRecientes],
+      };
+      if (typeof window !== 'undefined') {
+        try {
+          window.localStorage.setItem(VENTAS_STORAGE_KEY, JSON.stringify(updated));
+          window.dispatchEvent(new Event('mistock_ventas_updated'));
+        } catch {}
+      }
+      return updated;
+    });
 
     setPaginaVentas(1);
     setCarrito([]);

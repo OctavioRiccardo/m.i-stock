@@ -98,6 +98,37 @@ export function useLoginController() {
     setError(null);
 
     try {
+      const emailLower = values.email.trim().toLowerCase();
+
+      // Acceso directo de prueba para rama Test (sin requerir confirmación por email en Supabase)
+      if (
+        (emailLower === 'admin@mistock.com' && values.password.length >= 6) ||
+        (emailLower === 'octavio@mistock.com' && values.password.length >= 6) ||
+        (emailLower === 'vendedor@mistock.com' && values.password.length >= 6) ||
+        (emailLower === 'cajero@mistock.com' && values.password.length >= 6)
+      ) {
+        const esVendedor = emailLower.includes('vendedor') || emailLower.includes('cajero');
+        const rolAsignado = esVendedor ? 'vendedor' : 'admin';
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('mistock_rol_activo', rolAsignado);
+          window.localStorage.setItem(
+            'mistock_usuario_activo',
+            JSON.stringify({
+              email: emailLower,
+              nombre: esVendedor ? 'Cajero Turno' : 'Administrador',
+              rol: rolAsignado,
+            })
+          );
+        }
+        if (esVendedor) {
+          router.push('/dashboard');
+        } else {
+          router.push('/admin');
+        }
+        router.refresh();
+        return;
+      }
+
       const supabase = createClient();
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email: values.email,

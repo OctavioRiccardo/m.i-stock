@@ -25,7 +25,7 @@ import { Categoria, Producto } from '@/models/modelos_dominio/productoModel';
 import { FormularioCargaProducto } from '@/models/modelos_vista/cargaProductoModel';
 import { initialCategorias, initialProductos } from '@/models/mock_data/inventarioMock';
 
-const INVENTARIO_STORAGE_KEY = 'mistock_inventario_data_v1';
+const INVENTARIO_STORAGE_KEY = 'mistock_inventario_data_test_v1';
 
 export interface InventarioSnapshot {
   categorias: Categoria[];

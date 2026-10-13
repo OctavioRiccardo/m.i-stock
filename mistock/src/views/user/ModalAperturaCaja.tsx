@@ -113,7 +113,7 @@ export function ModalAperturaCaja({
               <User className="h-4 w-4 text-[#2A7A78] shrink-0" weight="duotone" />
               <div className="truncate">
                 <span className="text-[10px] text-[#657373] block uppercase font-semibold">Cajero Responsable</span>
-                <span className="font-bold text-[#1C2424] truncate block">{cajeroApertura || 'Lucas Benítez'}</span>
+                <span className="font-bold text-[#1C2424] truncate block">{cajeroApertura || 'Administrador'}</span>
               </div>
             </div>
 

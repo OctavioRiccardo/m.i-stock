@@ -7,567 +7,37 @@
  * 
  * Propósito:
  * Gestionar los datos estratégicos del panel de control para el rol Administrador:
- * métricas financieras de facturación mensual, conteo de stock activo,
- * usuarios del sistema y atención prioritaria a alertas de stock crítico.
+ * métricas financieras reales, agregaciones dinámicas de ventas de POS,
+ * rotación de catálogo según existencias reales e historial de transacciones.
  * 
  * Rol en la Arquitectura:
  * - Es la capa "C" (Controller) que alimenta a `AdminDashboardView` (View).
- * - Consume las definiciones tipadas de `AdminDashboardData` (ViewModel).
- * - Desacopla la lógica de resolución de alertas y recálculo de indicadores
- *   de los componentes visuales de la interfaz de usuario.
+ * - Sincronizado reactivamente con el historial real de ventas (`VENTAS_STORAGE_KEY`)
+ *   y con el catálogo maestro de inventario (`inventarioService`).
+ * - Cuando el sistema arranca de cero (entorno Test), inicializa limpiamente
+ *   sin métricas ni artículos simulados (0 ventas, $0 recaudado).
  */
 
 import { useState, useMemo, useEffect } from 'react';
-import { AdminDashboardData, AdminMetricCard } from '@/models/modelos_vista/dashboardModel';
+import {
+  AdminDashboardData,
+  AdminMetricCard,
+  ProductoRankingVentas,
+  DetalleVentaItem,
+  ResumenVentasPeriodo,
+  PuntoTendenciaVentas,
+  PuntoDistribucionPago,
+  PuntoBarraVenta,
+} from '@/models/modelos_vista/dashboardModel';
+import { MetodoPago, EstadoVenta } from '@/models/modelos_dominio/ventaModel';
 import { useConfiguracionData } from '@/services/configuracionService';
 import { PeriodoMetricas } from '@/models/modelos_vista/configuracionModel';
-
-/**
- * Datos iniciales simulados (Mock) para métricas y alertas del Administrador.
- * Permiten el desarrollo y pruebas de interfaz de usuario desacopladas de la BD.
- */
-const initialMockAdminData: AdminDashboardData = {
-  kpiMetrics: [
-    { title: 'Recaudación del Mes', value: '$1.450.000', changePercentage: '+12.5%', status: 'positive' },
-    { title: 'Ticket Promedio Mensual', value: '$8.630', changePercentage: '+4.2%', status: 'positive' },
-    { title: 'Operaciones Concretadas', value: '168 ventas', changePercentage: '+8.1%', status: 'positive' },
-    { title: 'Unidades Despachadas', value: '640 un.', changePercentage: '+15.3%', status: 'positive' },
-  ],
-  productosMasVendidos: [
-    {
-      id: 'TOP-1',
-      nombre: 'Yerba Mate Especial 1kg',
-      codigo: 'ALM-YER-1001',
-      categoria: 'Almacén',
-      unidadesVendidas: 185,
-      stockActual: 24,
-      montoTotal: 425500,
-      tendencia: 'alza',
-    },
-    {
-      id: 'TOP-2',
-      nombre: 'Leche Larga Vida Entera 1L',
-      codigo: 'LAC-LEC-1002',
-      categoria: 'Lácteos',
-      unidadesVendidas: 142,
-      stockActual: 8,
-      montoTotal: 184600,
-      tendencia: 'alza',
-    },
-    {
-      id: 'TOP-3',
-      nombre: 'Gaseosa Cola 1.5L',
-      codigo: 'BEB-COL-1003',
-      categoria: 'Bebidas',
-      unidadesVendidas: 118,
-      stockActual: 35,
-      montoTotal: 295000,
-      tendencia: 'alza',
-    },
-    {
-      id: 'TOP-4',
-      nombre: 'Pan Lactal Familiar 500g',
-      codigo: 'PAN-LAC-1004',
-      categoria: 'Panadería',
-      unidadesVendidas: 96,
-      stockActual: 12,
-      montoTotal: 144000,
-      tendencia: 'alza',
-    },
-    {
-      id: 'TOP-5',
-      nombre: 'Arroz Largo Fino 1kg',
-      codigo: 'ALM-ARR-1005',
-      categoria: 'Almacén',
-      unidadesVendidas: 88,
-      stockActual: 40,
-      montoTotal: 132000,
-      tendencia: 'alza',
-    },
-    {
-      id: 'TOP-6',
-      nombre: 'Fideos Guiseros 500g',
-      codigo: 'ALM-FID-1006',
-      categoria: 'Almacén',
-      unidadesVendidas: 76,
-      stockActual: 32,
-      montoTotal: 98800,
-      tendencia: 'alza',
-    },
-    {
-      id: 'TOP-7',
-      nombre: 'Galletitas Dulces Surtidas 400g',
-      codigo: 'GAL-SUR-1007',
-      categoria: 'Galletitas',
-      unidadesVendidas: 65,
-      stockActual: 18,
-      montoTotal: 97500,
-      tendencia: 'alza',
-    },
-    {
-      id: 'TOP-8',
-      nombre: 'Queso Cremoso 1kg',
-      codigo: 'LAC-QUE-1008',
-      categoria: 'Lácteos',
-      unidadesVendidas: 54,
-      stockActual: 14,
-      montoTotal: 243000,
-      tendencia: 'alza',
-    },
-    {
-      id: 'TOP-9',
-      nombre: 'Agua Mineral sin Gas 2L',
-      codigo: 'BEB-AGU-1009',
-      categoria: 'Bebidas',
-      unidadesVendidas: 49,
-      stockActual: 45,
-      montoTotal: 58800,
-      tendencia: 'alza',
-    },
-    {
-      id: 'TOP-10',
-      nombre: 'Manteca Calidad Extra 200g',
-      codigo: 'LAC-MAN-1010',
-      categoria: 'Lácteos',
-      unidadesVendidas: 42,
-      stockActual: 16,
-      montoTotal: 92400,
-      tendencia: 'alza',
-    },
-  ],
-  productosMenosVendidos: [
-    {
-      id: 'LOW-1',
-      nombre: 'Lavandina Concentrada 5L',
-      codigo: 'LIM-LAV-2001',
-      categoria: 'Limpieza',
-      unidadesVendidas: 1,
-      stockActual: 42,
-      montoTotal: 4500,
-      tendencia: 'estancada',
-    },
-    {
-      id: 'LOW-2',
-      nombre: 'Esponja Multiuso Pack x3',
-      codigo: 'LIM-ESP-2002',
-      categoria: 'Limpieza',
-      unidadesVendidas: 2,
-      stockActual: 60,
-      montoTotal: 3200,
-      tendencia: 'baja',
-    },
-    {
-      id: 'LOW-3',
-      nombre: 'Té Verde en Saquitos x20',
-      codigo: 'INF-TEV-2003',
-      categoria: 'Infusiones',
-      unidadesVendidas: 3,
-      stockActual: 30,
-      montoTotal: 5400,
-      tendencia: 'baja',
-    },
-    {
-      id: 'LOW-4',
-      nombre: 'Galletitas de Salvado 200g',
-      codigo: 'GAL-SAL-2004',
-      categoria: 'Galletitas',
-      unidadesVendidas: 4,
-      stockActual: 28,
-      montoTotal: 7200,
-      tendencia: 'estancada',
-    },
-    {
-      id: 'LOW-5',
-      nombre: 'Sal Fina Dosificador 500g',
-      codigo: 'ALM-SAL-2005',
-      categoria: 'Almacén',
-      unidadesVendidas: 5,
-      stockActual: 55,
-      montoTotal: 6000,
-      tendencia: 'baja',
-    },
-    {
-      id: 'LOW-6',
-      nombre: 'Vinagre de Manzana 500ml',
-      codigo: 'ALM-VIN-2006',
-      categoria: 'Almacén',
-      unidadesVendidas: 5,
-      stockActual: 34,
-      montoTotal: 7500,
-      tendencia: 'estancada',
-    },
-    {
-      id: 'LOW-7',
-      nombre: 'Limpiador de Pisos Lavanda 900ml',
-      codigo: 'LIM-PIS-2007',
-      categoria: 'Limpieza',
-      unidadesVendidas: 6,
-      stockActual: 48,
-      montoTotal: 10800,
-      tendencia: 'baja',
-    },
-    {
-      id: 'LOW-8',
-      nombre: 'Servilletas de Papel x80',
-      codigo: 'PAP-SER-2008',
-      categoria: 'Limpieza',
-      unidadesVendidas: 7,
-      stockActual: 50,
-      montoTotal: 8400,
-      tendencia: 'baja',
-    },
-    {
-      id: 'LOW-9',
-      nombre: 'Edulcorante Líquido 200ml',
-      codigo: 'ALM-EDU-2009',
-      categoria: 'Almacén',
-      unidadesVendidas: 8,
-      stockActual: 26,
-      montoTotal: 12800,
-      tendencia: 'baja',
-    },
-    {
-      id: 'LOW-10',
-      nombre: 'Lentejas Selección 400g',
-      codigo: 'ALM-LEN-2010',
-      categoria: 'Almacén',
-      unidadesVendidas: 9,
-      stockActual: 38,
-      montoTotal: 14400,
-      tendencia: 'estancada',
-    },
-  ],
-  ventasDetalle: {
-    resumenSemana: {
-      totalRecaudado: 385400,
-      cantidadVentas: 42,
-      ticketPromedio: 9176,
-      unidadesTotales: 156,
-    },
-    resumenMes: {
-      totalRecaudado: 1450000,
-      cantidadVentas: 168,
-      ticketPromedio: 8630,
-      unidadesTotales: 640,
-    },
-    ventasSemana: [
-      {
-        id: 'VNT-SEM-01',
-        codigoComprobante: 'VNT-1048',
-        fechaHora: 'Hoy, 18:30',
-        vendedor: 'Octavio Riccardo',
-        metodoPago: 'tarjeta_debito',
-        cantidadItems: 4,
-        total: 18500,
-        estado: 'completada',
-      },
-      {
-        id: 'VNT-SEM-02',
-        codigoComprobante: 'VNT-1047',
-        fechaHora: 'Hoy, 17:15',
-        vendedor: 'Empleado Mañana',
-        metodoPago: 'efectivo',
-        cantidadItems: 2,
-        total: 7200,
-        estado: 'completada',
-      },
-      {
-        id: 'VNT-SEM-03',
-        codigoComprobante: 'VNT-1046',
-        fechaHora: 'Hoy, 15:40',
-        vendedor: 'Empleado Mañana',
-        metodoPago: 'transferencia',
-        cantidadItems: 6,
-        total: 24600,
-        estado: 'completada',
-      },
-      {
-        id: 'VNT-SEM-04',
-        codigoComprobante: 'VNT-1045',
-        fechaHora: 'Ayer, 19:10',
-        vendedor: 'Octavio Riccardo',
-        metodoPago: 'tarjeta_credito',
-        cantidadItems: 5,
-        total: 31200,
-        estado: 'completada',
-      },
-      {
-        id: 'VNT-SEM-05',
-        codigoComprobante: 'VNT-1044',
-        fechaHora: 'Ayer, 16:50',
-        vendedor: 'Empleado Mañana',
-        metodoPago: 'efectivo',
-        cantidadItems: 1,
-        total: 4500,
-        estado: 'completada',
-      },
-      {
-        id: 'VNT-SEM-06',
-        codigoComprobante: 'VNT-1043',
-        fechaHora: 'Ayer, 12:20',
-        vendedor: 'Empleado Mañana',
-        metodoPago: 'tarjeta_debito',
-        cantidadItems: 3,
-        total: 13800,
-        estado: 'completada',
-      },
-      {
-        id: 'VNT-SEM-07',
-        codigoComprobante: 'VNT-1042',
-        fechaHora: 'Mar 23, 18:05',
-        vendedor: 'Octavio Riccardo',
-        metodoPago: 'efectivo',
-        cantidadItems: 2,
-        total: 8900,
-        estado: 'completada',
-      },
-      {
-        id: 'VNT-SEM-08',
-        codigoComprobante: 'VNT-1041',
-        fechaHora: 'Mar 23, 14:30',
-        vendedor: 'Empleado Mañana',
-        metodoPago: 'transferencia',
-        cantidadItems: 7,
-        total: 28400,
-        estado: 'completada',
-      },
-      {
-        id: 'VNT-SEM-09',
-        codigoComprobante: 'VNT-1040',
-        fechaHora: 'Lun 22, 17:45',
-        vendedor: 'Octavio Riccardo',
-        metodoPago: 'tarjeta_credito',
-        cantidadItems: 4,
-        total: 19500,
-        estado: 'completada',
-      },
-      {
-        id: 'VNT-SEM-10',
-        codigoComprobante: 'VNT-1039',
-        fechaHora: 'Lun 22, 11:15',
-        vendedor: 'Empleado Mañana',
-        metodoPago: 'efectivo',
-        cantidadItems: 3,
-        total: 11200,
-        estado: 'completada',
-      },
-      {
-        id: 'VNT-SEM-11',
-        codigoComprobante: 'VNT-1038',
-        fechaHora: 'Dom 21, 19:40',
-        vendedor: 'Valeria Gómez',
-        metodoPago: 'mercado_pago',
-        cantidadItems: 5,
-        total: 16800,
-        estado: 'completada',
-      },
-      {
-        id: 'VNT-SEM-12',
-        codigoComprobante: 'VNT-1037',
-        fechaHora: 'Dom 21, 16:15',
-        vendedor: 'Valeria Gómez',
-        metodoPago: 'efectivo',
-        cantidadItems: 2,
-        total: 5400,
-        estado: 'completada',
-      },
-      {
-        id: 'VNT-SEM-13',
-        codigoComprobante: 'VNT-1036',
-        fechaHora: 'Dom 21, 12:30',
-        vendedor: 'Empleado Mañana',
-        metodoPago: 'tarjeta_debito',
-        cantidadItems: 3,
-        total: 9700,
-        estado: 'cancelada',
-      },
-    ],
-    ventasMes: [
-      {
-        id: 'VNT-MES-01',
-        codigoComprobante: 'VNT-1048',
-        fechaHora: '24 Sep, 18:30',
-        vendedor: 'Octavio Riccardo',
-        metodoPago: 'tarjeta_debito',
-        cantidadItems: 4,
-        total: 18500,
-        estado: 'completada',
-      },
-      {
-        id: 'VNT-MES-02',
-        codigoComprobante: 'VNT-1045',
-        fechaHora: '23 Sep, 19:10',
-        vendedor: 'Octavio Riccardo',
-        metodoPago: 'tarjeta_credito',
-        cantidadItems: 5,
-        total: 31200,
-        estado: 'completada',
-      },
-      {
-        id: 'VNT-MES-03',
-        codigoComprobante: 'VNT-1038',
-        fechaHora: '20 Sep, 16:00',
-        vendedor: 'Empleado Mañana',
-        metodoPago: 'transferencia',
-        cantidadItems: 8,
-        total: 42100,
-        estado: 'completada',
-      },
-      {
-        id: 'VNT-MES-04',
-        codigoComprobante: 'VNT-1032',
-        fechaHora: '18 Sep, 13:40',
-        vendedor: 'Octavio Riccardo',
-        metodoPago: 'efectivo',
-        cantidadItems: 3,
-        total: 9800,
-        estado: 'completada',
-      },
-      {
-        id: 'VNT-MES-05',
-        codigoComprobante: 'VNT-1025',
-        fechaHora: '15 Sep, 17:25',
-        vendedor: 'Empleado Mañana',
-        metodoPago: 'tarjeta_debito',
-        cantidadItems: 6,
-        total: 27500,
-        estado: 'completada',
-      },
-      {
-        id: 'VNT-MES-06',
-        codigoComprobante: 'VNT-1019',
-        fechaHora: '12 Sep, 19:00',
-        vendedor: 'Octavio Riccardo',
-        metodoPago: 'tarjeta_credito',
-        cantidadItems: 4,
-        total: 21400,
-        estado: 'completada',
-      },
-      {
-        id: 'VNT-MES-07',
-        codigoComprobante: 'VNT-1014',
-        fechaHora: '10 Sep, 11:30',
-        vendedor: 'Empleado Mañana',
-        metodoPago: 'efectivo',
-        cantidadItems: 2,
-        total: 6500,
-        estado: 'completada',
-      },
-      {
-        id: 'VNT-MES-08',
-        codigoComprobante: 'VNT-1008',
-        fechaHora: '07 Sep, 15:10',
-        vendedor: 'Octavio Riccardo',
-        metodoPago: 'transferencia',
-        cantidadItems: 9,
-        total: 51200,
-        estado: 'completada',
-      },
-      {
-        id: 'VNT-MES-09',
-        codigoComprobante: 'VNT-1003',
-        fechaHora: '04 Sep, 18:45',
-        vendedor: 'Empleado Mañana',
-        metodoPago: 'efectivo',
-        cantidadItems: 3,
-        total: 12400,
-        estado: 'completada',
-      },
-      {
-        id: 'VNT-MES-10',
-        codigoComprobante: 'VNT-0998',
-        fechaHora: '01 Sep, 10:20',
-        vendedor: 'Octavio Riccardo',
-        metodoPago: 'tarjeta_debito',
-        cantidadItems: 5,
-        total: 23800,
-        estado: 'completada',
-      },
-      {
-        id: 'VNT-MES-11',
-        codigoComprobante: 'VNT-0992',
-        fechaHora: '28 Ago, 18:00',
-        vendedor: 'Empleado Mañana',
-        metodoPago: 'efectivo',
-        cantidadItems: 2,
-        total: 8100,
-        estado: 'completada',
-      },
-      {
-        id: 'VNT-MES-12',
-        codigoComprobante: 'VNT-0985',
-        fechaHora: '26 Ago, 16:30',
-        vendedor: 'Octavio Riccardo',
-        metodoPago: 'tarjeta_credito',
-        cantidadItems: 6,
-        total: 33400,
-        estado: 'completada',
-      },
-      {
-        id: 'VNT-MES-13',
-        codigoComprobante: 'VNT-0980',
-        fechaHora: '25 Ago, 18:20',
-        vendedor: 'Valeria Gómez',
-        metodoPago: 'mercado_pago',
-        cantidadItems: 4,
-        total: 19800,
-        estado: 'completada',
-      },
-      {
-        id: 'VNT-MES-14',
-        codigoComprobante: 'VNT-0975',
-        fechaHora: '23 Ago, 12:10',
-        vendedor: 'Valeria Gómez',
-        metodoPago: 'efectivo',
-        cantidadItems: 3,
-        total: 7600,
-        estado: 'completada',
-      },
-    ],
-  },
-  graficos: {
-    tendenciaSemana: [
-      { fecha: 'Lun', 'Recaudación Actual': 48000, 'Período Anterior': 42000 },
-      { fecha: 'Mar', 'Recaudación Actual': 56500, 'Período Anterior': 49000 },
-      { fecha: 'Mié', 'Recaudación Actual': 62000, 'Período Anterior': 54000 },
-      { fecha: 'Jue', 'Recaudación Actual': 58400, 'Período Anterior': 51000 },
-      { fecha: 'Vie', 'Recaudación Actual': 74000, 'Período Anterior': 68000 },
-      { fecha: 'Sáb', 'Recaudación Actual': 86500, 'Período Anterior': 78000 },
-    ],
-    tendenciaMes: [
-      { fecha: 'Semana 1', 'Recaudación Actual': 320000, 'Período Anterior': 290000 },
-      { fecha: 'Semana 2', 'Recaudación Actual': 385400, 'Período Anterior': 340000 },
-      { fecha: 'Semana 3', 'Recaudación Actual': 365000, 'Período Anterior': 350000 },
-      { fecha: 'Semana 4', 'Recaudación Actual': 379600, 'Período Anterior': 360000 },
-    ],
-    distribucionPagosSemana: [
-      { metodo: 'Mercado Pago (Point)', monto: 154200, porcentaje: 40 },
-      { metodo: 'Efectivo', monto: 142600, porcentaje: 37 },
-      { metodo: 'Transferencia', monto: 57800, porcentaje: 15 },
-      { metodo: 'Tarjeta Débito/Crédito', monto: 30800, porcentaje: 8 },
-    ],
-    distribucionPagosMes: [
-      { metodo: 'Mercado Pago (Point)', monto: 580000, porcentaje: 40 },
-      { metodo: 'Efectivo', monto: 536500, porcentaje: 37 },
-      { metodo: 'Transferencia', monto: 217500, porcentaje: 15 },
-      { metodo: 'Tarjeta Débito/Crédito', monto: 116000, porcentaje: 8 },
-    ],
-    barrasVentasSemana: [
-      { periodo: 'Lun', 'Monto Facturado': 48000, Operaciones: 8 },
-      { periodo: 'Mar', 'Monto Facturado': 56500, Operaciones: 10 },
-      { periodo: 'Mié', 'Monto Facturado': 62000, Operaciones: 12 },
-      { periodo: 'Jue', 'Monto Facturado': 58400, Operaciones: 9 },
-      { periodo: 'Vie', 'Monto Facturado': 74000, Operaciones: 14 },
-      { periodo: 'Sáb', 'Monto Facturado': 86500, Operaciones: 18 },
-    ],
-    barrasVentasMes: [
-      { periodo: 'Semana 1', 'Monto Facturado': 320000, Operaciones: 38 },
-      { periodo: 'Semana 2', 'Monto Facturado': 385400, Operaciones: 42 },
-      { periodo: 'Semana 3', 'Monto Facturado': 365000, Operaciones: 41 },
-      { periodo: 'Semana 4', 'Monto Facturado': 379600, Operaciones: 47 },
-    ],
-  },
-};
+import { useInventarioData } from '@/services/inventarioService';
+import {
+  VENTAS_STORAGE_KEY,
+  VentasHistorialStore,
+  inicializarVentasCliente,
+} from '@/controllers/userControllers/userDashboardController';
 
 export type RotacionTab = 'mas_vendidos' | 'menos_vendidos';
 export type PeriodoVentasTab = 'semana' | 'mes';
@@ -586,6 +56,29 @@ export type PeriodoVentasTab = 'semana' | 'mes';
 export function useAdminDashboardController() {
   const config = useConfiguracionData();
   const monedaSimbolo = config.negocio?.monedaSimbolo || '$';
+  const { productos } = useInventarioData();
+
+  // Historial de ventas reactivo persistido en el almacenamiento del sistema
+  const [ventasState, setVentasState] = useState<VentasHistorialStore>(() => inicializarVentasCliente());
+
+  // Escuchar eventos de sincronización de ventas (cross-tab o transacciones de POS en la misma ventana)
+  useEffect(() => {
+    const sincronizarVentas = () => {
+      setVentasState(inicializarVentasCliente());
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', sincronizarVentas);
+      window.addEventListener('mistock_ventas_updated', sincronizarVentas);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('storage', sincronizarVentas);
+        window.removeEventListener('mistock_ventas_updated', sincronizarVentas);
+      }
+    };
+  }, []);
 
   // Período activo de métricas, inicializado con la preferencia configurada en el sistema
   const [periodoMetricasActivo, setPeriodoMetricasActivo] = useState<PeriodoMetricas>(
@@ -599,125 +92,250 @@ export function useAdminDashboardController() {
     }
   }, [config.metricas?.periodoPorDefecto]);
 
-  // KPIs dinámicos calculados según el período activo y la regla de comparativa
+  // Desglose de ventas individuales mapeadas desde el historial real
+  const detalleVentas = useMemo<DetalleVentaItem[]>(() => {
+    return (ventasState.ventasRecientes || []).map((v) => ({
+      id: v.id,
+      codigoComprobante: v.id,
+      fechaHora: `${v.fecha || new Date().toLocaleDateString('es-AR')} ${v.hora}`,
+      vendedor: v.vendedor || 'Administrador',
+      metodoPago: (v.metodoPago as MetodoPago) || 'efectivo',
+      cantidadItems: v.cantidadItems,
+      total: v.montoTotal,
+      estado: (v.estado as EstadoVenta) || 'completada',
+    }));
+  }, [ventasState.ventasRecientes]);
+
+  // Métricas agregadas resumidas calculadas a partir de las transacciones reales
+  const resumenCalculado = useMemo<ResumenVentasPeriodo>(() => {
+    const activas = detalleVentas.filter((v) => v.estado !== 'cancelada');
+    const totalRecaudado = activas.reduce((acc, v) => acc + v.total, 0);
+    const cantidadVentas = activas.length;
+    const ticketPromedio = cantidadVentas > 0 ? Math.round(totalRecaudado / cantidadVentas) : 0;
+    const unidadesTotales = activas.reduce((acc, v) => acc + v.cantidadItems, 0);
+
+    return {
+      totalRecaudado,
+      cantidadVentas,
+      ticketPromedio,
+      unidadesTotales,
+    };
+  }, [detalleVentas]);
+
+  // KPIs dinámicos calculados según el período activo y los datos reales
   const kpisActivos = useMemo<AdminMetricCard[]>(() => {
-    const comparar = config.metricas?.compararPeriodoAnterior ?? true;
+    const total = resumenCalculado.totalRecaudado;
+    const ticket = resumenCalculado.ticketPromedio;
+    const ops = resumenCalculado.cantidadVentas;
+    const un = resumenCalculado.unidadesTotales;
+
+    const valorRecaudacion = `${monedaSimbolo} ${total.toLocaleString('es-AR')}`;
+    const valorTicket = `${monedaSimbolo} ${ticket.toLocaleString('es-AR')}`;
+    const valorOps = `${ops} ${ops === 1 ? 'venta' : 'ventas'}`;
+    const valorUnidades = `${un} un.`;
+
+    const comparativa = ops > 0 ? '+100%' : undefined;
+    const status: 'positive' | 'neutral' = ops > 0 ? 'positive' : 'neutral';
 
     switch (periodoMetricasActivo) {
       case 'diario':
         return [
-          {
-            title: 'Recaudación de Hoy (Caja)',
-            value: `${monedaSimbolo} 86.500`,
-            changePercentage: comparar ? '+5.4% vs ayer' : undefined,
-            status: 'positive',
-          },
-          {
-            title: 'Ticket Promedio Diario',
-            value: `${monedaSimbolo} 7.200`,
-            changePercentage: comparar ? '+2.1%' : undefined,
-            status: 'positive',
-          },
-          {
-            title: 'Operaciones de Hoy',
-            value: '18 ventas',
-            changePercentage: comparar ? '+12.5%' : undefined,
-            status: 'positive',
-          },
-          {
-            title: 'Unidades Despachadas Hoy',
-            value: '74 un.',
-            changePercentage: comparar ? '+8.8%' : undefined,
-            status: 'positive',
-          },
+          { title: 'Recaudación de Hoy (Caja)', value: valorRecaudacion, changePercentage: comparativa, status },
+          { title: 'Ticket Promedio Diario', value: valorTicket, changePercentage: comparativa, status },
+          { title: 'Operaciones de Hoy', value: valorOps, changePercentage: comparativa, status },
+          { title: 'Unidades Despachadas Hoy', value: valorUnidades, changePercentage: comparativa, status },
         ];
       case 'semanal':
         return [
-          {
-            title: 'Recaudación Semanal',
-            value: `${monedaSimbolo} 385.400`,
-            changePercentage: comparar ? '+9.2% vs sem. ant.' : undefined,
-            status: 'positive',
-          },
-          {
-            title: 'Ticket Promedio Semanal',
-            value: `${monedaSimbolo} 7.860`,
-            changePercentage: comparar ? '+3.5%' : undefined,
-            status: 'positive',
-          },
-          {
-            title: 'Operaciones de la Semana',
-            value: '49 ventas',
-            changePercentage: comparar ? '+6.4%' : undefined,
-            status: 'positive',
-          },
-          {
-            title: 'Unidades Despachadas',
-            value: '198 un.',
-            changePercentage: comparar ? '+11.2%' : undefined,
-            status: 'positive',
-          },
+          { title: 'Recaudación Semanal', value: valorRecaudacion, changePercentage: comparativa, status },
+          { title: 'Ticket Promedio Semanal', value: valorTicket, changePercentage: comparativa, status },
+          { title: 'Operaciones de la Semana', value: valorOps, changePercentage: comparativa, status },
+          { title: 'Unidades Despachadas', value: valorUnidades, changePercentage: comparativa, status },
         ];
       case 'ultimos_30_dias':
         return [
-          {
-            title: 'Recaudación (Últimos 30 Días)',
-            value: `${monedaSimbolo} 1.520.000`,
-            changePercentage: comparar ? '+10.8% vs 30d prev.' : undefined,
-            status: 'positive',
-          },
-          {
-            title: 'Ticket Promedio (30 Días)',
-            value: `${monedaSimbolo} 8.740`,
-            changePercentage: comparar ? '+4.0%' : undefined,
-            status: 'positive',
-          },
-          {
-            title: 'Operaciones (30 Días)',
-            value: '174 ventas',
-            changePercentage: comparar ? '+7.9%' : undefined,
-            status: 'positive',
-          },
-          {
-            title: 'Unidades Despachadas (30 Días)',
-            value: '662 un.',
-            changePercentage: comparar ? '+14.1%' : undefined,
-            status: 'positive',
-          },
+          { title: 'Recaudación (Últimos 30 Días)', value: valorRecaudacion, changePercentage: comparativa, status },
+          { title: 'Ticket Promedio (30 Días)', value: valorTicket, changePercentage: comparativa, status },
+          { title: 'Operaciones (30 Días)', value: valorOps, changePercentage: comparativa, status },
+          { title: 'Unidades Despachadas (30 Días)', value: valorUnidades, changePercentage: comparativa, status },
         ];
       case 'mensual':
       default:
         return [
-          {
-            title: 'Recaudación del Mes',
-            value: `${monedaSimbolo} 1.450.000`,
-            changePercentage: comparar ? '+12.5% vs mes ant.' : undefined,
-            status: 'positive',
-          },
-          {
-            title: 'Ticket Promedio Mensual',
-            value: `${monedaSimbolo} 8.630`,
-            changePercentage: comparar ? '+4.2%' : undefined,
-            status: 'positive',
-          },
-          {
-            title: 'Operaciones Concretadas',
-            value: '168 ventas',
-            changePercentage: comparar ? '+8.1%' : undefined,
-            status: 'positive',
-          },
-          {
-            title: 'Unidades Despachadas',
-            value: '640 un.',
-            changePercentage: comparar ? '+15.3%' : undefined,
-            status: 'positive',
-          },
+          { title: 'Recaudación del Mes', value: valorRecaudacion, changePercentage: comparativa, status },
+          { title: 'Ticket Promedio Mensual', value: valorTicket, changePercentage: comparativa, status },
+          { title: 'Operaciones Concretadas', value: valorOps, changePercentage: comparativa, status },
+          { title: 'Unidades Despachadas', value: valorUnidades, changePercentage: comparativa, status },
         ];
     }
-  }, [periodoMetricasActivo, monedaSimbolo, config.metricas?.compararPeriodoAnterior]);
+  }, [resumenCalculado, monedaSimbolo, periodoMetricasActivo]);
 
-  // Estado principal que contiene métricas agregadas y datos analíticos
-  const [data] = useState<AdminDashboardData>(initialMockAdminData);
+  // Rotación de productos: Más Vendidos vs Menos Vendidos calculados del catálogo y ventas
+  const { productosMasVendidos, productosMenosVendidos } = useMemo(() => {
+    const mapaVentas = new Map<string, { unidades: number; monto: number }>();
+
+    (ventasState.ventasRecientes || []).forEach((v) => {
+      if (v.estado === 'cancelada') return;
+      (v.items || []).forEach((item) => {
+        const actual = mapaVentas.get(item.productoId) || { unidades: 0, monto: 0 };
+        const subtotalItem = item.subtotal ?? (item.cantidad * (item.precioUnitario || 0));
+        mapaVentas.set(item.productoId, {
+          unidades: actual.unidades + item.cantidad,
+          monto: actual.monto + subtotalItem,
+        });
+      });
+    });
+
+    const rankingCompleto: ProductoRankingVentas[] = productos.map((p) => {
+      const info = mapaVentas.get(p.id) || { unidades: 0, monto: 0 };
+      const nombreCategoria = p.categoria?.nombre || 'General';
+      return {
+        id: p.id,
+        nombre: p.nombre,
+        codigo: p.codigo,
+        categoria: nombreCategoria,
+        unidadesVendidas: info.unidades,
+        stockActual: p.stockActual,
+        montoTotal: info.monto,
+        tendencia: info.unidades > 0 ? 'alza' : 'estancada',
+      };
+    });
+
+    const masVendidos = rankingCompleto
+      .filter((p) => p.unidadesVendidas > 0)
+      .sort((a, b) => b.unidadesVendidas - a.unidadesVendidas);
+
+    const menosVendidos = [...rankingCompleto].sort(
+      (a, b) => a.unidadesVendidas - b.unidadesVendidas
+    );
+
+    return {
+      productosMasVendidos: masVendidos,
+      productosMenosVendidos: menosVendidos,
+    };
+  }, [ventasState.ventasRecientes, productos]);
+
+  // Distribución real de métodos de pago
+  const distribucionPagos = useMemo<PuntoDistribucionPago[]>(() => {
+    const activas = (ventasState.ventasRecientes || []).filter((v) => v.estado !== 'cancelada');
+    const totalesPorMetodo: Record<string, number> = {
+      'Mercado Pago (Point)': 0,
+      'Efectivo': 0,
+      'Transferencia': 0,
+      'Tarjeta Débito/Crédito': 0,
+    };
+    let totalGlobal = 0;
+
+    activas.forEach((v) => {
+      let clave = 'Efectivo';
+      if (v.metodoPago === 'mercado_pago') clave = 'Mercado Pago (Point)';
+      else if (v.metodoPago === 'transferencia') clave = 'Transferencia';
+      else if (v.metodoPago === 'tarjeta_debito' || v.metodoPago === 'tarjeta_credito') clave = 'Tarjeta Débito/Crédito';
+      else if (v.metodoPago === 'efectivo') clave = 'Efectivo';
+
+      totalesPorMetodo[clave] = (totalesPorMetodo[clave] || 0) + v.montoTotal;
+      totalGlobal += v.montoTotal;
+    });
+
+    if (totalGlobal === 0) return [];
+
+    return Object.entries(totalesPorMetodo)
+      .filter(([_, monto]) => monto > 0)
+      .map(([metodo, monto]) => ({
+        metodo,
+        monto,
+        porcentaje: Math.round((monto / totalGlobal) * 100),
+      }));
+  }, [ventasState.ventasRecientes]);
+
+  // Barras de ventas agrupadas
+  const { barrasVentasSemana, barrasVentasMes } = useMemo<{
+    barrasVentasSemana: PuntoBarraVenta[];
+    barrasVentasMes: PuntoBarraVenta[];
+  }>(() => {
+    const diasSemana = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    const barrasSemana: PuntoBarraVenta[] = diasSemana.map((d) => ({
+      periodo: d,
+      'Monto Facturado': 0,
+      Operaciones: 0,
+    }));
+
+    const semanasMes = ['Semana 1', 'Semana 2', 'Semana 3', 'Semana 4'];
+    const barrasMes: PuntoBarraVenta[] = semanasMes.map((s) => ({
+      periodo: s,
+      'Monto Facturado': 0,
+      Operaciones: 0,
+    }));
+
+    const diaActualIdx = (new Date().getDay() + 6) % 7;
+    const totalRecaudado = resumenCalculado.totalRecaudado;
+    const cantVentas = resumenCalculado.cantidadVentas;
+
+    if (totalRecaudado > 0) {
+      barrasSemana[diaActualIdx]['Monto Facturado'] = totalRecaudado;
+      barrasSemana[diaActualIdx].Operaciones = cantVentas;
+
+      barrasMes[0]['Monto Facturado'] = totalRecaudado;
+      barrasMes[0].Operaciones = cantVentas;
+    }
+
+    return {
+      barrasVentasSemana: barrasSemana,
+      barrasVentasMes: barrasMes,
+    };
+  }, [resumenCalculado]);
+
+  // Tendencia de recaudación (Evolución de ventas)
+  const { tendenciaSemana, tendenciaMes } = useMemo<{
+    tendenciaSemana: PuntoTendenciaVentas[];
+    tendenciaMes: PuntoTendenciaVentas[];
+  }>(() => {
+    const total = resumenCalculado.totalRecaudado;
+    if (total === 0) {
+      return { tendenciaSemana: [], tendenciaMes: [] };
+    }
+    const hoyStr = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+    return {
+      tendenciaSemana: [
+        { fecha: hoyStr, 'Recaudación Actual': total, 'Período Anterior': 0 },
+      ],
+      tendenciaMes: [
+        { fecha: hoyStr, 'Recaudación Actual': total, 'Período Anterior': 0 },
+      ],
+    };
+  }, [resumenCalculado.totalRecaudado]);
+
+  // Objeto general consolidado consumido por AdminDashboardView
+  const data = useMemo<AdminDashboardData>(() => ({
+    kpiMetrics: kpisActivos,
+    productosMasVendidos,
+    productosMenosVendidos,
+    ventasDetalle: {
+      resumenSemana: resumenCalculado,
+      resumenMes: resumenCalculado,
+      ventasSemana: detalleVentas,
+      ventasMes: detalleVentas,
+    },
+    graficos: {
+      tendenciaSemana,
+      tendenciaMes,
+      distribucionPagosSemana: distribucionPagos,
+      distribucionPagosMes: distribucionPagos,
+      barrasVentasSemana,
+      barrasVentasMes,
+    },
+  }), [
+    kpisActivos,
+    productosMasVendidos,
+    productosMenosVendidos,
+    resumenCalculado,
+    detalleVentas,
+    tendenciaSemana,
+    tendenciaMes,
+    distribucionPagos,
+    barrasVentasSemana,
+    barrasVentasMes,
+  ]);
 
   // Pestaña activa para la tarjeta de rotación de productos ('mas_vendidos' | 'menos_vendidos')
   const [rotacionTab, setRotacionTab] = useState<RotacionTab>('mas_vendidos');
@@ -729,8 +347,7 @@ export function useAdminDashboardController() {
   const [paginaRotacion, setPaginaRotacion] = useState<number>(1);
   const itemsPorPaginaRotacion = 5;
 
-  // Indicador de carga para operaciones asíncronas del dashboard
-  const [loading] = useState<boolean>(false);
+  const loading = false;
 
   /**
    * Cambia la pestaña de rotación y reinicia la paginación a la primera página.

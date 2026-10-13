@@ -27,8 +27,32 @@ import { initialUsuarios } from '@/models/mock_data/usuariosMock';
 export type FiltroRol = 'todos' | RolUsuarioDB;
 export type FiltroEstado = 'todos' | EstadoUsuario;
 
+const USUARIOS_STORAGE_KEY = 'mistock_usuarios_data_test_v1';
+
 export function useAdminUsuariosController() {
-  const [usuarios, setUsuarios] = useState<Usuario[]>(initialUsuarios);
+  const [usuarios, setUsuarios] = useState<Usuario[]>(() => {
+    if (typeof window === 'undefined') return initialUsuarios;
+    try {
+      const stored = window.localStorage.getItem(USUARIOS_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return initialUsuarios;
+  });
+
+  const guardarUsuarios = (updater: (prev: Usuario[]) => Usuario[]) => {
+    setUsuarios((prev) => {
+      const actualizados = updater(prev);
+      if (typeof window !== 'undefined') {
+        try {
+          window.localStorage.setItem(USUARIOS_STORAGE_KEY, JSON.stringify(actualizados));
+        } catch {}
+      }
+      return actualizados;
+    });
+  };
   const [busqueda, setBusquedaState] = useState<string>('');
   const [filtroRol, setFiltroRolState] = useState<FiltroRol>('todos');
   const [filtroEstado, setFiltroEstadoState] = useState<FiltroEstado>('todos');
@@ -161,7 +185,7 @@ export function useAdminUsuariosController() {
       ultimoAcceso: new Date(),
     };
 
-    setUsuarios((prev) => [nuevoUsuario, ...prev]);
+    guardarUsuarios((prev) => [nuevoUsuario, ...prev]);
     setModalCrearAbierto(false);
     setMensajeExito(`Usuario "${nuevoUsuario.nombre}" incorporado exitosamente.`);
     setTimeout(() => setMensajeExito(null), 4000);
@@ -189,7 +213,7 @@ export function useAdminUsuariosController() {
       }
     }
 
-    setUsuarios((prev) =>
+    guardarUsuarios((prev) =>
       prev.map((u) => {
         if (u.id !== id) return u;
         return {
@@ -249,7 +273,7 @@ export function useAdminUsuariosController() {
       }
     }
 
-    setUsuarios((prev) => prev.filter((u) => u.id !== id));
+    guardarUsuarios((prev) => prev.filter((u) => u.id !== id));
     setModalEliminarAbierto(false);
     setUsuarioSeleccionado(null);
     setMensajeExito(`El usuario "${usuario.nombre}" fue desvinculado del sistema.`);
