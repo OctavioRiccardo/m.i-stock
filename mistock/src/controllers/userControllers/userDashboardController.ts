@@ -15,22 +15,12 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import {
-  UserDashboardData,
-  ProductoRapidoPOS,
-  VentaRecientePOS,
-  ItemCarritoPOS,
-  PestanaOperativaPOS,
-} from '@/models/modelos_vista/dashboardModel';
+import { UserDashboardData, ProductoRapidoPOS, VentaRecientePOS, ItemCarritoPOS, PestanaOperativaPOS, } from '@/models/modelos_vista/dashboardModel';
 import { initialProductos } from '@/models/mock_data/inventarioMock';
 import { useInventarioData, inventarioService } from '@/services/inventarioService';
 import { MetodoPago, DetalleVenta } from '@/models/modelos_dominio/ventaModel';
 import { useConfiguracionData } from '@/services/configuracionService';
-import {
-  ArqueoCajaDTO,
-  ResumenMediosPagoCierre,
-  EstadoBalanceCaja,
-} from '@/models/modelos_vista/cierreCajaModel';
+import { ArqueoCajaDTO, ResumenMediosPagoCierre, EstadoBalanceCaja, } from '@/models/modelos_vista/cierreCajaModel';
 
 /**
  * Mapeo de artículos del catálogo maestro para listas rápidas en el mostrador.
@@ -951,12 +941,12 @@ export function useUserDashboardController() {
       metodoPago === 'efectivo'
         ? 'Efectivo'
         : metodoPago === 'mercado_pago'
-        ? 'Mercado Pago'
-        : metodoPago === 'tarjeta_debito'
-        ? 'Tarjeta Débito'
-        : metodoPago === 'tarjeta_credito'
-        ? 'Tarjeta Crédito'
-        : 'Transferencia';
+          ? 'Mercado Pago'
+          : metodoPago === 'tarjeta_debito'
+            ? 'Tarjeta Débito'
+            : metodoPago === 'tarjeta_credito'
+              ? 'Tarjeta Crédito'
+              : 'Transferencia';
 
     const textoVuelto =
       metodoPago === 'efectivo' && vuelto > 0
