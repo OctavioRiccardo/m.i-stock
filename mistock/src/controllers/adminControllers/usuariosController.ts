@@ -37,7 +37,11 @@ export function useAdminUsuariosController() {
       const stored = window.localStorage.getItem(USUARIOS_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const emails = new Set(parsed.map((u: Usuario) => u.email.toLowerCase()));
+          const faltantes = initialUsuarios.filter((u) => !emails.has(u.email.toLowerCase()));
+          return faltantes.length > 0 ? [...faltantes, ...parsed] : parsed;
+        }
       }
     } catch {}
     return initialUsuarios;

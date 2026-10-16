@@ -23,4 +23,15 @@ export const initialUsuarios: Usuario[] = [
     ultimoAcceso: new Date(),
     fechaCreacion: new Date(),
   },
+  {
+    id: 'usr-admin-test',
+    email: 'admin@test.com',
+    nombre: 'Admin Test',
+    nombreCompleto: 'Administrador de Pruebas (Test)',
+    rol: 'admin',
+    telefono: '+54 9 11 5555-4321',
+    estado: 'activo',
+    ultimoAcceso: new Date(),
+    fechaCreacion: new Date(),
+  },
 ];
