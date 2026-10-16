@@ -15,7 +15,7 @@
  * - Políticas RLS: Solo `admin` puede insertar, modificar o eliminar usuarios.
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Usuario,
   RolUsuarioDB,
@@ -23,6 +23,7 @@ import {
   CrearUsuarioDTO,
 } from '@/models/modelos_dominio/userModel';
 import { initialUsuarios } from '@/models/mock_data/usuariosMock';
+import { supabaseService } from '@/services/supabaseService';
 
 export type FiltroRol = 'todos' | RolUsuarioDB;
 export type FiltroEstado = 'todos' | EstadoUsuario;
@@ -53,6 +54,32 @@ export function useAdminUsuariosController() {
       return actualizados;
     });
   };
+
+  // Sincronizar colaboradores remotos desde Supabase public.usuario
+  useEffect(() => {
+    supabaseService
+      .fetchUsuarios()
+      .then((usuariosRemotos) => {
+        if (usuariosRemotos && usuariosRemotos.length > 0) {
+          guardarUsuarios((prev) => {
+            const idsExistentes = new Set(prev.map((u) => u.id));
+            const emailsExistentes = new Set(prev.map((u) => u.email.toLowerCase()));
+            const actualizados = [...prev];
+            let cambio = false;
+
+            for (const u of usuariosRemotos) {
+              if (!idsExistentes.has(u.id) && !emailsExistentes.has(u.email.toLowerCase())) {
+                actualizados.push(u);
+                cambio = true;
+              }
+            }
+            return cambio ? actualizados : prev;
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const [busqueda, setBusquedaState] = useState<string>('');
   const [filtroRol, setFiltroRolState] = useState<FiltroRol>('todos');
   const [filtroEstado, setFiltroEstadoState] = useState<FiltroEstado>('todos');

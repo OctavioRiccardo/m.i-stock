@@ -24,6 +24,7 @@ import { useSyncExternalStore } from 'react';
 import { Categoria, Producto } from '@/models/modelos_dominio/productoModel';
 import { FormularioCargaProducto } from '@/models/modelos_vista/cargaProductoModel';
 import { initialCategorias, initialProductos } from '@/models/mock_data/inventarioMock';
+import { supabaseService } from './supabaseService';
 
 const INVENTARIO_STORAGE_KEY = 'mistock_inventario_data_test_v1';
 
@@ -128,6 +129,76 @@ export const inventarioService = {
   },
 
   /**
+   * Sincroniza el inventario con Supabase PostgreSQL (Cloud-first bidireccional).
+   * Incorpora categorías y productos remotos al catálogo reactivo local.
+   */
+  async sincronizarConSupabase(): Promise<boolean> {
+    try {
+      const [catsRemotas, prodsRemotos] = await Promise.all([
+        supabaseService.fetchCategorias(),
+        supabaseService.fetchProductos(),
+      ]);
+
+      let huboCambios = false;
+      let nuevasCategorias = [...currentSnapshot.categorias];
+      let nuevosProductos = [...currentSnapshot.productos];
+
+      if (catsRemotas && catsRemotas.length > 0) {
+        for (const catRemota of catsRemotas) {
+          const indexExistente = nuevasCategorias.findIndex(
+            (c) => c.id === catRemota.id || c.nombre.trim().toLowerCase() === catRemota.nombre.trim().toLowerCase()
+          );
+          if (indexExistente >= 0) {
+            nuevasCategorias[indexExistente] = {
+              ...nuevasCategorias[indexExistente],
+              ...catRemota,
+            };
+            huboCambios = true;
+          } else {
+            nuevasCategorias.push(catRemota);
+            huboCambios = true;
+          }
+        }
+      }
+
+      if (prodsRemotos && prodsRemotos.length > 0) {
+        for (const prodRemoto of prodsRemotos) {
+          const indexExistente = nuevosProductos.findIndex(
+            (p) =>
+              p.id === prodRemoto.id ||
+              (p.codigo && prodRemoto.codigo && p.codigo.trim().toLowerCase() === prodRemoto.codigo.trim().toLowerCase())
+          );
+          if (indexExistente >= 0) {
+            nuevosProductos[indexExistente] = {
+              ...nuevosProductos[indexExistente],
+              ...prodRemoto,
+              categoria: prodRemoto.categoria || nuevasCategorias.find((c) => c.id === prodRemoto.categoriaId),
+            };
+            huboCambios = true;
+          } else {
+            nuevosProductos.push({
+              ...prodRemoto,
+              categoria: prodRemoto.categoria || nuevasCategorias.find((c) => c.id === prodRemoto.categoriaId),
+            });
+            huboCambios = true;
+          }
+        }
+      }
+
+      if (huboCambios) {
+        currentSnapshot = {
+          categorias: nuevasCategorias,
+          productos: nuevosProductos,
+        };
+        notifySubscribers();
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  /**
    * Registra una nueva categoría en el catálogo global.
    */
   agregarCategoria(nombre: string, descripcion?: string): Categoria {
@@ -144,6 +215,10 @@ export const inventarioService = {
       categorias: [...currentSnapshot.categorias, nuevaCat],
     };
     notifySubscribers();
+
+    // Persistencia asíncrona no bloqueante en Supabase
+    supabaseService.insertCategoria({ nombre, descripcion }).catch(() => {});
+
     return nuevaCat;
   },
 
@@ -212,6 +287,22 @@ export const inventarioService = {
     };
     notifySubscribers();
 
+    // Persistencia asíncrona no bloqueante en Supabase
+    supabaseService
+      .insertProducto({
+        nombre: nuevoProducto.nombre,
+        descripcion: nuevoProducto.descripcion,
+        sku: nuevoProducto.codigo,
+        precioCosto: nuevoProducto.precioCosto,
+        precioVenta: nuevoProducto.precioVenta,
+        stockActual: nuevoProducto.stockActual,
+        stockMinimo: nuevoProducto.stockMinimo,
+        categoriaId: nuevoProducto.categoriaId,
+        unidadMedida: nuevoProducto.unidadMedida,
+        oferta: nuevoProducto.oferta,
+      })
+      .catch(() => {});
+
     return {
       exito: true,
       mensaje: `Producto "${nuevoProducto.nombre}" cargado con éxito en la categoría "${categoriaSeleccionada.nombre}".`,
@@ -236,6 +327,9 @@ export const inventarioService = {
     };
     notifySubscribers();
 
+    // Persistencia asíncrona no bloqueante en Supabase
+    supabaseService.updateProducto(productoId, { activo: false }).catch(() => {});
+
     const detalleMotivo = motivo ? ` (Motivo: ${motivo.trim()})` : '';
     return {
       exito: true,
@@ -259,6 +353,9 @@ export const inventarioService = {
       ),
     };
     notifySubscribers();
+
+    // Persistencia asíncrona no bloqueante en Supabase
+    supabaseService.updateProducto(productoId, { activo: true }).catch(() => {});
 
     return {
       exito: true,
@@ -323,6 +420,9 @@ export const inventarioService = {
     };
     notifySubscribers();
 
+    // Persistencia asíncrona no bloqueante en Supabase
+    supabaseService.updateProducto(productoId, datosActualizados).catch(() => {});
+
     return {
       exito: true,
       mensaje: `Producto "${datosActualizados.nombre || producto.nombre}" actualizado con éxito.`,
@@ -331,9 +431,9 @@ export const inventarioService = {
 
   /**
    * Descuenta stock tras una venta concretada en el punto de venta (POS).
-   * Refleja de inmediato el egreso en inventario global y catálogo de administración.
+   * Si permitirNegativo es true, no trunca en 0 para mantener la trazabilidad de backorders.
    */
-  descontarStock(productoId: string, cantidad: number): boolean {
+  descontarStock(productoId: string, cantidad: number, permitirNegativo: boolean = false): boolean {
     const producto = currentSnapshot.productos.find((p) => p.id === productoId);
     if (!producto) return false;
 
@@ -343,7 +443,30 @@ export const inventarioService = {
         p.id === productoId
           ? {
               ...p,
-              stockActual: Math.max(0, p.stockActual - cantidad),
+              stockActual: permitirNegativo ? p.stockActual - cantidad : Math.max(0, p.stockActual - cantidad),
+              fechaActualizacion: new Date(),
+            }
+          : p
+      ),
+    };
+    notifySubscribers();
+    return true;
+  },
+
+  /**
+   * Reintegra existencias al inventario tras la anulación o cancelación de una venta.
+   */
+  reintegrarStock(productoId: string, cantidad: number): boolean {
+    const producto = currentSnapshot.productos.find((p) => p.id === productoId);
+    if (!producto) return false;
+
+    currentSnapshot = {
+      ...currentSnapshot,
+      productos: currentSnapshot.productos.map((p) =>
+        p.id === productoId
+          ? {
+              ...p,
+              stockActual: p.stockActual + cantidad,
               fechaActualizacion: new Date(),
             }
           : p
@@ -364,3 +487,11 @@ export const inventarioService = {
     notifySubscribers();
   },
 };
+
+// Sincronización automática no bloqueante en el cliente al iniciar la aplicación
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    inventarioService.sincronizarConSupabase();
+  }, 200);
+}
+

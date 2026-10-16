@@ -31,6 +31,7 @@ export type EstadoBalanceCaja = 'exacto' | 'sobrante' | 'faltante';
  */
 export interface ArqueoCajaDTO {
   idCierre: string;
+  idTurno?: string;
   fechaApertura: string;
   fechaCierre: string;
   cajero: string;
@@ -53,6 +54,8 @@ export interface ArqueoCajaDTO {
  */
 export interface AperturaCajaDTO {
   idApertura: string;
+  idTurno?: string;
+  timestampApertura?: number;
   fechaApertura: string;
   cajero: string;
   numeroCaja: number;
@@ -64,11 +67,15 @@ export interface AperturaCajaDTO {
  * Estado reactivo de la sesión de caja en la terminal.
  */
 export interface EstadoSesionCaja {
+  idTurno?: string;
+  timestampApertura?: number;
   fondoInicial: number;
   fechaApertura: string | null;
   estaAbierta: boolean;
-  cajero: string;
-  numeroCaja: number;
+  cajaAbierta?: boolean;
+  cajero?: string;
+  cajeroApertura?: string;
+  numeroCaja?: number;
   observacionesApertura?: string;
   ultimoCierre: ArqueoCajaDTO | null;
 }

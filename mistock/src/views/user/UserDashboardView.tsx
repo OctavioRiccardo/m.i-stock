@@ -65,6 +65,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
     isModalTicketCierreOpen,
     setIsModalTicketCierreOpen,
     ultimoCierre,
+    cancelarVenta,
   } = controller;
 
   const [isModalCobroOpen, setIsModalCobroOpen] = useState<boolean>(false);
@@ -316,6 +317,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
           onClose={() => setVentaSeleccionada(null)}
           venta={ventaSeleccionada}
           monedaSimbolo={monedaSimbolo}
+          onCancelarVenta={cancelarVenta}
         />
 
         {/* Modal de Apertura de Caja (Inicio de Turno / Sesión) */}

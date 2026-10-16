@@ -17,6 +17,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { UserDashboardData, ProductoRapidoPOS, VentaRecientePOS, ItemCarritoPOS, PestanaOperativaPOS, } from '@/models/modelos_vista/dashboardModel';
 import { useInventarioData, inventarioService } from '@/services/inventarioService';
+import { supabaseService } from '@/services/supabaseService';
 import { MetodoPago, DetalleVenta } from '@/models/modelos_dominio/ventaModel';
 import { useConfiguracionData } from '@/services/configuracionService';
 import { ArqueoCajaDTO, ResumenMediosPagoCierre, EstadoBalanceCaja, } from '@/models/modelos_vista/cierreCajaModel';
@@ -38,11 +39,22 @@ export function inicializarVentasCliente(): VentasHistorialStore {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed.ventasRecientes)) {
+        const hoyStr = new Date().toLocaleDateString('es-AR');
+        const hoyInicioTs = new Date().setHours(0, 0, 0, 0);
+
+        const ventasDeHoy = parsed.ventasRecientes.filter((v: VentaRecientePOS) => {
+          if (v.estado === 'cancelada') return false;
+          if (v.fecha && v.fecha === hoyStr) return true;
+          if (v.timestamp && v.timestamp >= hoyInicioTs) return true;
+          return false;
+        });
+
         return {
-          ventasDelDia: parsed.ventasDelDia ?? parsed.ventasRecientes.length,
-          recaudacionDelDia:
-            parsed.recaudacionDelDia ??
-            parsed.ventasRecientes.reduce((acc: number, v: VentaRecientePOS) => acc + (v.montoTotal || 0), 0),
+          ventasDelDia: ventasDeHoy.length,
+          recaudacionDelDia: ventasDeHoy.reduce(
+            (acc: number, v: VentaRecientePOS) => acc + (v.montoTotal || 0),
+            0
+          ),
           ventasRecientes: parsed.ventasRecientes,
         };
       }
@@ -237,6 +249,8 @@ export function useUserDashboardController() {
     return 'Administrador';
   });
   const [observacionesApertura, setObservacionesApertura] = useState<string>('');
+  const [idTurnoActivo, setIdTurnoActivo] = useState<string | null>(null);
+  const [timestampApertura, setTimestampApertura] = useState<number | null>(null);
   const [isModalAperturaOpen, setIsModalAperturaOpen] = useState<boolean>(false);
   const [isModalArqueoOpen, setIsModalArqueoOpen] = useState<boolean>(false);
   const [isModalTicketCierreOpen, setIsModalTicketCierreOpen] = useState<boolean>(false);
@@ -250,6 +264,8 @@ export function useUserDashboardController() {
         const sesion = JSON.parse(stored);
         if (sesion && typeof sesion.cajaAbierta === 'boolean') {
           setCajaAbierta(sesion.cajaAbierta);
+          if (sesion.idTurno) setIdTurnoActivo(sesion.idTurno);
+          if (sesion.timestampApertura) setTimestampApertura(sesion.timestampApertura);
           if (sesion.fondoInicial !== undefined) setFondoInicial(sesion.fondoInicial);
           if (sesion.fechaApertura) setFechaApertura(sesion.fechaApertura);
           if (sesion.cajeroApertura) setCajeroApertura(sesion.cajeroApertura);
@@ -277,7 +293,11 @@ export function useUserDashboardController() {
     });
     const strFechaApertura = `${fechaFormateada} ${horaFormateada}`;
     const cajeroActual = cajeroApertura || 'Administrador';
+    const nuevoIdTurno = `TRN-${Date.now().toString().slice(-6)}`;
+    const nuevoTimestamp = ahora.getTime();
 
+    setIdTurnoActivo(nuevoIdTurno);
+    setTimestampApertura(nuevoTimestamp);
     setCajaAbierta(true);
     setFondoInicial(montoInicial);
     setFechaApertura(strFechaApertura);
@@ -290,6 +310,8 @@ export function useUserDashboardController() {
         'mistock_sesion_caja_v1',
         JSON.stringify({
           cajaAbierta: true,
+          idTurno: nuevoIdTurno,
+          timestampApertura: nuevoTimestamp,
           fondoInicial: montoInicial,
           fechaApertura: strFechaApertura,
           cajeroApertura: cajeroActual,
@@ -302,10 +324,25 @@ export function useUserDashboardController() {
     }
 
     setSaleSuccessMessage(
-      `Caja abierta con éxito. Fondo inicial: ${monedaSimbolo} ${montoInicial.toLocaleString('es-AR')}`
+      `Caja abierta con éxito (Turno ${nuevoIdTurno}). Fondo inicial: ${monedaSimbolo} ${montoInicial.toLocaleString('es-AR')}`
     );
     setTimeout(() => setSaleSuccessMessage(null), 4000);
   };
+
+  // Ventas correspondientes exclusivamente a la sesión del turno activo
+  const ventasTurnoActual = useMemo(() => {
+    if (!cajaAbierta && !timestampApertura && !idTurnoActivo) return [];
+    return data.ventasRecientes.filter((v) => {
+      if (v.estado === 'cancelada') return false;
+      if (idTurnoActivo && v.idTurno) {
+        return v.idTurno === idTurnoActivo;
+      }
+      if (timestampApertura && v.timestamp) {
+        return v.timestamp >= timestampApertura;
+      }
+      return false;
+    });
+  }, [data.ventasRecientes, cajaAbierta, idTurnoActivo, timestampApertura]);
 
   // Desglose de ingresos por medio de cobro acumulado en el turno actual
   const resumenMediosTurno: ResumenMediosPagoCierre = useMemo(() => {
@@ -318,8 +355,7 @@ export function useUserDashboardController() {
       otro: 0,
     };
 
-    for (const v of data.ventasRecientes) {
-      if (v.estado === 'cancelada') continue;
+    for (const v of ventasTurnoActual) {
       const m = v.metodoPago;
       if (m === 'efectivo') resumen.efectivo += v.montoTotal;
       else if (m === 'mercado_pago') resumen.mercadoPago += v.montoTotal;
@@ -330,7 +366,7 @@ export function useUserDashboardController() {
     }
 
     return resumen;
-  }, [data.ventasRecientes]);
+  }, [ventasTurnoActual]);
 
   const totalVentasEfectivo = resumenMediosTurno.efectivo;
   const totalDigitales =
@@ -341,8 +377,8 @@ export function useUserDashboardController() {
     resumenMediosTurno.otro;
   const granTotalRecaudado = totalVentasEfectivo + totalDigitales;
   const cantidadTicketsValidos = useMemo(
-    () => data.ventasRecientes.filter((v) => v.estado !== 'cancelada').length,
-    [data.ventasRecientes]
+    () => ventasTurnoActual.length,
+    [ventasTurnoActual]
   );
   const efectivoEsperado = fondoInicial + totalVentasEfectivo;
 
@@ -364,6 +400,7 @@ export function useUserDashboardController() {
 
     const nuevoCierre: ArqueoCajaDTO = {
       idCierre: `CR-${Date.now().toString().slice(-6)}`,
+      idTurno: idTurnoActivo || undefined,
       fechaApertura: fechaApertura || `${fechaFormateada} 08:30`,
       fechaCierre: `${fechaFormateada} ${horaFormateada}`,
       cajero: cajeroApertura || 'Administrador',
@@ -382,6 +419,8 @@ export function useUserDashboardController() {
     };
 
     setCajaAbierta(false);
+    setIdTurnoActivo(null);
+    setTimestampApertura(null);
     setUltimoCierre(nuevoCierre);
     setIsModalArqueoOpen(false);
     setIsModalTicketCierreOpen(true);
@@ -391,6 +430,8 @@ export function useUserDashboardController() {
         'mistock_sesion_caja_v1',
         JSON.stringify({
           cajaAbierta: false,
+          idTurno: null,
+          timestampApertura: null,
           fondoInicial,
           fechaApertura: null,
           cajeroApertura,
@@ -694,10 +735,14 @@ export function useUserDashboardController() {
       subtotal: item.subtotal,
     }));
 
+    const ahora = new Date();
     const newSale: VentaRecientePOS = {
       id: ventaId,
-      hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      fecha: new Date().toLocaleDateString('es-AR'),
+      hora: ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      fecha: ahora.toLocaleDateString('es-AR'),
+      fechaISO: ahora.toISOString(),
+      timestamp: ahora.getTime(),
+      idTurno: idTurnoActivo || undefined,
       montoTotal: totalVenta,
       cantidadItems: cantidadArticulosCarrito,
       metodoPago,
@@ -716,15 +761,31 @@ export function useUserDashboardController() {
 
     // Descontar existencias en el inventario central para cada renglón
     for (const item of carrito) {
-      inventarioService.descontarStock(item.producto.id, item.cantidad);
+      inventarioService.descontarStock(item.producto.id, item.cantidad, permitirVentaSinStock);
     }
 
+    // Persistencia remota asíncrona en Supabase (dispara triggers de movimientos_stock y stock_actual)
+    supabaseService.registrarVenta(newSale).catch(() => {});
+
     setVentasState((prev) => {
+      const allSales = [newSale, ...prev.ventasRecientes];
+      const hoyStr = ahora.toLocaleDateString('es-AR');
+      const hoyInicioTs = new Date().setHours(0, 0, 0, 0);
+
+      const ventasDeHoy = allSales.filter((v) => {
+        if (v.estado === 'cancelada') return false;
+        if (v.fecha && v.fecha === hoyStr) return true;
+        if (v.timestamp && v.timestamp >= hoyInicioTs) return true;
+        return false;
+      });
+
       const updated = {
-        ...prev,
-        ventasDelDia: prev.ventasDelDia + 1,
-        recaudacionDelDia: prev.recaudacionDelDia + totalVenta,
-        ventasRecientes: [newSale, ...prev.ventasRecientes],
+        ventasDelDia: ventasDeHoy.length,
+        recaudacionDelDia: ventasDeHoy.reduce(
+          (acc: number, v: VentaRecientePOS) => acc + (v.montoTotal || 0),
+          0
+        ),
+        ventasRecientes: allSales,
       };
       if (typeof window !== 'undefined') {
         try {
@@ -836,6 +897,9 @@ export function useUserDashboardController() {
     // Descuenta stock en el almacén central de inventario
     inventarioService.descontarStock(productId, cantidad);
 
+    // Persistencia remota asíncrona en Supabase
+    supabaseService.registrarVenta(newSale).catch(() => {});
+
     setVentasState((prev) => ({
       ...prev,
       ventasDelDia: prev.ventasDelDia + 1,
@@ -926,6 +990,9 @@ export function useUserDashboardController() {
     // Descuenta stock en el almacén central de inventario
     inventarioService.descontarStock(productId, cantidad);
 
+    // Persistencia remota asíncrona en Supabase
+    supabaseService.registrarVenta(newSale).catch(() => {});
+
     setVentasState((prev) => ({
       ...prev,
       ventasDelDia: prev.ventasDelDia + 1,
@@ -952,6 +1019,69 @@ export function useUserDashboardController() {
       return registrarVentaMercadoPago(productId, 1);
     }
     return registrarVentaEfectivo(productId, 1);
+  };
+
+  /**
+   * Cancela una venta registrada, reintegra su stock físico al inventario
+   * y descuenta su monto de las métricas de recaudación del turno y del día.
+   */
+  const cancelarVenta = (ventaId: string, motivo?: string): boolean => {
+    const venta = data.ventasRecientes.find((v) => v.id === ventaId);
+    if (!venta) {
+      setSaleErrorMessage(`No se encontró el comprobante ${ventaId}.`);
+      setTimeout(() => setSaleErrorMessage(null), 3500);
+      return false;
+    }
+
+    if (venta.estado === 'cancelada') {
+      setSaleErrorMessage(`El comprobante ${ventaId} ya fue cancelado previamente.`);
+      setTimeout(() => setSaleErrorMessage(null), 3500);
+      return false;
+    }
+
+    // 1. Reintegrar existencias al inventario para cada ítem vendido
+    for (const item of venta.items || []) {
+      inventarioService.reintegrarStock(item.productoId, item.cantidad);
+    }
+
+    // Persistir cancelación remota en Supabase
+    supabaseService.cancelarVenta(ventaId).catch(() => {});
+
+    // 2. Actualizar estado de la venta a 'cancelada' y recalcular métricas del día
+    setVentasState((prev) => {
+      const allSales = prev.ventasRecientes.map((v) =>
+        v.id === ventaId ? { ...v, estado: 'cancelada' as const } : v
+      );
+
+      const hoyStr = new Date().toLocaleDateString('es-AR');
+      const hoyInicioTs = new Date().setHours(0, 0, 0, 0);
+
+      const ventasDeHoy = allSales.filter((v) => {
+        if (v.estado === 'cancelada') return false;
+        if (v.fecha && v.fecha === hoyStr) return true;
+        if (v.timestamp && v.timestamp >= hoyInicioTs) return true;
+        return false;
+      });
+
+      const updated = {
+        ventasDelDia: ventasDeHoy.length,
+        recaudacionDelDia: ventasDeHoy.reduce((acc, v) => acc + (v.montoTotal || 0), 0),
+        ventasRecientes: allSales,
+      };
+
+      if (typeof window !== 'undefined') {
+        try {
+          window.localStorage.setItem(VENTAS_STORAGE_KEY, JSON.stringify(updated));
+          window.dispatchEvent(new Event('mistock_ventas_updated'));
+        } catch {}
+      }
+      return updated;
+    });
+
+    const motivoTexto = motivo ? ` (Motivo: ${motivo.trim()})` : '';
+    setSaleSuccessMessage(`Venta ${ventaId} anulada con éxito y mercadería reingresada al stock.${motivoTexto}`);
+    setTimeout(() => setSaleSuccessMessage(null), 4000);
+    return true;
   };
 
   return {
@@ -1051,7 +1181,9 @@ export function useUserDashboardController() {
     totalDigitales,
     granTotalRecaudado,
     cantidadTicketsValidos,
+    idTurnoActivo,
     efectivoEsperado,
+    cancelarVenta,
     confirmarCierreCaja,
   };
 }

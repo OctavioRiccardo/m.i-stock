@@ -52,6 +52,7 @@ export interface ModalDetalleVentaProps {
   onClose: () => void;
   venta: VentaRecientePOS | null;
   monedaSimbolo: string;
+  onCancelarVenta?: (ventaId: string) => void;
 }
 
 export function ModalDetalleVenta({
@@ -59,6 +60,7 @@ export function ModalDetalleVenta({
   onClose,
   venta,
   monedaSimbolo,
+  onCancelarVenta,
 }: ModalDetalleVentaProps) {
   const [vistaActiva, setVistaActiva] = useState<'detalles' | 'ticket'>('detalles');
   const configGlobal = useConfiguracionData();
@@ -515,6 +517,21 @@ export function ModalDetalleVenta({
             </>
           ) : (
             <>
+              {onCancelarVenta && venta && venta.estado !== 'cancelada' && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => {
+                    if (confirm(`¿Está seguro de anular el comprobante ${venta.id}? Las existencias vendidas serán reingresadas al inventario.`)) {
+                      onCancelarVenta(venta.id);
+                      onClose();
+                    }
+                  }}
+                  className="text-xs h-9 cursor-pointer mr-auto"
+                >
+                  Anular Venta
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="outline"

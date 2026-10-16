@@ -100,7 +100,51 @@ export function useLoginController() {
     try {
       const emailLower = values.email.trim().toLowerCase();
 
-      // Acceso directo de prueba para rama Test (sin requerir confirmación por email en Supabase)
+      // 1. Comprobar si el usuario existe en la nómina del sistema (usuariosController)
+      if (typeof window !== 'undefined') {
+        try {
+          const storedUsersRaw = window.localStorage.getItem('mistock_usuarios_data_test_v1');
+          if (storedUsersRaw) {
+            const userList = JSON.parse(storedUsersRaw);
+            if (Array.isArray(userList)) {
+              const matchedUser = userList.find(
+                (u: { email?: string; estado?: string; activo?: boolean; rol?: string; nombre?: string; id?: string }) =>
+                  u.email && u.email.trim().toLowerCase() === emailLower
+              );
+
+              if (matchedUser) {
+                if (matchedUser.estado === 'inactivo' || matchedUser.activo === false) {
+                  setError('Su cuenta de usuario se encuentra inactiva. Contacte al Administrador.');
+                  setLoading(false);
+                  return;
+                }
+
+                const rolAsignado = matchedUser.rol === 'vendedor' ? 'vendedor' : 'admin';
+                window.localStorage.setItem('mistock_rol_activo', rolAsignado);
+                window.localStorage.setItem(
+                  'mistock_usuario_activo',
+                  JSON.stringify({
+                    id: matchedUser.id,
+                    email: matchedUser.email,
+                    nombre: matchedUser.nombre || 'Colaborador',
+                    rol: rolAsignado,
+                  })
+                );
+
+                if (rolAsignado === 'vendedor') {
+                  router.push('/dashboard');
+                } else {
+                  router.push('/admin');
+                }
+                router.refresh();
+                return;
+              }
+            }
+          }
+        } catch {}
+      }
+
+      // 2. Acceso directo de prueba para cuentas base de desarrollo
       if (
         (emailLower === 'admin@mistock.com' && values.password.length >= 6) ||
         (emailLower === 'octavio@mistock.com' && values.password.length >= 6) ||
