@@ -14,7 +14,7 @@
  * 4. Habilitar el circuito comercial de ventas y cobros en el sistema.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Key,
   Coins,
@@ -57,6 +57,23 @@ export function ModalAperturaCaja({
   const [montoInput, setMontoInput] = useState<string>(fondoInicial ? fondoInicial.toString() : '10000');
   const [observacionesInput, setObservacionesInput] = useState<string>('');
   const [errorInput, setErrorInput] = useState<string | null>(null);
+
+  // Asegurar que el cajero refleje siempre el usuario actualmente autenticado
+  const nombreCajero = useMemo(() => {
+    if (cajeroApertura && cajeroApertura !== 'Lucas Benítez' && cajeroApertura !== 'Lucas Gutiérrez') {
+      return cajeroApertura;
+    }
+    if (typeof window !== 'undefined') {
+      try {
+        const u = window.localStorage.getItem('mistock_usuario_activo');
+        if (u) {
+          const parsed = JSON.parse(u);
+          if (parsed.nombre) return parsed.nombre;
+        }
+      } catch {}
+    }
+    return cajeroApertura || 'Administrador';
+  }, [cajeroApertura]);
 
   // Atajos rápidos para montos habituales de fondo de caja
   const sugerenciasFondo = [0, 5000, 10000, 20000, 50000];
@@ -113,7 +130,7 @@ export function ModalAperturaCaja({
               <User className="h-4 w-4 text-[#2A7A78] shrink-0" weight="duotone" />
               <div className="truncate">
                 <span className="text-[10px] text-[#657373] block uppercase font-semibold">Cajero Responsable</span>
-                <span className="font-bold text-[#1C2424] truncate block">{cajeroApertura || 'Administrador'}</span>
+                <span className="font-bold text-[#1C2424] truncate block">{nombreCajero}</span>
               </div>
             </div>
 

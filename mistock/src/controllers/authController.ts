@@ -23,6 +23,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { LoginFormValues } from '@/models/modelos_vista/authModel';
 import { initialUsuarios } from '@/models/mock_data/usuariosMock';
+import { RolUsuario } from '@/models/modelos_dominio/userModel';
 
 /**
  * Hook Controlador para el Formulario de Inicio de Sesión.
@@ -128,14 +129,23 @@ export function useLoginController() {
               return;
             }
 
-            const rolAsignado = matchedUser.rol === 'vendedor' ? 'vendedor' : 'admin';
+            // Bloquear acceso a colaboradores que aún no tengan un rol asignado por el Administrador
+            if (matchedUser.rol === 'no_rol') {
+              setError('Su cuenta no posee un rol asignado en el sistema. Solicite a un Administrador que active sus permisos desde el panel de Gestión de Usuarios.');
+              setLoading(false);
+              return;
+            }
+
+            const rolAsignado: RolUsuario = matchedUser.rol === 'admin' ? 'admin' : 'vendedor';
+            const nombreColaborador = matchedUser.nombre || matchedUser.nombreCompleto || matchedUser.email.split('@')[0] || 'Colaborador';
+
             window.localStorage.setItem('mistock_rol_activo', rolAsignado);
             window.localStorage.setItem(
               'mistock_usuario_activo',
               JSON.stringify({
                 id: matchedUser.id,
                 email: matchedUser.email,
-                nombre: matchedUser.nombre || 'Administrador',
+                nombre: nombreColaborador,
                 rol: rolAsignado,
               })
             );

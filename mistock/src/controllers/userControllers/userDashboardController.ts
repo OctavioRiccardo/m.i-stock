@@ -236,7 +236,9 @@ export function useUserDashboardController() {
   const [cajaAbierta, setCajaAbierta] = useState<boolean>(false);
   const [fondoInicial, setFondoInicial] = useState<number>(10000); // Fondo de gaveta inicial para dar cambio
   const [fechaApertura, setFechaApertura] = useState<string | null>(null);
-  const [cajeroApertura, setCajeroApertura] = useState<string>(() => {
+
+  // Helper para sincronizar siempre el cajero responsable con el usuario que tiene sesión iniciada
+  const getNombreUsuarioActivo = (): string => {
     if (typeof window !== 'undefined') {
       try {
         const u = window.localStorage.getItem('mistock_usuario_activo');
@@ -247,11 +249,22 @@ export function useUserDashboardController() {
       } catch {}
     }
     return 'Administrador';
+  };
+
+  const [cajeroApertura, setCajeroApertura] = useState<string>(() => {
+    return getNombreUsuarioActivo();
   });
   const [observacionesApertura, setObservacionesApertura] = useState<string>('');
   const [idTurnoActivo, setIdTurnoActivo] = useState<string | null>(null);
   const [timestampApertura, setTimestampApertura] = useState<number | null>(null);
   const [isModalAperturaOpen, setIsModalAperturaOpen] = useState<boolean>(false);
+
+  const handleSetIsModalAperturaOpen = (abrir: boolean) => {
+    if (abrir) {
+      setCajeroApertura(getNombreUsuarioActivo());
+    }
+    setIsModalAperturaOpen(abrir);
+  };
   const [isModalArqueoOpen, setIsModalArqueoOpen] = useState<boolean>(false);
   const [isModalTicketCierreOpen, setIsModalTicketCierreOpen] = useState<boolean>(false);
   const [ultimoCierre, setUltimoCierre] = useState<ArqueoCajaDTO | null>(null);
@@ -264,20 +277,28 @@ export function useUserDashboardController() {
         const sesion = JSON.parse(stored);
         if (sesion && typeof sesion.cajaAbierta === 'boolean') {
           setCajaAbierta(sesion.cajaAbierta);
-          if (sesion.idTurno) setIdTurnoActivo(sesion.idTurno);
-          if (sesion.timestampApertura) setTimestampApertura(sesion.timestampApertura);
-          if (sesion.fondoInicial !== undefined) setFondoInicial(sesion.fondoInicial);
-          if (sesion.fechaApertura) setFechaApertura(sesion.fechaApertura);
-          if (sesion.cajeroApertura) setCajeroApertura(sesion.cajeroApertura);
-          if (sesion.observacionesApertura) setObservacionesApertura(sesion.observacionesApertura);
+          if (sesion.cajaAbierta) {
+            // Turno activo en curso: conservar los datos de la sesión actual abierta
+            if (sesion.idTurno) setIdTurnoActivo(sesion.idTurno);
+            if (sesion.timestampApertura) setTimestampApertura(sesion.timestampApertura);
+            if (sesion.fondoInicial !== undefined) setFondoInicial(sesion.fondoInicial);
+            if (sesion.fechaApertura) setFechaApertura(sesion.fechaApertura);
+            if (sesion.cajeroApertura) setCajeroApertura(sesion.cajeroApertura);
+            if (sesion.observacionesApertura) setObservacionesApertura(sesion.observacionesApertura);
+          } else {
+            // Si la caja está CERRADA, el cajero para la próxima apertura SIEMPRE es el usuario con sesión activa
+            setCajeroApertura(getNombreUsuarioActivo());
+          }
           if (sesion.ultimoCierre) setUltimoCierre(sesion.ultimoCierre);
           return;
         }
       }
       // Por defecto la caja inicia cerrada requiriendo apertura explícita
       setCajaAbierta(false);
+      setCajeroApertura(getNombreUsuarioActivo());
     } catch {
       setCajaAbierta(false);
+      setCajeroApertura(getNombreUsuarioActivo());
     }
   }, []);
 
@@ -292,7 +313,7 @@ export function useUserDashboardController() {
       minute: '2-digit',
     });
     const strFechaApertura = `${fechaFormateada} ${horaFormateada}`;
-    const cajeroActual = cajeroApertura || 'Administrador';
+    const cajeroActual = getNombreUsuarioActivo();
     const nuevoIdTurno = `TRN-${Date.now().toString().slice(-6)}`;
     const nuevoTimestamp = ahora.getTime();
 
@@ -434,7 +455,7 @@ export function useUserDashboardController() {
           timestampApertura: null,
           fondoInicial,
           fechaApertura: null,
-          cajeroApertura,
+          cajeroApertura: null,
           observacionesApertura: '',
           ultimoCierre: nuevoCierre,
         })
@@ -1166,7 +1187,7 @@ export function useUserDashboardController() {
     cajeroApertura,
     observacionesApertura,
     isModalAperturaOpen,
-    setIsModalAperturaOpen,
+    setIsModalAperturaOpen: handleSetIsModalAperturaOpen,
     abrirCaja,
     fondoInicial,
     setFondoInicial,
