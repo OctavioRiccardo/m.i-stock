@@ -732,9 +732,9 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="vendedor">Vendedor (Caja/POS)</SelectItem>
-                      <SelectItem value="admin">Administrador (Total)</SelectItem>
-                      <SelectItem value="no_rol">Sin Rol (Pendiente)</SelectItem>
+                      <SelectItem value="vendedor">Vendedor</SelectItem>
+                      <SelectItem value="admin">Administrador</SelectItem>
+                      <SelectItem value="no_rol">Sin Rol</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
