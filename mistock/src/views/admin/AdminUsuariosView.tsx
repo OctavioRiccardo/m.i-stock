@@ -36,6 +36,11 @@ import {
   EnvelopeSimple,
   Power,
   Shield,
+  Key,
+  Eye,
+  EyeSlash,
+  Sparkle,
+  Copy,
 } from '@phosphor-icons/react';
 import {
   useAdminUsuariosController,
@@ -124,12 +129,44 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
   const [nuevoEmail, setNuevoEmail] = useState('');
   const [nuevoRol, setNuevoRol] = useState<RolUsuarioDB>('vendedor');
   const [nuevoTelefono, setNuevoTelefono] = useState('');
+  const [nuevoPassword, setNuevoPassword] = useState('');
+  const [mostrarNuevoPassword, setMostrarNuevoPassword] = useState(false);
+  const [copiadoPassword, setCopiadoPassword] = useState(false);
 
   // Estado del formulario de edición
   const [editNombre, setEditNombre] = useState('');
   const [editRol, setEditRol] = useState<RolUsuarioDB>('vendedor');
   const [editEstado, setEditEstado] = useState<EstadoUsuario>('activo');
   const [editTelefono, setEditTelefono] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+  const [mostrarEditPassword, setMostrarEditPassword] = useState(false);
+  const [copiadoEditPassword, setCopiadoEditPassword] = useState(false);
+
+  // Generador de contraseñas seguras y legibles
+  const generarPasswordAleatorio = (setter: (pass: string) => void) => {
+    const mayus = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const minus = 'abcdefghjkmnpqrstuvwxyz';
+    const nums = '23456789';
+    const specials = '!@#$%*';
+    
+    let res = '';
+    res += mayus.charAt(Math.floor(Math.random() * mayus.length));
+    res += minus.charAt(Math.floor(Math.random() * minus.length));
+    res += minus.charAt(Math.floor(Math.random() * minus.length));
+    res += nums.charAt(Math.floor(Math.random() * nums.length));
+    res += nums.charAt(Math.floor(Math.random() * nums.length));
+    res += specials.charAt(Math.floor(Math.random() * specials.length));
+    res += nums.charAt(Math.floor(Math.random() * nums.length));
+    res += mayus.charAt(Math.floor(Math.random() * mayus.length));
+    setter(res);
+  };
+
+  const copiarAlPortapapeles = (texto: string, setCopiado: (val: boolean) => void) => {
+    if (!texto) return;
+    navigator.clipboard.writeText(texto);
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 2000);
+  };
 
   // Al abrir edición, inicializar valores
   const handleAbrirEdicion = (usuario: Usuario) => {
@@ -137,6 +174,8 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
     setEditRol((usuario.rol as RolUsuarioDB) || 'vendedor');
     setEditEstado(usuario.estado || 'activo');
     setEditTelefono(usuario.telefono || '');
+    setEditPassword(usuario.password || '');
+    setMostrarEditPassword(false);
     abrirModalEditar(usuario);
   };
 
@@ -147,12 +186,15 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
       email: nuevoEmail,
       rol: nuevoRol,
       telefono: nuevoTelefono || undefined,
+      password: nuevoPassword.trim() || undefined,
     });
     if (exito) {
       setNuevoNombre('');
       setNuevoEmail('');
       setNuevoRol('vendedor');
       setNuevoTelefono('');
+      setNuevoPassword('');
+      setMostrarNuevoPassword(false);
     }
   };
 
@@ -164,6 +206,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
       rol: editRol,
       estado: editEstado,
       telefono: editTelefono || undefined,
+      password: editPassword.trim() || undefined,
     });
   };
 
@@ -727,6 +770,74 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                 </div>
               </div>
 
+              {/* Contraseña de Acceso */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-[#1C2424] flex items-center gap-1.5">
+                    <Key className="h-3.5 w-3.5 text-[#2A7A78]" weight="duotone" />
+                    <span>Contraseña de Acceso</span>
+                  </label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-[11px] text-[#2A7A78] hover:bg-[#E2F1F0] gap-1 cursor-pointer font-medium"
+                    onClick={() => generarPasswordAleatorio(setNuevoPassword)}
+                  >
+                    <Sparkle className="h-3 w-3" weight="fill" />
+                    <span>Generar segura</span>
+                  </Button>
+                </div>
+                <div className="relative">
+                  <Input
+                    type={mostrarNuevoPassword ? 'text' : 'password'}
+                    placeholder="Mínimo 6 caracteres (ej: Pass1234!)"
+                    value={nuevoPassword}
+                    onChange={(e) => setNuevoPassword(e.target.value)}
+                    className="pr-16 text-xs font-mono"
+                  />
+                  <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+                    {nuevoPassword && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-[#657373] hover:text-[#1C2424] cursor-pointer"
+                        onClick={() => copiarAlPortapapeles(nuevoPassword, setCopiadoPassword)}
+                        title="Copiar contraseña"
+                      >
+                        {copiadoPassword ? (
+                          <Check className="h-3.5 w-3.5 text-emerald-600" weight="bold" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-[#657373] hover:text-[#1C2424] cursor-pointer"
+                      onClick={() => setMostrarNuevoPassword(!mostrarNuevoPassword)}
+                      title={mostrarNuevoPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                    >
+                      {mostrarNuevoPassword ? (
+                        <EyeSlash className="h-3.5 w-3.5" />
+                      ) : (
+                        <Eye className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-[11px] text-[#657373]">
+                  {copiadoPassword ? (
+                    <span className="text-emerald-600 font-medium">¡Contraseña copiada al portapapeles!</span>
+                  ) : (
+                    'Permite al colaborador ingresar en /login con esta contraseña (opcional en modo prueba).'
+                  )}
+                </p>
+              </div>
+
               <DialogFooter className="pt-2">
                 <Button
                   type="button"
@@ -840,6 +951,74 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                     value={editTelefono}
                     onChange={(e) => setEditTelefono(e.target.value)}
                   />
+                </div>
+
+                {/* Modificar Contraseña */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-[#1C2424] flex items-center gap-1.5">
+                      <Key className="h-3.5 w-3.5 text-[#2A7A78]" weight="duotone" />
+                      <span>Modificar Contraseña</span>
+                    </label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-[11px] text-[#2A7A78] hover:bg-[#E2F1F0] gap-1 cursor-pointer font-medium"
+                      onClick={() => generarPasswordAleatorio(setEditPassword)}
+                    >
+                      <Sparkle className="h-3 w-3" weight="fill" />
+                      <span>Generar nueva</span>
+                    </Button>
+                  </div>
+                  <div className="relative">
+                    <Input
+                      type={mostrarEditPassword ? 'text' : 'password'}
+                      placeholder="Dejar en blanco para conservar la actual"
+                      value={editPassword}
+                      onChange={(e) => setEditPassword(e.target.value)}
+                      className="pr-16 text-xs font-mono"
+                    />
+                    <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+                      {editPassword && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-[#657373] hover:text-[#1C2424] cursor-pointer"
+                          onClick={() => copiarAlPortapapeles(editPassword, setCopiadoEditPassword)}
+                          title="Copiar contraseña"
+                        >
+                          {copiadoEditPassword ? (
+                            <Check className="h-3.5 w-3.5 text-emerald-600" weight="bold" />
+                          ) : (
+                            <Copy className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-[#657373] hover:text-[#1C2424] cursor-pointer"
+                        onClick={() => setMostrarEditPassword(!mostrarEditPassword)}
+                        title={mostrarEditPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                      >
+                        {mostrarEditPassword ? (
+                          <EyeSlash className="h-3.5 w-3.5" />
+                        ) : (
+                          <Eye className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-[#657373]">
+                    {copiadoEditPassword ? (
+                      <span className="text-emerald-600 font-medium">¡Nueva contraseña copiada al portapapeles!</span>
+                    ) : (
+                      'Escribe una nueva contraseña o presiona "Generar nueva" para cambiarla.'
+                    )}
+                  </p>
                 </div>
 
                 <DialogFooter className="pt-2">

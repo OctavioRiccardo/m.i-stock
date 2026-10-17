@@ -59,6 +59,7 @@ export interface Usuario {
   ultimoAcceso?: Date | string;   // Timestamp de última sesión
   fechaCreacion?: Date | string;  // Fecha de alta
   fechaActualizacion?: Date | string;
+  password?: string;              // Contraseña de acceso al sistema asignada por el administrador
 }
 
 /**
@@ -85,6 +86,7 @@ export interface CrearUsuarioDTO {
   nombreCompleto?: string;
   rol: RolUsuario;
   telefono?: string;
+  password?: string;
 }
 
 /**

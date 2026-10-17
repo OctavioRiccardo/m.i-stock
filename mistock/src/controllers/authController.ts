@@ -121,6 +121,13 @@ export function useLoginController() {
               return;
             }
 
+            // Validar contraseña si el usuario tiene una asignada
+            if (matchedUser.password && matchedUser.password.trim() !== values.password.trim()) {
+              setError('Contraseña incorrecta. Verifique sus credenciales.');
+              setLoading(false);
+              return;
+            }
+
             const rolAsignado = matchedUser.rol === 'vendedor' ? 'vendedor' : 'admin';
             window.localStorage.setItem('mistock_rol_activo', rolAsignado);
             window.localStorage.setItem(

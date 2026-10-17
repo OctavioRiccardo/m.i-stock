@@ -211,6 +211,7 @@ export function useAdminUsuariosController() {
       nombreCompleto: dto.nombre.trim(),
       rol: dto.rol,
       telefono: dto.telefono?.trim() || undefined,
+      password: dto.password?.trim() || undefined,
       estado: 'activo',
       fechaCreacion: new Date(),
       ultimoAcceso: new Date(),
@@ -252,6 +253,7 @@ export function useAdminUsuariosController() {
           ...datos,
           nombre: datos.nombre ? datos.nombre.trim() : u.nombre,
           nombreCompleto: datos.nombre ? datos.nombre.trim() : u.nombreCompleto,
+          password: datos.password !== undefined ? (datos.password.trim() || undefined) : u.password,
           fechaActualizacion: new Date(),
         };
       })
