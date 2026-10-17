@@ -39,7 +39,6 @@ import {
   Key,
   Eye,
   EyeSlash,
-  Sparkle,
   Copy,
 } from '@phosphor-icons/react';
 import {
@@ -142,24 +141,6 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
   const [mostrarEditPassword, setMostrarEditPassword] = useState(false);
   const [copiadoEditPassword, setCopiadoEditPassword] = useState(false);
 
-  // Generador de contraseñas seguras y legibles
-  const generarPasswordAleatorio = (setter: (pass: string) => void) => {
-    const mayus = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-    const minus = 'abcdefghjkmnpqrstuvwxyz';
-    const nums = '23456789';
-    const specials = '!@#$%*';
-    
-    let res = '';
-    res += mayus.charAt(Math.floor(Math.random() * mayus.length));
-    res += minus.charAt(Math.floor(Math.random() * minus.length));
-    res += minus.charAt(Math.floor(Math.random() * minus.length));
-    res += nums.charAt(Math.floor(Math.random() * nums.length));
-    res += nums.charAt(Math.floor(Math.random() * nums.length));
-    res += specials.charAt(Math.floor(Math.random() * specials.length));
-    res += nums.charAt(Math.floor(Math.random() * nums.length));
-    res += mayus.charAt(Math.floor(Math.random() * mayus.length));
-    setter(res);
-  };
 
   const copiarAlPortapapeles = (texto: string, setCopiado: (val: boolean) => void) => {
     if (!texto) return;
@@ -772,22 +753,10 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
 
               {/* Contraseña de Acceso */}
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-[#1C2424] flex items-center gap-1.5">
-                    <Key className="h-3.5 w-3.5 text-[#2A7A78]" weight="duotone" />
-                    <span>Contraseña de Acceso</span>
-                  </label>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-2 text-[11px] text-[#2A7A78] hover:bg-[#E2F1F0] gap-1 cursor-pointer font-medium"
-                    onClick={() => generarPasswordAleatorio(setNuevoPassword)}
-                  >
-                    <Sparkle className="h-3 w-3" weight="fill" />
-                    <span>Generar segura</span>
-                  </Button>
-                </div>
+                <label className="text-xs font-semibold text-[#1C2424] flex items-center gap-1.5">
+                  <Key className="h-3.5 w-3.5 text-[#2A7A78]" weight="duotone" />
+                  <span>Contraseña de Acceso</span>
+                </label>
                 <div className="relative">
                   <Input
                     type={mostrarNuevoPassword ? 'text' : 'password'}
@@ -955,22 +924,10 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
 
                 {/* Modificar Contraseña */}
                 <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-semibold text-[#1C2424] flex items-center gap-1.5">
-                      <Key className="h-3.5 w-3.5 text-[#2A7A78]" weight="duotone" />
-                      <span>Modificar Contraseña</span>
-                    </label>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 px-2 text-[11px] text-[#2A7A78] hover:bg-[#E2F1F0] gap-1 cursor-pointer font-medium"
-                      onClick={() => generarPasswordAleatorio(setEditPassword)}
-                    >
-                      <Sparkle className="h-3 w-3" weight="fill" />
-                      <span>Generar nueva</span>
-                    </Button>
-                  </div>
+                  <label className="text-xs font-semibold text-[#1C2424] flex items-center gap-1.5">
+                    <Key className="h-3.5 w-3.5 text-[#2A7A78]" weight="duotone" />
+                    <span>Modificar Contraseña</span>
+                  </label>
                   <div className="relative">
                     <Input
                       type={mostrarEditPassword ? 'text' : 'password'}
@@ -1016,7 +973,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                     {copiadoEditPassword ? (
                       <span className="text-emerald-600 font-medium">¡Nueva contraseña copiada al portapapeles!</span>
                     ) : (
-                      'Escribe una nueva contraseña o presiona "Generar nueva" para cambiarla.'
+                      'Escribe una nueva contraseña para actualizar el acceso del colaborador.'
                     )}
                   </p>
                 </div>
