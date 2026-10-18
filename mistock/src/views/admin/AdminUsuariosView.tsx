@@ -870,9 +870,6 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                     value={usuarioSeleccionado.email}
                     className="bg-[#F8F7F2] text-[#657373] cursor-not-allowed"
                   />
-                  <p className="text-[11px] text-[#657373]">
-                    El correo está vinculado a la cuenta de autenticación en Supabase.
-                  </p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -969,13 +966,11 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                       </Button>
                     </div>
                   </div>
-                  <p className="text-[11px] text-[#657373]">
-                    {copiadoEditPassword ? (
-                      <span className="text-emerald-600 font-medium">¡Nueva contraseña copiada al portapapeles!</span>
-                    ) : (
-                      'Escribe una nueva contraseña para actualizar el acceso del colaborador.'
-                    )}
-                  </p>
+                  {copiadoEditPassword && (
+                    <p className="text-[11px] text-emerald-600 font-medium">
+                      ¡Nueva contraseña copiada al portapapeles!
+                    </p>
+                  )}
                 </div>
 
                 <DialogFooter className="pt-2">
