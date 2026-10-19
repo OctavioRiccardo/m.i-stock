@@ -208,14 +208,41 @@ export function useLoginController() {
       }
 
       if (data.session) {
-        // Consultar el rol del usuario en public.usuario para dirigirlo a su panel correspondiente
+        // Consultar el rol y nombre del usuario en public.usuario
         const { data: usuarioData } = await supabase
           .from('usuario')
-          .select('rol')
+          .select('rol, nombre')
           .eq('id_usuario', data.session.user.id)
           .maybeSingle();
 
-        if (usuarioData?.rol === 'vendedor') {
+        // Bloquear acceso si la cuenta no tiene rol asignado
+        if (usuarioData?.rol === 'no_rol') {
+          setError('Su cuenta no posee un rol asignado en el sistema. Solicite a un Administrador que active sus permisos desde el panel de Gestión de Usuarios.');
+          setLoading(false);
+          return;
+        }
+
+        const rolAsignado: RolUsuario = usuarioData?.rol === 'vendedor' ? 'vendedor' : 'admin';
+        const nombreColaborador =
+          usuarioData?.nombre ||
+          data.session.user.user_metadata?.full_name ||
+          data.session.user.email?.split('@')[0] ||
+          'Colaborador';
+
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('mistock_rol_activo', rolAsignado);
+          window.localStorage.setItem(
+            'mistock_usuario_activo',
+            JSON.stringify({
+              id: data.session.user.id,
+              email: data.session.user.email,
+              nombre: nombreColaborador,
+              rol: rolAsignado,
+            })
+          );
+        }
+
+        if (rolAsignado === 'vendedor') {
           router.push('/dashboard');
         } else {
           router.push('/admin');
