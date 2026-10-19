@@ -621,20 +621,12 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
             <div className="lg:col-span-5 space-y-4">
               <Card className="border-[#E8E6DF] shadow-sm sticky top-6">
                 <CardHeader className="pb-3 border-b border-[#E8E6DF] bg-[#F8F7F2]/60">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Receipt className="h-4 w-4 text-[#2A7A78]" weight="duotone" />
-                      <CardTitle className="text-xs font-bold uppercase tracking-wider text-[#1C2424]">
-                        Simulador de Ticket Térmico ({config.pos.anchoPapelTicket || '80mm'})
-                      </CardTitle>
-                    </div>
-                    <Badge variant="outline" className="text-[10px] text-emerald-700 border-emerald-300 bg-emerald-50">
-                      Vista en Vivo
-                    </Badge>
+                  <div className="flex items-center gap-2">
+                    <Receipt className="h-4 w-4 text-[#2A7A78]" weight="duotone" />
+                    <CardTitle className="text-sm font-bold text-[#1C2424]">
+                      Simulador de Ticket Térmico ({config.pos.anchoPapelTicket || '80mm'})
+                    </CardTitle>
                   </div>
-                  <p className="text-xs text-[#657373]">
-                    Previsualización en tiempo real del comprobante emitido en las ticketeadoras de caja.
-                  </p>
                 </CardHeader>
 
                 <CardContent className="p-4 bg-[#F2F1EA]/40">
