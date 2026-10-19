@@ -338,7 +338,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
               )}
             </div>
             <p className="text-xs text-[#657373] mt-1">
-              Registros nuevos en Supabase
+              Pendientes de asignación de rol
             </p>
           </Card>
         </div>
@@ -798,13 +798,11 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                     </Button>
                   </div>
                 </div>
-                <p className="text-[11px] text-[#657373]">
-                  {copiadoPassword ? (
-                    <span className="text-emerald-600 font-medium">¡Contraseña copiada al portapapeles!</span>
-                  ) : (
-                    'Permite al colaborador ingresar en /login con esta contraseña (opcional en modo prueba).'
-                  )}
-                </p>
+                {copiadoPassword && (
+                  <p className="text-[11px] text-emerald-600 font-medium">
+                    ¡Contraseña copiada al portapapeles!
+                  </p>
+                )}
               </div>
 
               <DialogFooter className="pt-2">

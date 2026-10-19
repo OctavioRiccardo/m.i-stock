@@ -169,7 +169,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
       id: 'respaldos',
       etiqueta: 'Respaldos & Base de Datos',
       icono: Database,
-      descripcion: 'Salud de Supabase, descargas en CSV y restablecimiento.',
+      descripcion: 'Estado de la base de datos, descargas en CSV y restablecimiento.',
     },
   ];
 
@@ -1124,7 +1124,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                       <div className="flex items-center gap-1.5">
                         <SpeakerHigh className="h-4 w-4 text-[#2A7A78]" weight="duotone" />
                         <p className="text-xs font-semibold text-[#1C2424]">
-                          Sonido Auditivo al Cobrar
+                          Sonido de Confirmación al Cobrar
                         </p>
                       </div>
                       <p className="text-xs text-[#657373] mt-1">
@@ -1564,7 +1564,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                   <div className="flex items-center gap-2">
                     <HardDrive className="h-4 w-4 text-[#2A7A78]" weight="duotone" />
                     <CardTitle className="text-sm font-bold text-[#1C2424]">
-                      Monitor de Conexión e Infraestructura (Supabase Cloud)
+                      Monitor de Conexión e Infraestructura
                     </CardTitle>
                   </div>
                   <Badge variant="success" className="text-xs gap-1.5">
@@ -1763,7 +1763,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
               <DialogDescription className="text-xs text-[#657373] pt-1">
                 Esta acción restablecerá los datos comerciales, opciones de tickets térmicos, medios de pago y reglas de inventario a su estado predeterminado.
                 <br /><br />
-                <strong className="text-[#1C2424]">Tus artículos y ventas registradas en Supabase NO se eliminarán.</strong>
+                <strong className="text-[#1C2424]">Tus artículos y ventas registradas en el sistema no se eliminarán.</strong>
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="gap-2 sm:gap-0 pt-3">
