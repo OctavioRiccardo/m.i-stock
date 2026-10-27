@@ -192,3 +192,74 @@ export interface AdminDashboardData {
   ventasDetalle: VentasDetalleData;
   graficos: GraficosMetricasData;
 }
+
+
+// ====================================================================
+// Funciones Puras de Dominio / Cálculo para el Carrito y Cobro POS
+// ====================================================================
+
+/**
+ * Calcula el subtotal monetario de un renglón en el carrito de compras.
+ */
+export function calcularSubtotalRenglon(precio: number, cantidad: number): number {
+  const p = Math.max(0, Number(precio) || 0);
+  const c = Math.max(0, Number(cantidad) || 0);
+  return Number((p * c).toFixed(2));
+}
+
+/**
+ * Consolida la sumatoria de subtotales y unidades totales de un carrito.
+ */
+export function calcularTotalesCarrito(carrito: { cantidad: number; subtotal: number }[]): {
+  total: number;
+  cantidadArticulos: number;
+} {
+  const acumulado = carrito.reduce(
+    (acc, item) => ({
+      total: acc.total + (Number(item.subtotal) || 0),
+      cantidadArticulos: acc.cantidadArticulos + (Number(item.cantidad) || 0),
+    }),
+    { total: 0, cantidadArticulos: 0 }
+  );
+
+  return {
+    total: Number(acumulado.total.toFixed(2)),
+    cantidadArticulos: acumulado.cantidadArticulos,
+  };
+}
+
+/**
+ * Calcula el vuelto a entregar o el faltante pendiente para pagos en efectivo.
+ */
+export function calcularVueltoPOS(
+  total: number,
+  montoRecibido: number
+): {
+  vuelto: number;
+  faltante: number;
+  esMontoSuficiente: boolean;
+} {
+  const tot = Math.max(0, Number(total) || 0);
+  const recibido = Math.max(0, Number(montoRecibido) || 0);
+
+  const vuelto = Number(Math.max(0, recibido - tot).toFixed(2));
+  const faltante = Number(Math.max(0, tot - recibido).toFixed(2));
+  const esMontoSuficiente = recibido >= tot;
+
+  return { vuelto, faltante, esMontoSuficiente };
+}
+
+/**
+ * Genera la lista de atajos rápidos de billetes comunes a partir del total a cobrar.
+ */
+export function generarSugerenciasBilletes(total: number): { label: string; valor: number }[] {
+  const t = Math.max(0, Math.round(Number(total) || 0));
+  return [
+    { label: 'Exacto', valor: t },
+    { label: '+ $1.000', valor: t + 1000 },
+    { label: '+ $2.000', valor: t + 2000 },
+    { label: '+ $5.000', valor: t + 5000 },
+    { label: '+ $10.000', valor: t + 10000 },
+    { label: '+ $20.000', valor: t + 20000 },
+  ];
+}

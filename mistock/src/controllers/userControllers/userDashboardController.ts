@@ -15,12 +15,12 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { UserDashboardData, ProductoRapidoPOS, VentaRecientePOS, ItemCarritoPOS, PestanaOperativaPOS, } from '@/models/modelos_vista/dashboardModel';
+import { UserDashboardData, ProductoRapidoPOS, VentaRecientePOS, ItemCarritoPOS, PestanaOperativaPOS, calcularTotalesCarrito } from '@/models/modelos_vista/dashboardModel';
 import { useInventarioData, inventarioService } from '@/services/inventarioService';
 import { supabaseService } from '@/services/supabaseService';
 import { MetodoPago, DetalleVenta } from '@/models/modelos_dominio/ventaModel';
 import { useConfiguracionData } from '@/services/configuracionService';
-import { ArqueoCajaDTO, ResumenMediosPagoCierre, EstadoBalanceCaja, } from '@/models/modelos_vista/cierreCajaModel';
+import { ArqueoCajaDTO, ResumenMediosPagoCierre, EstadoBalanceCaja, calcularEfectivoEsperado, calcularDiferenciaCaja, determinarEstadoBalance } from '@/models/modelos_vista/cierreCajaModel';
 
 export const VENTAS_STORAGE_KEY = 'mistock_ventas_historial_test_v1';
 
@@ -401,16 +401,16 @@ export function useUserDashboardController() {
     () => ventasTurnoActual.length,
     [ventasTurnoActual]
   );
-  const efectivoEsperado = fondoInicial + totalVentasEfectivo;
+  const efectivoEsperado = calcularEfectivoEsperado(fondoInicial, totalVentasEfectivo);
 
   /**
    * Ejecuta la confirmación del Arqueo y emite el comprobante de Cierre de Caja (Z).
    */
   const confirmarCierreCaja = (efectivoReal: number, observaciones?: string): ArqueoCajaDTO => {
-    const diferencia = efectivoReal - efectivoEsperado;
-    let estadoBalance: EstadoBalanceCaja = 'exacto';
-    if (diferencia > 0) estadoBalance = 'sobrante';
-    else if (diferencia < 0) estadoBalance = 'faltante';
+    const diferencia = calcularDiferenciaCaja(efectivoReal, efectivoEsperado);
+    const estadoBalance: EstadoBalanceCaja = determinarEstadoBalance(diferencia);
+
+
 
     const fechaHoy = new Date();
     const horaFormateada = fechaHoy.toLocaleTimeString('es-AR', {
@@ -581,11 +581,11 @@ export function useUserDashboardController() {
 
   // Totales calculados en tiempo real
   const totalCarrito = useMemo(() => {
-    return carrito.reduce((acc, item) => acc + item.subtotal, 0);
+    return calcularTotalesCarrito(carrito).total;
   }, [carrito]);
 
   const cantidadArticulosCarrito = useMemo(() => {
-    return carrito.reduce((acc, item) => acc + item.cantidad, 0);
+    return calcularTotalesCarrito(carrito).cantidadArticulos;
   }, [carrito]);
 
   /**
