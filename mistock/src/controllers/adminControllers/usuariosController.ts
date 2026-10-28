@@ -29,6 +29,7 @@ export type FiltroRol = 'todos' | RolUsuarioDB;
 export type FiltroEstado = 'todos' | EstadoUsuario;
 
 const USUARIOS_STORAGE_KEY = 'mistock_usuarios_data_test_v1';
+const LEGACY_MOCK_EMAILS = new Set(['admin@mistock.com', 'admin@test.com']);
 
 export function useAdminUsuariosController() {
   const [usuarios, setUsuarios] = useState<Usuario[]>(() => {
@@ -37,10 +38,11 @@ export function useAdminUsuariosController() {
       const stored = window.localStorage.getItem(USUARIOS_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const emails = new Set(parsed.map((u: Usuario) => u.email.toLowerCase()));
-          const faltantes = initialUsuarios.filter((u) => !emails.has(u.email.toLowerCase()));
-          return faltantes.length > 0 ? [...faltantes, ...parsed] : parsed;
+        if (Array.isArray(parsed)) {
+          // Filtrar cuentas ficticias heredadas de versiones de prueba anteriores
+          return parsed.filter(
+            (u: Usuario) => !LEGACY_MOCK_EMAILS.has((u.email || '').toLowerCase())
+          );
         }
       }
     } catch {}
@@ -66,18 +68,26 @@ export function useAdminUsuariosController() {
       .then((usuariosRemotos) => {
         if (usuariosRemotos && usuariosRemotos.length > 0) {
           guardarUsuarios((prev) => {
-            const idsExistentes = new Set(prev.map((u) => u.id));
-            const emailsExistentes = new Set(prev.map((u) => u.email.toLowerCase()));
-            const actualizados = [...prev];
-            let cambio = false;
-
-            for (const u of usuariosRemotos) {
-              if (!idsExistentes.has(u.id) && !emailsExistentes.has(u.email.toLowerCase())) {
-                actualizados.push(u);
-                cambio = true;
+            const limpios = prev.filter(
+              (u) => !LEGACY_MOCK_EMAILS.has((u.email || '').toLowerCase())
+            );
+            const mapaPorEmail = new Map<string, Usuario>();
+            for (const u of limpios) {
+              mapaPorEmail.set(u.email.toLowerCase(), u);
+            }
+            for (const remoto of usuariosRemotos) {
+              const existente = mapaPorEmail.get(remoto.email.toLowerCase());
+              if (existente) {
+                mapaPorEmail.set(remoto.email.toLowerCase(), {
+                  ...existente,
+                  ...remoto,
+                  estado: existente.estado || 'activo',
+                });
+              } else {
+                mapaPorEmail.set(remoto.email.toLowerCase(), remoto);
               }
             }
-            return cambio ? actualizados : prev;
+            return Array.from(mapaPorEmail.values());
           });
         }
       })
@@ -204,8 +214,13 @@ export function useAdminUsuariosController() {
       return false;
     }
 
+    const idGenerado =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `usr-${Date.now().toString().slice(-4)}`;
+
     const nuevoUsuario: Usuario = {
-      id: `usr-${Date.now().toString().slice(-4)}`,
+      id: idGenerado,
       email: dto.email.trim().toLowerCase(),
       nombre: dto.nombre.trim(),
       nombreCompleto: dto.nombre.trim(),
@@ -225,7 +240,7 @@ export function useAdminUsuariosController() {
   };
 
   /**
-   * Modifica los datos o rol de un usuario existente.
+   * Modifica los datos o rol de un usuario existente y sincroniza con Supabase.
    */
   const actualizarUsuario = (id: string, datos: Partial<Usuario>): boolean => {
     setMensajeError(null);
@@ -258,6 +273,15 @@ export function useAdminUsuariosController() {
         };
       })
     );
+
+    // Sincronizar con Supabase public.usuario
+    supabaseService
+      .updateUsuario(id, {
+        nombre: datos.nombre,
+        rol: datos.rol,
+        telefono: datos.telefono,
+      })
+      .catch(() => {});
 
     setModalEditarAbierto(false);
     setUsuarioSeleccionado(null);
@@ -307,6 +331,10 @@ export function useAdminUsuariosController() {
     }
 
     guardarUsuarios((prev) => prev.filter((u) => u.id !== id));
+
+    // Sincronizar eliminación en Supabase public.usuario
+    supabaseService.deleteUsuario(id).catch(() => {});
+
     setModalEliminarAbierto(false);
     setUsuarioSeleccionado(null);
     setMensajeExito(`El usuario "${usuario.nombre}" fue desvinculado del sistema.`);

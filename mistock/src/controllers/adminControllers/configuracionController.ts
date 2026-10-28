@@ -21,6 +21,7 @@ import {
 } from '@/models/modelos_vista/configuracionModel';
 import { configuracionService, useConfiguracionData } from '@/services/configuracionService';
 import { inventarioService } from '@/services/inventarioService';
+import { inicializarVentasCliente } from '@/controllers/userControllers/userDashboardController';
 
 export type PestañaConfiguracion = 'negocio' | 'pos' | 'inventario' | 'metricas' | 'respaldos';
 
@@ -139,20 +140,30 @@ export function useAdminConfiguracionController() {
   };
 
   /**
-   * Descarga el resumen contable de ventas en formato CSV.
+   * Descarga el resumen contable de ventas reales registradas en el sistema en formato CSV.
    */
   const exportarVentasCSV = () => {
     try {
-      const headers = ['Comprobante', 'Fecha', 'Vendedor', 'Método Pago', 'Total Facturado', 'Estado'];
-      const demoVentas = [
-        ['"VNT-1001"', '"2026-09-25 10:30"', '"Lucas Benítez"', '"Efectivo"', 4500, '"Completada"'],
-        ['"VNT-1002"', '"2026-09-25 11:15"', '"Camila Fernández"', '"Tarjeta Débito"', 12800, '"Completada"'],
-        ['"VNT-1003"', '"2026-09-25 12:40"', '"Mateo Rossi"', '"Transferencia QR"', 6900, '"Completada"'],
-        ['"VNT-1004"', '"2026-09-25 14:10"', '"Lucas Benítez"', '"Efectivo"', 2450, '"Completada"'],
-        ['"VNT-1005"', '"2026-09-25 16:00"', '"Camila Fernández"', '"Tarjeta Crédito"', 8900, '"Completada"'],
-      ];
+      const headers = ['Comprobante', 'Fecha y Hora', 'Vendedor', 'Método Pago', 'Cantidad Ítems', 'Total Facturado', 'Estado'];
+      const ventasReales = inicializarVentasCliente().ventasRecientes || [];
 
-      const csvContent = '\uFEFF' + [headers.join(','), ...demoVentas.map((r) => r.join(','))].join('\n');
+      const rows = ventasReales.map((v) => {
+        const fechaHora = `${v.fecha || new Date().toLocaleDateString('es-AR')} ${v.hora || ''}`.trim();
+        const vendedor = (v.vendedor || 'Cajero').replace(/"/g, '""');
+        const metodo = String(v.metodoPago || 'efectivo').replace(/_/g, ' ');
+        const estado = v.estado === 'cancelada' ? 'Cancelada' : 'Completada';
+        return [
+          `"${v.id}"`,
+          `"${fechaHora}"`,
+          `"${vendedor}"`,
+          `"${metodo}"`,
+          v.cantidadItems || 1,
+          v.montoTotal || 0,
+          `"${estado}"`,
+        ];
+      });
+
+      const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -163,7 +174,9 @@ export function useAdminConfiguracionController() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      setMensajeExito('Histórico de ventas exportado exitosamente a formato CSV.');
+      setMensajeExito(
+        `Histórico de ventas exportado exitosamente a formato CSV (${ventasReales.length} registros).`
+      );
       setTimeout(() => setMensajeExito(null), 3500);
     } catch {
       setMensajeError('No se pudo generar el archivo de exportación de ventas.');

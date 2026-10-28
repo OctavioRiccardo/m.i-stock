@@ -119,6 +119,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
     reactivarProducto,
     modificarProducto,
     limpiarMensajes,
+    config,
   } = controller;
 
   // Auto-animaciones para tablas (transiciones suaves al filtrar, paginar o actualizar)
@@ -145,7 +146,10 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
   // ==========================================
   // ESTADOS: FORMULARIO DE ALTA 
   // ==========================================
-  const [formData, setFormData] = useState<FormularioCargaProducto>(valoresInicialesCargaProducto);
+  const [formData, setFormData] = useState<FormularioCargaProducto>(() => ({
+    ...valoresInicialesCargaProducto,
+    stockMinimo: config?.inventario?.umbralMinimoPorDefecto ?? valoresInicialesCargaProducto.stockMinimo,
+  }));
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof FormularioCargaProducto, string>>>({});
 
   const setFieldValue = <K extends keyof FormularioCargaProducto>(field: K, value: FormularioCargaProducto[K]) => {
@@ -268,6 +272,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
       setFormData({
         ...valoresInicialesCargaProducto,
         categoriaId: catPrevia,
+        stockMinimo: config?.inventario?.umbralMinimoPorDefecto ?? valoresInicialesCargaProducto.stockMinimo,
       });
       setFieldErrors({});
     }
@@ -325,9 +330,9 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
   const metricasModificar = {
     total: productos.length,
     activos: productos.filter((p) => p.activo).length,
-    criticos: productos.filter((p) => p.activo && p.stockActual <= p.stockMinimo).length,
+    criticos: productos.filter((p) => p.activo && p.stockActual > 0 && p.stockActual <= p.stockMinimo).length,
     bajasUnidades: productos.filter(
-      (p) => p.activo && p.stockActual > 0 && p.stockActual <= p.stockMinimo * 1.5
+      (p) => p.activo && p.stockActual > p.stockMinimo && p.stockActual <= p.stockMinimo * 1.5
     ).length,
     agotados: productos.filter((p) => p.activo && p.stockActual === 0).length,
     optimos: productos.filter((p) => p.activo && p.stockActual > p.stockMinimo).length,
@@ -354,9 +359,9 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
 
     // 3. Filtro por nivel de stock
     if (filtroStockModificar === 'critico') {
-      if (p.stockActual > p.stockMinimo) return false;
+      if (!(p.stockActual > 0 && p.stockActual <= p.stockMinimo)) return false;
     } else if (filtroStockModificar === 'bajo') {
-      if (!(p.stockActual > 0 && p.stockActual <= p.stockMinimo * 1.5)) return false;
+      if (!(p.stockActual > p.stockMinimo && p.stockActual <= p.stockMinimo * 1.5)) return false;
     } else if (filtroStockModificar === 'agotado') {
       if (p.stockActual !== 0) return false;
     } else if (filtroStockModificar === 'optimo') {
@@ -1316,6 +1321,11 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                       <div className="flex items-center justify-between p-3 rounded-lg bg-white border border-[#E8E6DF]">
                         <div>
                           <p className="text-xs text-[#657373]">Ganancia neta x unidad</p>
+                          {!esRentable && config?.inventario?.alertarMargenNegativo && venta > 0 && (
+                            <p className="text-[10px] font-semibold text-red-600">
+                              ¡Alerta! Margen negativo (venta menor al costo)
+                            </p>
+                          )}
                           <p className={`text-sm font-bold ${esRentable ? 'text-[#2A7A78]' : 'text-red-600'}`}>
                             ${gananciaNeta.toLocaleString('es-AR')}
                           </p>
@@ -1387,7 +1397,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => setFormData(valoresInicialesCargaProducto)}
+                      onClick={() => setFormData({ ...valoresInicialesCargaProducto, stockMinimo: config?.inventario?.umbralMinimoPorDefecto ?? valoresInicialesCargaProducto.stockMinimo })}
                       disabled={loading}
                     >
                       Limpiar Formulario

@@ -22,61 +22,36 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { LoginFormValues } from '@/models/modelos_vista/authModel';
-import { initialUsuarios } from '@/models/mock_data/usuariosMock';
 import { RolUsuario } from '@/models/modelos_dominio/userModel';
 
 /**
  * Hook Controlador para el Formulario de Inicio de Sesión.
- * 
- * Responsabilidades:
- * 1. Controlar el estado reactivo de los campos (email, password, rememberMe).
- * 2. Ejecutar validaciones locales antes de contactar con el backend.
- * 3. Enviar credenciales a Supabase Auth (`signInWithPassword`).
- * 4. Normalizar y traducir errores técnicos a mensajes comprensibles para el usuario.
- * 5. Dirigir al usuario autenticado hacia su panel correspondiente (/admin).
- * 
- * @returns {Object} Estado del formulario, handlers de cambio, validación y submit.
  */
 export function useLoginController() {
   const router = useRouter();
 
-  // Estado reactivo que almacena los valores ingresados por el usuario
   const [values, setValues] = useState<LoginFormValues>({
     email: '',
     password: '',
     rememberMe: false,
   });
 
-  // Diccionario reactivo de errores por campo para retroalimentación visual inmediata
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof LoginFormValues, string>>>({});
-
-  // Indicador de solicitud asíncrona en curso (deshabilita inputs y muestra spinners)
   const [loading, setLoading] = useState<boolean>(false);
-
-  // Mensaje de error global (credenciales incorrectas, fallos de red, etc.)
   const [error, setError] = useState<string | null>(null);
 
-  /**
-   * Actualiza el valor de un campo específico y limpia su error asociado
-   */
   const setFieldValue = <K extends keyof LoginFormValues>(field: K, value: LoginFormValues[K]) => {
     setValues((prev) => ({ ...prev, [field]: value }));
     setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
-  /**
-   * Valida sintácticamente el formulario en el cliente antes del envío al servidor.
-   * Evita llamadas de red innecesarias si los datos son inválidos.
-   */
   const validate = (): boolean => {
     const errors: Partial<Record<keyof LoginFormValues, string>> = {};
 
-    // Validación de formato de correo electrónico
     if (!values.email || !/^\S+@\S+$/.test(values.email)) {
       errors.email = 'Correo electrónico no válido';
     }
 
-    // Validación de longitud mínima de contraseña
     if (!values.password || values.password.length < 6) {
       errors.password = 'La contraseña debe tener al menos 6 caracteres';
     }
@@ -85,13 +60,6 @@ export function useLoginController() {
     return Object.keys(errors).length === 0;
   };
 
-  /**
-   * Procesa el envío del formulario:
-   * 1. Previene el refresco nativo del navegador.
-   * 2. Comprueba las validaciones locales.
-   * 3. Invoca `signInWithPassword` en el cliente Supabase.
-   * 4. En caso de éxito, redirige al panel de administración y actualiza la sesión.
-   */
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!validate()) return;
@@ -101,113 +69,15 @@ export function useLoginController() {
 
     try {
       const emailLower = values.email.trim().toLowerCase();
-
-      // 1. Comprobar si el usuario existe en la nómina del sistema (usuariosController) o en cuentas semilla
-      if (typeof window !== 'undefined') {
-        try {
-          const storedUsersRaw = window.localStorage.getItem('mistock_usuarios_data_test_v1');
-          const storedList = storedUsersRaw ? JSON.parse(storedUsersRaw) : [];
-          const userList = Array.isArray(storedList) && storedList.length > 0 ? storedList : initialUsuarios;
-          const combinedUsers = [...userList, ...initialUsuarios];
-
-          const matchedUser = combinedUsers.find(
-            (u: { email?: string; estado?: string; activo?: boolean; rol?: string; nombre?: string; id?: string }) =>
-              u.email && u.email.trim().toLowerCase() === emailLower
-          );
-
-          if (matchedUser) {
-            if (matchedUser.estado === 'inactivo' || matchedUser.activo === false) {
-              setError('Su cuenta de usuario se encuentra inactiva. Contacte al Administrador.');
-              setLoading(false);
-              return;
-            }
-
-            // Validar contraseña si el usuario tiene una asignada
-            if (matchedUser.password && matchedUser.password.trim() !== values.password.trim()) {
-              setError('Contraseña incorrecta. Verifique sus credenciales.');
-              setLoading(false);
-              return;
-            }
-
-            // Bloquear acceso a colaboradores que aún no tengan un rol asignado por el Administrador
-            if (matchedUser.rol === 'no_rol') {
-              setError('Su cuenta no posee un rol asignado en el sistema. Solicite a un Administrador que active sus permisos desde el panel de Gestión de Usuarios.');
-              setLoading(false);
-              return;
-            }
-
-            const rolAsignado: RolUsuario = matchedUser.rol === 'admin' ? 'admin' : 'vendedor';
-            const nombreColaborador = matchedUser.nombre || matchedUser.nombreCompleto || matchedUser.email.split('@')[0] || 'Colaborador';
-
-            window.localStorage.setItem('mistock_rol_activo', rolAsignado);
-            window.localStorage.setItem(
-              'mistock_usuario_activo',
-              JSON.stringify({
-                id: matchedUser.id,
-                email: matchedUser.email,
-                nombre: nombreColaborador,
-                rol: rolAsignado,
-              })
-            );
-
-            if (rolAsignado === 'vendedor') {
-              router.push('/dashboard');
-            } else {
-              router.push('/admin');
-            }
-            router.refresh();
-            return;
-          }
-        } catch {}
-      }
-
-      // 2. Acceso directo de prueba para cuentas base de desarrollo
-      if (
-        (emailLower === 'admin@mistock.com' && values.password.length >= 6) ||
-        (emailLower === 'admin@test.com' && values.password.length >= 6) ||
-        (emailLower === 'octavio@mistock.com' && values.password.length >= 6) ||
-        (emailLower === 'vendedor@mistock.com' && values.password.length >= 6) ||
-        (emailLower === 'cajero@mistock.com' && values.password.length >= 6)
-      ) {
-        const esVendedor = emailLower.includes('vendedor') || emailLower.includes('cajero');
-        const rolAsignado = esVendedor ? 'vendedor' : 'admin';
-        if (typeof window !== 'undefined') {
-          window.localStorage.setItem('mistock_rol_activo', rolAsignado);
-          window.localStorage.setItem(
-            'mistock_usuario_activo',
-            JSON.stringify({
-              email: emailLower,
-              nombre: esVendedor ? 'Cajero Turno' : 'Administrador Test',
-              rol: rolAsignado,
-            })
-          );
-        }
-        if (esVendedor) {
-          router.push('/dashboard');
-        } else {
-          router.push('/admin');
-        }
-        router.refresh();
-        return;
-      }
-
       const supabase = createClient();
+
+      // 1. Autenticación principal contra Supabase Auth
       const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email: values.email,
+        email: emailLower,
         password: values.password,
       });
 
-      if (authError) {
-        // Traducción de mensajes técnicos de Supabase a mensajes amigables
-        if (authError.message.includes('Invalid login credentials')) {
-          setError('Correo electrónico o contraseña incorrectos.');
-        } else {
-          setError(authError.message || 'Error al iniciar sesión.');
-        }
-        return;
-      }
-
-      if (data.session) {
+      if (!authError && data.session) {
         // Consultar el rol y nombre del usuario en public.usuario
         const { data: usuarioData } = await supabase
           .from('usuario')
@@ -217,12 +87,21 @@ export function useLoginController() {
 
         // Bloquear acceso si la cuenta no tiene rol asignado
         if (usuarioData?.rol === 'no_rol') {
-          setError('Su cuenta no posee un rol asignado en el sistema. Solicite a un Administrador que active sus permisos desde el panel de Gestión de Usuarios.');
+          await supabase.auth.signOut();
+          setError(
+            'Su cuenta no posee un rol asignado en el sistema. Solicite a un Administrador que active sus permisos desde Gestión de Usuarios.'
+          );
           setLoading(false);
           return;
         }
 
-        const rolAsignado: RolUsuario = usuarioData?.rol === 'vendedor' ? 'vendedor' : 'admin';
+        const rolAsignado: RolUsuario =
+          usuarioData?.rol === 'vendedor'
+            ? 'vendedor'
+            : emailLower.startsWith('user@')
+            ? 'vendedor'
+            : 'admin';
+
         const nombreColaborador =
           usuarioData?.nombre ||
           data.session.user.user_metadata?.full_name ||
@@ -248,6 +127,88 @@ export function useLoginController() {
           router.push('/admin');
         }
         router.refresh();
+        return;
+      }
+
+      // 2. Fallback para colaboradores creados localmente desde el panel de Gestión de Usuarios
+      if (typeof window !== 'undefined') {
+        try {
+          const storedUsersRaw = window.localStorage.getItem('mistock_usuarios_data_test_v1');
+          const storedList = storedUsersRaw ? JSON.parse(storedUsersRaw) : [];
+          if (Array.isArray(storedList)) {
+            const matchedUser = storedList.find(
+              (u: {
+                email?: string;
+                password?: string;
+                estado?: string;
+                activo?: boolean;
+                rol?: string;
+                nombre?: string;
+                nombreCompleto?: string;
+                id?: string;
+              }) => u.email && u.email.trim().toLowerCase() === emailLower && u.password
+            );
+
+            if (matchedUser) {
+              if (matchedUser.password?.trim() !== values.password.trim()) {
+                setError('Correo electrónico o contraseña incorrectos.');
+                setLoading(false);
+                return;
+              }
+
+              if (
+                matchedUser.estado === 'inactivo' ||
+                matchedUser.estado === 'suspendido' ||
+                matchedUser.activo === false
+              ) {
+                setError('Su cuenta de usuario se encuentra suspendida o inactiva.');
+                setLoading(false);
+                return;
+              }
+
+              if (matchedUser.rol === 'no_rol') {
+                setError(
+                  'Su cuenta no posee un rol asignado en el sistema. Solicite a un Administrador que active sus permisos.'
+                );
+                setLoading(false);
+                return;
+              }
+
+              const rolAsignado: RolUsuario = matchedUser.rol === 'admin' ? 'admin' : 'vendedor';
+              const nombreColaborador =
+                matchedUser.nombre ||
+                matchedUser.nombreCompleto ||
+                matchedUser.email?.split('@')[0] ||
+                'Colaborador';
+
+              window.localStorage.setItem('mistock_rol_activo', rolAsignado);
+              window.localStorage.setItem(
+                'mistock_usuario_activo',
+                JSON.stringify({
+                  id: matchedUser.id,
+                  email: matchedUser.email,
+                  nombre: nombreColaborador,
+                  rol: rolAsignado,
+                })
+              );
+
+              if (rolAsignado === 'vendedor') {
+                router.push('/dashboard');
+              } else {
+                router.push('/admin');
+              }
+              router.refresh();
+              return;
+            }
+          }
+        } catch {}
+      }
+
+      // 3. Mostrar error amigable si las credenciales no coincidieron
+      if (authError?.message.includes('Invalid login credentials')) {
+        setError('Correo electrónico o contraseña incorrectos.');
+      } else {
+        setError(authError?.message || 'Error al iniciar sesión.');
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Error inesperado de conexión.';
@@ -257,7 +218,6 @@ export function useLoginController() {
     }
   };
 
-  // Limpia manualmente el mensaje de error global
   const clearError = () => setError(null);
 
   return {
@@ -272,26 +232,29 @@ export function useLoginController() {
 }
 
 /**
+ * Limpia las claves de sesión locales almacenadas en el navegador al cerrar sesión.
+ */
+function limpiarSesionLocal() {
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.removeItem('mistock_rol_activo');
+      window.localStorage.removeItem('mistock_usuario_activo');
+    } catch {}
+  }
+}
+
+/**
  * Hook Controlador para el Cierre de Sesión (Logout).
- * 
- * Responsabilidades:
- * 1. Invalidar la sesión JWT activa en Supabase Auth (`signOut`).
- * 2. Limpiar cookies y credenciales del navegador.
- * 3. Redirigir al usuario a la pantalla pública de login (`/login`).
- * 
- * @param {boolean} autoExecute - Si es true, ejecuta el cierre automáticamente al montar la vista.
  */
 export function useLogoutController(autoExecute: boolean = true) {
   const router = useRouter();
   const [loading, setLoading] = useState<boolean>(autoExecute);
   const [loggedOut, setLoggedOut] = useState<boolean>(false);
 
-  /**
-   * Ejecuta el cierre de sesión bajo demanda (ej: clic en un botón de la barra de navegación)
-   */
   const handleLogout = useCallback(async () => {
     setLoading(true);
     try {
+      limpiarSesionLocal();
       const supabase = createClient();
       await supabase.auth.signOut();
       setLoggedOut(true);
@@ -305,15 +268,13 @@ export function useLogoutController(autoExecute: boolean = true) {
     }
   }, [router]);
 
-  /**
-   * Efecto automático para vistas dedicadas de cierre de sesión (como /logout)
-   */
   useEffect(() => {
     if (!autoExecute) return;
 
     let isMounted = true;
     const performLogout = async () => {
       try {
+        limpiarSesionLocal();
         const supabase = createClient();
         await supabase.auth.signOut();
         if (isMounted) {
@@ -347,5 +308,4 @@ export function useLogoutController(autoExecute: boolean = true) {
   };
 }
 
-// Alias de retrocompatibilidad
 export const useLogin = useLoginController;

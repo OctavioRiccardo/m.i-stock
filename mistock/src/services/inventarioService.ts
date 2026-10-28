@@ -7,13 +7,8 @@
  * 
  * Propósito:
  * Proporcionar un almacén reactivo único para categorías y productos en memoria,
- * con persistencia opcional en localStorage del navegador.
- * 
- * Resuelve la inconsistencia lógica de estado aislado entre:
- * - `inventarioController` (Alta, baja y modificación de artículos)
- * - `inventarioGlobalController` (Auditoría, filtros globales y stock crítico)
- * - `userDashboardController` (Terminal de venta POS y descuento de existencias)
- * - `configuracionController` (Exportación en CSV del catálogo maestro)
+ * con persistencia opcional en localStorage del navegador y sincronización UUID
+ * bidireccional con Supabase PostgreSQL.
  * 
  * Integración React 19:
  * Utiliza `useSyncExternalStore` para suscripciones reactivas libres de desincronización
@@ -27,6 +22,20 @@ import { initialCategorias, initialProductos } from '@/models/mock_data/inventar
 import { supabaseService } from './supabaseService';
 
 const INVENTARIO_STORAGE_KEY = 'mistock_inventario_data_test_v1';
+
+/**
+ * Genera un identificador UUID v4 estándar compatible con PostgreSQL `uuid`.
+ */
+function generarUUID(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
 
 export interface InventarioSnapshot {
   categorias: Categoria[];
@@ -140,8 +149,8 @@ export const inventarioService = {
       ]);
 
       let huboCambios = false;
-      let nuevasCategorias = [...currentSnapshot.categorias];
-      let nuevosProductos = [...currentSnapshot.productos];
+      const nuevasCategorias = [...currentSnapshot.categorias];
+      const nuevosProductos = [...currentSnapshot.productos];
 
       if (catsRemotas && catsRemotas.length > 0) {
         for (const catRemota of catsRemotas) {
@@ -149,10 +158,23 @@ export const inventarioService = {
             (c) => c.id === catRemota.id || c.nombre.trim().toLowerCase() === catRemota.nombre.trim().toLowerCase()
           );
           if (indexExistente >= 0) {
+            const idAnterior = nuevasCategorias[indexExistente].id;
             nuevasCategorias[indexExistente] = {
               ...nuevasCategorias[indexExistente],
               ...catRemota,
             };
+            // Si la categoría local tenía otro ID, actualizar productos que apunten a ella
+            if (idAnterior !== catRemota.id) {
+              for (let i = 0; i < nuevosProductos.length; i++) {
+                if (nuevosProductos[i].categoriaId === idAnterior) {
+                  nuevosProductos[i] = {
+                    ...nuevosProductos[i],
+                    categoriaId: catRemota.id,
+                    categoria: catRemota,
+                  };
+                }
+              }
+            }
             huboCambios = true;
           } else {
             nuevasCategorias.push(catRemota);
@@ -199,11 +221,12 @@ export const inventarioService = {
   },
 
   /**
-   * Registra una nueva categoría en el catálogo global.
+   * Registra una nueva categoría en el catálogo global con UUID compatible con PostgreSQL.
    */
   agregarCategoria(nombre: string, descripcion?: string): Categoria {
+    const idGenerado = generarUUID();
     const nuevaCat: Categoria = {
-      id: `cat-${Date.now().toString().slice(-4)}`,
+      id: idGenerado,
       nombre: nombre.trim(),
       descripcion: descripcion?.trim() || '',
       activo: true,
@@ -216,8 +239,21 @@ export const inventarioService = {
     };
     notifySubscribers();
 
-    // Persistencia asíncrona no bloqueante en Supabase
-    supabaseService.insertCategoria({ nombre, descripcion }).catch(() => {});
+    // Persistencia asíncrona en Supabase preservando el UUID
+    supabaseService
+      .insertCategoria({ id: idGenerado, nombre, descripcion })
+      .then((catRemota) => {
+        if (catRemota && catRemota.id !== idGenerado) {
+          currentSnapshot = {
+            categorias: currentSnapshot.categorias.map((c) => (c.id === idGenerado ? catRemota : c)),
+            productos: currentSnapshot.productos.map((p) =>
+              p.categoriaId === idGenerado ? { ...p, categoriaId: catRemota.id, categoria: catRemota } : p
+            ),
+          };
+          notifySubscribers();
+        }
+      })
+      .catch(() => {});
 
     return nuevaCat;
   },
@@ -265,8 +301,9 @@ export const inventarioService = {
       return { exito: false, mensaje: 'El precio de venta debe ser mayor a 0.' };
     }
 
+    const idProductoGenerado = generarUUID();
     const nuevoProducto: Producto = {
-      id: `PROD-${Date.now().toString().slice(-4)}`,
+      id: idProductoGenerado,
       codigo: datos.codigo.trim(),
       nombre: datos.nombre.trim(),
       descripcion: datos.descripcion?.trim() || '',
@@ -287,9 +324,10 @@ export const inventarioService = {
     };
     notifySubscribers();
 
-    // Persistencia asíncrona no bloqueante en Supabase
+    // Persistencia asíncrona en Supabase preservando el UUID
     supabaseService
       .insertProducto({
+        id: idProductoGenerado,
         nombre: nuevoProducto.nombre,
         descripcion: nuevoProducto.descripcion,
         sku: nuevoProducto.codigo,
@@ -300,6 +338,17 @@ export const inventarioService = {
         categoriaId: nuevoProducto.categoriaId,
         unidadMedida: nuevoProducto.unidadMedida,
         oferta: nuevoProducto.oferta,
+      })
+      .then((prodRemoto) => {
+        if (prodRemoto && prodRemoto.id !== idProductoGenerado) {
+          currentSnapshot = {
+            ...currentSnapshot,
+            productos: currentSnapshot.productos.map((p) =>
+              p.id === idProductoGenerado ? { ...p, id: prodRemoto.id } : p
+            ),
+          };
+          notifySubscribers();
+        }
       })
       .catch(() => {});
 
@@ -437,19 +486,26 @@ export const inventarioService = {
     const producto = currentSnapshot.productos.find((p) => p.id === productoId);
     if (!producto) return false;
 
+    const nuevoStock = permitirNegativo
+      ? producto.stockActual - cantidad
+      : Math.max(0, producto.stockActual - cantidad);
+
     currentSnapshot = {
       ...currentSnapshot,
       productos: currentSnapshot.productos.map((p) =>
         p.id === productoId
           ? {
               ...p,
-              stockActual: permitirNegativo ? p.stockActual - cantidad : Math.max(0, p.stockActual - cantidad),
+              stockActual: nuevoStock,
               fechaActualizacion: new Date(),
             }
           : p
       ),
     };
     notifySubscribers();
+
+    // Sincronizar stock actualizado con Supabase
+    supabaseService.updateProducto(productoId, { stockActual: nuevoStock }).catch(() => {});
     return true;
   },
 
@@ -460,19 +516,24 @@ export const inventarioService = {
     const producto = currentSnapshot.productos.find((p) => p.id === productoId);
     if (!producto) return false;
 
+    const nuevoStock = producto.stockActual + cantidad;
+
     currentSnapshot = {
       ...currentSnapshot,
       productos: currentSnapshot.productos.map((p) =>
         p.id === productoId
           ? {
               ...p,
-              stockActual: p.stockActual + cantidad,
+              stockActual: nuevoStock,
               fechaActualizacion: new Date(),
             }
           : p
       ),
     };
     notifySubscribers();
+
+    // Sincronizar stock reintegrado con Supabase
+    supabaseService.updateProducto(productoId, { stockActual: nuevoStock }).catch(() => {});
     return true;
   },
 
@@ -494,4 +555,3 @@ if (typeof window !== 'undefined') {
     inventarioService.sincronizarConSupabase();
   }, 200);
 }
-

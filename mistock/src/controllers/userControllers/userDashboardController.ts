@@ -9,7 +9,7 @@
  * Gestionar la operativa diaria en el punto de venta (POS) para el rol Vendedor/Cajero:
  * - Búsqueda rápida en el catálogo maestro unificado.
  * - Registro ágil de ventas con selección de medio de cobro habilitado.
- * - Respeto a las directivas de configuración global (moneda, venta sin stock).
+ * - Respeto a las directivas de configuración global (moneda, venta sin stock, sonido).
  * - Descuento automático de stock y seguimiento de métricas diarias de caja.
  */
 
@@ -107,6 +107,53 @@ export function useUserDashboardController() {
   }, [storeProductos]);
 
   const [ventasState, setVentasState] = useState<VentasHistorialStore>(inicializarVentasCliente);
+
+  // Hidratar ventas remotas desde Supabase al montar y sincronizar cambios locales
+  useEffect(() => {
+    let mounted = true;
+    supabaseService
+      .fetchVentas()
+      .then((remotas) => {
+        if (!mounted || !remotas || remotas.length === 0) return;
+        setVentasState((prev) => {
+          const mapa = new Map<string, VentaRecientePOS>();
+          for (const v of remotas) {
+            mapa.set(v.id, v);
+          }
+          for (const local of prev.ventasRecientes) {
+            if (!mapa.has(local.id)) {
+              mapa.set(local.id, local);
+            }
+          }
+          const combinadas = Array.from(mapa.values()).sort(
+            (a, b) => (b.timestamp || 0) - (a.timestamp || 0)
+          );
+          const hoyStr = new Date().toLocaleDateString('es-AR');
+          const hoyInicioTs = new Date().setHours(0, 0, 0, 0);
+          const ventasDeHoy = combinadas.filter((v) => {
+            if (v.estado === 'cancelada') return false;
+            if (v.fecha && v.fecha === hoyStr) return true;
+            if (v.timestamp && v.timestamp >= hoyInicioTs) return true;
+            return false;
+          });
+          const updated: VentasHistorialStore = {
+            ventasDelDia: ventasDeHoy.length,
+            recaudacionDelDia: ventasDeHoy.reduce((acc, v) => acc + (v.montoTotal || 0), 0),
+            ventasRecientes: combinadas,
+          };
+          if (typeof window !== 'undefined') {
+            try {
+              window.localStorage.setItem(VENTAS_STORAGE_KEY, JSON.stringify(updated));
+            } catch {}
+          }
+          return updated;
+        });
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const data: UserDashboardData = useMemo(() => ({
     ventasDelDia: ventasState.ventasDelDia,
@@ -229,7 +276,6 @@ export function useUserDashboardController() {
     setPaginaVentas(1);
   }, [metodoPagoFiltroVentas, busquedaHistorial]);
 
-  // ====================================================================
   // ====================================================================
   // OPERATIVA DE SESIÓN DE CAJA: APERTURA Y CIERRE (MONO-CAJA)
   // ====================================================================
@@ -409,8 +455,6 @@ export function useUserDashboardController() {
   const confirmarCierreCaja = (efectivoReal: number, observaciones?: string): ArqueoCajaDTO => {
     const diferencia = calcularDiferenciaCaja(efectivoReal, efectivoEsperado);
     const estadoBalance: EstadoBalanceCaja = determinarEstadoBalance(diferencia);
-
-
 
     const fechaHoy = new Date();
     const horaFormateada = fechaHoy.toLocaleTimeString('es-AR', {
@@ -785,8 +829,50 @@ export function useUserDashboardController() {
       inventarioService.descontarStock(item.producto.id, item.cantidad, permitirVentaSinStock);
     }
 
+    // Reproducir sonido de confirmación si está activo en la configuración del POS
+    if (config.pos.sonidoConfirmacionVenta && typeof window !== 'undefined') {
+      try {
+        const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        if (AudioCtx) {
+          const ctx = new AudioCtx();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(880, ctx.currentTime);
+          osc.frequency.setValueAtTime(1174.66, ctx.currentTime + 0.08);
+          gain.gain.setValueAtTime(0.08, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.22);
+        }
+      } catch {}
+    }
+
     // Persistencia remota asíncrona en Supabase (dispara triggers de movimientos_stock y stock_actual)
-    supabaseService.registrarVenta(newSale).catch(() => {});
+    supabaseService
+      .registrarVenta(newSale)
+      .then((remoteId) => {
+        if (!remoteId) return;
+        setVentasState((prev) => {
+          const allSales = prev.ventasRecientes.map((v) =>
+            v.id === ventaId ? { ...v, id: remoteId } : v
+          );
+          const updated = {
+            ...prev,
+            ventasRecientes: allSales,
+          };
+          if (typeof window !== 'undefined') {
+            try {
+              window.localStorage.setItem(VENTAS_STORAGE_KEY, JSON.stringify(updated));
+              window.dispatchEvent(new Event('mistock_ventas_updated'));
+            } catch {}
+          }
+          return updated;
+        });
+      })
+      .catch(() => {});
 
     setVentasState((prev) => {
       const allSales = [newSale, ...prev.ventasRecientes];
@@ -843,203 +929,6 @@ export function useUserDashboardController() {
     setTimeout(() => setSaleSuccessMessage(null), 4500);
 
     return newSale;
-  };
-
-  /**
-   * Registra una venta en efectivo especificando cantidad y monto recibido para cálculo de vuelto.
-   */
-  const registrarVentaEfectivo = (
-    productId: string,
-    cantidad: number = 1,
-    montoRecibido?: number
-  ): boolean => {
-    setLoading(true);
-    setSaleErrorMessage(null);
-    setSaleSuccessMessage(null);
-
-    const product = data.productosPopulares.find((p) => p.id === productId);
-
-    if (!product) {
-      setLoading(false);
-      return false;
-    }
-
-    if (cantidad <= 0) {
-      setSaleErrorMessage('La cantidad a vender debe ser de al menos 1 unidad.');
-      setLoading(false);
-      setTimeout(() => setSaleErrorMessage(null), 3500);
-      return false;
-    }
-
-    if (product.stock < cantidad && !permitirVentaSinStock) {
-      setSaleErrorMessage(
-        `Stock insuficiente para "${product.nombre}". Disponible: ${product.stock} un. Solicitado: ${cantidad} un.`
-      );
-      setLoading(false);
-      setTimeout(() => setSaleErrorMessage(null), 4000);
-      return false;
-    }
-
-    const totalVenta = product.precio * cantidad;
-    const vuelto = montoRecibido !== undefined && montoRecibido >= totalVenta ? montoRecibido - totalVenta : 0;
-
-    const ventaId = `VNT-${Date.now().toString().slice(-4)}`;
-    const nuevoDetalle: DetalleVenta = {
-      id: `DET-${Date.now().toString().slice(-4)}`,
-      ventaId: ventaId,
-      productoId: product.id,
-      nombreProducto: product.nombre,
-      codigoProducto: product.codigo,
-      cantidad: cantidad,
-      precioUnitario: product.precio,
-      subtotal: totalVenta,
-    };
-
-    const newSale: VentaRecientePOS = {
-      id: ventaId,
-      hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      fecha: new Date().toLocaleDateString('es-AR'),
-      montoTotal: totalVenta,
-      cantidadItems: cantidad,
-      metodoPago: 'efectivo',
-      vendedor: 'Cajero en Turno',
-      items: [nuevoDetalle],
-      pagos: [
-        {
-          id: `PAG-${Date.now().toString().slice(-4)}`,
-          ventaId: ventaId,
-          metodo: 'efectivo',
-          total: totalVenta,
-        },
-      ],
-      estado: 'completada',
-    };
-
-    // Descuenta stock en el almacén central de inventario
-    inventarioService.descontarStock(productId, cantidad);
-
-    // Persistencia remota asíncrona en Supabase
-    supabaseService.registrarVenta(newSale).catch(() => {});
-
-    setVentasState((prev) => ({
-      ...prev,
-      ventasDelDia: prev.ventasDelDia + 1,
-      recaudacionDelDia: prev.recaudacionDelDia + totalVenta,
-      ventasRecientes: [newSale, ...prev.ventasRecientes],
-    }));
-
-    // Asegurar que la nueva venta aparezca en la primera página
-    setPaginaVentas(1);
-
-    const textoVuelto = vuelto > 0 ? ` • Vuelto entregado: ${monedaSimbolo} ${vuelto.toLocaleString('es-AR')}` : '';
-    setSaleSuccessMessage(
-      `Venta en efectivo registrada: ${cantidad}x ${product.nombre} (${monedaSimbolo} ${totalVenta.toLocaleString('es-AR')})${textoVuelto}`
-    );
-    setLoading(false);
-    setTimeout(() => setSaleSuccessMessage(null), 4000);
-    return true;
-  };
-
-  /**
-   * Registra una venta mediante Mercado Pago (QR / Transferencia).
-   */
-  const registrarVentaMercadoPago = (
-    productId: string,
-    cantidad: number = 1
-  ): boolean => {
-    setLoading(true);
-    setSaleErrorMessage(null);
-    setSaleSuccessMessage(null);
-
-    const product = data.productosPopulares.find((p) => p.id === productId);
-
-    if (!product) {
-      setLoading(false);
-      return false;
-    }
-
-    if (cantidad <= 0) {
-      setSaleErrorMessage('La cantidad a vender debe ser de al menos 1 unidad.');
-      setLoading(false);
-      setTimeout(() => setSaleErrorMessage(null), 3500);
-      return false;
-    }
-
-    if (product.stock < cantidad && !permitirVentaSinStock) {
-      setSaleErrorMessage(
-        `Stock insuficiente para "${product.nombre}". Disponible: ${product.stock} un. Solicitado: ${cantidad} un.`
-      );
-      setLoading(false);
-      setTimeout(() => setSaleErrorMessage(null), 4000);
-      return false;
-    }
-
-    const totalVenta = product.precio * cantidad;
-
-    const ventaId = `VNT-${Date.now().toString().slice(-4)}`;
-    const nuevoDetalle = {
-      id: `DET-${Date.now().toString().slice(-4)}`,
-      ventaId: ventaId,
-      productoId: product.id,
-      nombreProducto: product.nombre,
-      codigoProducto: product.codigo,
-      cantidad: cantidad,
-      precioUnitario: product.precio,
-      subtotal: totalVenta,
-    };
-
-    const newSale: VentaRecientePOS = {
-      id: ventaId,
-      hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      fecha: new Date().toLocaleDateString('es-AR'),
-      montoTotal: totalVenta,
-      cantidadItems: cantidad,
-      metodoPago: 'mercado_pago',
-      vendedor: 'Cajero en Turno',
-      items: [nuevoDetalle],
-      pagos: [
-        {
-          id: `PAG-${Date.now().toString().slice(-4)}`,
-          ventaId: ventaId,
-          metodo: 'mercado_pago',
-          total: totalVenta,
-        },
-      ],
-      estado: 'completada',
-    };
-
-    // Descuenta stock en el almacén central de inventario
-    inventarioService.descontarStock(productId, cantidad);
-
-    // Persistencia remota asíncrona en Supabase
-    supabaseService.registrarVenta(newSale).catch(() => {});
-
-    setVentasState((prev) => ({
-      ...prev,
-      ventasDelDia: prev.ventasDelDia + 1,
-      recaudacionDelDia: prev.recaudacionDelDia + totalVenta,
-      ventasRecientes: [newSale, ...prev.ventasRecientes],
-    }));
-
-    setPaginaVentas(1);
-
-    setSaleSuccessMessage(
-      `Venta con Mercado Pago registrada: ${cantidad}x ${product.nombre} (${monedaSimbolo} ${totalVenta.toLocaleString('es-AR')}) • Cobro acreditado vía QR`
-    );
-    setLoading(false);
-    setTimeout(() => setSaleSuccessMessage(null), 4000);
-    return true;
-  };
-
-  /**
-   * Procesa una venta rápida de 1 unidad del producto seleccionado (compatibilidad).
-   */
-  const handleQuickSale = (productId: string, metodoOverride?: MetodoPago) => {
-    const metodo = metodoOverride || metodoSeleccionado;
-    if (metodo === 'mercado_pago') {
-      return registrarVentaMercadoPago(productId, 1);
-    }
-    return registrarVentaEfectivo(productId, 1);
   };
 
   /**
@@ -1139,9 +1028,6 @@ export function useUserDashboardController() {
     setBusquedaHistorial,
     saleSuccessMessage,
     saleErrorMessage,
-    handleQuickSale,
-    registrarVentaEfectivo,
-    registrarVentaMercadoPago,
     monedaSimbolo,
     metodoSeleccionado,
     setMetodoSeleccionado,

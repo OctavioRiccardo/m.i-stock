@@ -53,6 +53,7 @@ export interface ModalDetalleVentaProps {
   venta: VentaRecientePOS | null;
   monedaSimbolo: string;
   onCancelarVenta?: (ventaId: string) => void;
+  autoPrint?: boolean;
 }
 
 export function ModalDetalleVenta({
@@ -61,17 +62,28 @@ export function ModalDetalleVenta({
   venta,
   monedaSimbolo,
   onCancelarVenta,
+  autoPrint = false,
 }: ModalDetalleVentaProps) {
   const [vistaActiva, setVistaActiva] = useState<'detalles' | 'ticket'>('detalles');
   const configGlobal = useConfiguracionData();
   const configNegocio = configGlobal.negocio;
 
-  // Restablecer a vista 'detalles' cada vez que se abre una venta
+  // Restablecer a vista 'detalles' o activar auto-impresión cada vez que se abre una venta
   useEffect(() => {
     if (isOpen) {
-      setVistaActiva('detalles');
+      if (autoPrint) {
+        setVistaActiva('ticket');
+        const timer = setTimeout(() => {
+          if (typeof window !== 'undefined') {
+            window.print();
+          }
+        }, 250);
+        return () => clearTimeout(timer);
+      } else {
+        setVistaActiva('detalles');
+      }
     }
-  }, [isOpen, venta?.id]);
+  }, [isOpen, venta?.id, autoPrint]);
 
   if (!venta) return null;
 

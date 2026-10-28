@@ -39,7 +39,6 @@ export function LoginFormView({ loginController }: LoginFormViewProps) {
   // Estado local puramente visual para alternar la visibilidad de la contraseña
   const [showPassword, setShowPassword] = useState(false);
 
-
   return (
     <div className="w-full max-w-md mx-auto">
       <Card className="p-6 sm:p-8">
@@ -51,7 +50,7 @@ export function LoginFormView({ loginController }: LoginFormViewProps) {
                 <ShieldCheck className="h-6 w-6" weight="duotone" />
               </div>
               <h1 className="text-2xl font-bold text-[#1C2424] tracking-tight">
-                miStock
+                M.I Stock
               </h1>
             </div>
 
@@ -121,23 +120,6 @@ export function LoginFormView({ loginController }: LoginFormViewProps) {
               </div>
             </div>
 
-            {/* Remember Me & Forgot Password */}
-            <div className="flex items-center justify-between pt-1">
-              <label className="flex items-center gap-2 cursor-pointer text-xs text-[#1C2424]">
-                <input
-                  type="checkbox"
-                  checked={values.rememberMe}
-                  onChange={(e) => setFieldValue('rememberMe', e.target.checked)}
-                  className="h-4 w-4 rounded border-[#E8E6DF] text-[#2A7A78] focus:ring-[#2A7A78]"
-                />
-                <span>Recordarme</span>
-              </label>
-
-              <a href="#" className="text-xs font-semibold text-[#2A7A78] hover:underline">
-                ¿Olvidaste tu contraseña?
-              </a>
-            </div>
-
             {/* Submit Button */}
             <Button
               type="submit"
@@ -149,14 +131,6 @@ export function LoginFormView({ loginController }: LoginFormViewProps) {
               <ArrowRight className="ml-2 h-4 w-4" weight="bold" />
             </Button>
           </form>
-
-          {/* Footer note */}
-          <p className="text-xs text-center text-[#657373] pt-2">
-            ¿No tienes una cuenta aún?{' '}
-            <a href="#" className="font-semibold text-[#2A7A78] hover:underline">
-              Contacta al administrador
-            </a>
-          </p>
         </CardContent>
       </Card>
     </div>

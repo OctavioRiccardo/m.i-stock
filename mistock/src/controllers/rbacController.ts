@@ -13,74 +13,123 @@
  * 
  * Sincronización:
  * - Consulta el usuario autenticado en Supabase Auth (`auth.users`) y su fila en `public.usuario`.
- * - Permite alternar el rol simulado en entorno de desarrollo/pruebas mediante `localStorage`.
+ * - Redirige a `/login` si no existe ninguna sesión activa válida.
  */
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { RolUsuario } from '@/models/modelos_dominio/userModel';
 
 const ROL_STORAGE_KEY = 'mistock_rol_activo';
+const USUARIO_STORAGE_KEY = 'mistock_usuario_activo';
 
 export function useRBAC() {
+  const router = useRouter();
+
   const [rol, setRol] = useState<RolUsuario>(() => {
     if (typeof window === 'undefined') return 'admin';
-    const rolSimulado = window.localStorage.getItem(ROL_STORAGE_KEY) as RolUsuario | null;
-    if (rolSimulado && ['admin', 'vendedor', 'no_rol'].includes(rolSimulado)) {
-      return rolSimulado;
+    const rolGuardado = window.localStorage.getItem(ROL_STORAGE_KEY) as RolUsuario | null;
+    if (rolGuardado && ['admin', 'vendedor', 'no_rol'].includes(rolGuardado)) {
+      return rolGuardado;
     }
     return 'admin';
   });
 
-  const [nombreUsuario, setNombreUsuario] = useState<string>('Administrador');
-  const [emailUsuario, setEmailUsuario] = useState<string>('admin@mistock.com');
-  const [cargando] = useState<boolean>(false);
+  const [nombreUsuario, setNombreUsuario] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = window.localStorage.getItem(USUARIO_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed?.nombre) return parsed.nombre;
+        }
+      } catch {}
+    }
+    return 'Administrador';
+  });
+
+  const [emailUsuario, setEmailUsuario] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = window.localStorage.getItem(USUARIO_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed?.email) return parsed.email;
+        }
+      } catch {}
+    }
+    return '';
+  });
+
+  const [cargando, setCargando] = useState<boolean>(false);
 
   useEffect(() => {
     let isMounted = true;
     const supabase = createClient();
 
-    // Comprobar sesión de Supabase Auth
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!isMounted) return;
-
-      if (user) {
-        setEmailUsuario(user.email || '');
-
-        const { data: perfil } = await supabase
-          .from('usuario')
-          .select('nombre, rol')
-          .eq('id_usuario', user.id)
-          .maybeSingle();
-
+    supabase.auth
+      .getUser()
+      .then(async ({ data: { user } }) => {
         if (!isMounted) return;
 
-        if (perfil) {
-          setNombreUsuario(perfil.nombre || user.email || 'Usuario');
-          // Si no hay override de prueba en localStorage, aplicar el rol de BD
-          const override = window.localStorage.getItem(ROL_STORAGE_KEY);
-          if (!override) {
-            setRol(perfil.rol as RolUsuario);
+        if (user) {
+          const email = user.email || '';
+          setEmailUsuario(email);
+
+          const { data: perfil } = await supabase
+            .from('usuario')
+            .select('nombre, rol')
+            .eq('id_usuario', user.id)
+            .maybeSingle();
+
+          if (!isMounted) return;
+
+          const rolReal: RolUsuario =
+            (perfil?.rol as RolUsuario) ||
+            (email.toLowerCase().startsWith('user@') ? 'vendedor' : 'admin');
+          const nombreReal =
+            perfil?.nombre ||
+            user.user_metadata?.full_name ||
+            email.split('@')[0] ||
+            'Usuario';
+
+          setNombreUsuario(nombreReal);
+          setRol(rolReal);
+
+          if (typeof window !== 'undefined') {
+            window.localStorage.setItem(ROL_STORAGE_KEY, rolReal);
+            window.localStorage.setItem(
+              USUARIO_STORAGE_KEY,
+              JSON.stringify({
+                id: user.id,
+                email,
+                nombre: nombreReal,
+                rol: rolReal,
+              })
+            );
           }
-        } else {
-          const override = window.localStorage.getItem(ROL_STORAGE_KEY);
-          if (!override) {
-            setRol('no_rol');
+        } else if (typeof window !== 'undefined') {
+          // Verificar si hay sesión local activa de colaborador
+          const localUser = window.localStorage.getItem(USUARIO_STORAGE_KEY);
+          if (!localUser) {
+            setCargando(true);
+            router.replace('/login');
           }
         }
-      }
-    }).catch(() => {
-      // Ignorar errores silenciosamente en entorno offline
-    });
+      })
+      .catch(() => {
+        // Ignorar fallos de red transitorios si hay sesión local
+      });
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [router]);
 
   /**
    * Cambia temporalmente el rol activo en el navegador para verificar la experiencia
-   * de Administrador, Vendedor o Sin Rol en tiempo real sin salir del sistema.
+   * de Administrador, Vendedor o Sin Rol en tiempo real.
    */
   const cambiarRolSimulado = (nuevoRol: RolUsuario) => {
     setRol(nuevoRol);

@@ -7,9 +7,9 @@
  * 
  * Propósito:
  * Pantalla de trabajo táctil y de alta velocidad para el cajero:
- * 1. Escaneo por código de barras o búsqueda de texto con Enter-to-cart.
+ * 1. Escaneo por código de barras o búsqueda de texto con Enter-to-cart (según modoEscanerRapido).
  * 2. Catálogo con alternador de vista táctil (Cuadrícula POS) o compacta (Tabla).
- * 3. Selector de categorías dinámico (Dropdown + Píldoras horizontales).
+ * 3. Selector de categorías dinámico.
  * 4. Carrito / Ticket multi-ítem con modificación de cantidades y subtotales en vivo.
  * 5. Botón de checkout ágil hacia el modal de cobro multi-método.
  */
@@ -24,7 +24,6 @@ import {
   Minus,
   SquaresFour,
   ListBullets,
-  Tag,
   Funnel,
   CaretLeft,
   CaretRight,
@@ -79,6 +78,7 @@ export function ModuloTerminalCobro({
     productosPaginados,
     monedaSimbolo,
     permitirVentaSinStock,
+    config,
     // Carrito
     carrito,
     totalCarrito,
@@ -94,13 +94,14 @@ export function ModuloTerminalCobro({
 
   /**
    * Manejo de escáner de código de barras o tecla Enter en el buscador:
-   * Si hay una coincidencia exacta de código de barras o queda un solo producto filtrado,
-   * lo agrega inmediatamente al ticket y limpia el buscador.
+   * Si el modo escáner rápido está activo y hay una coincidencia exacta de código de barras
+   * o queda un solo producto filtrado, lo agrega inmediatamente al ticket y limpia el buscador.
    */
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       if (!controller.cajaAbierta) return;
+      if (!config.pos.modoEscanerRapido) return;
       const query = searchQuery.trim().toLowerCase();
       if (!query) return;
 
@@ -139,7 +140,9 @@ export function ModuloTerminalCobro({
                   disabled={!controller.cajaAbierta}
                   placeholder={
                     controller.cajaAbierta
-                      ? "Escanear código de barras o buscar por nombre (presione Enter)..."
+                      ? config.pos.modoEscanerRapido
+                        ? "Escanear código de barras o buscar por nombre (presione Enter)..."
+                        : "Buscar producto por código o nombre..."
                       : "Caja cerrada • Abra la caja desde la barra superior para operar"
                   }
                   value={searchQuery}
@@ -213,54 +216,6 @@ export function ModuloTerminalCobro({
                   <ListBullets className="h-4 w-4" weight={modoVistaCatalogo === 'table' ? 'bold' : 'regular'} />
                 </button>
               </div>
-            </div>
-
-            {/* Píldoras de Categorías Rápidas */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-              <span className="text-[11px] font-semibold text-[#657373] shrink-0 hidden md:inline-flex items-center gap-1 mr-0.5">
-                <Tag className="h-3 w-3 text-[#2A7A78]" weight="duotone" />
-                <span>Rápido:</span>
-              </span>
-              <button
-                type="button"
-                onClick={() => setCategoriaFiltro('todas')}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all shrink-0 cursor-pointer ${
-                  categoriaFiltro === 'todas'
-                    ? 'bg-[#2A7A78] text-white shadow-xs font-semibold'
-                    : 'bg-[#F8F7F2] text-[#657373] hover:text-[#1C2424] hover:bg-[#E8E6DF] border border-[#E8E6DF]'
-                }`}
-              >
-                <span>Todas</span>
-                <span className={`px-1.5 py-0.2 rounded-full text-[9px] ${
-                  categoriaFiltro === 'todas' ? 'bg-white/20 text-white' : 'bg-[#E8E6DF] text-[#657373]'
-                }`}>
-                  {data.productosPopulares.length}
-                </span>
-              </button>
-
-              {categorias.map((cat) => {
-                const esActiva = categoriaFiltro.toLowerCase() === cat.toLowerCase();
-                const cantidad = conteosPorCategoria[cat] || 0;
-                return (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => setCategoriaFiltro(cat)}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-all shrink-0 cursor-pointer ${
-                      esActiva
-                        ? 'bg-[#2A7A78] text-white shadow-xs font-semibold'
-                        : 'bg-[#F8F7F2] text-[#657373] hover:text-[#1C2424] hover:bg-[#E8E6DF] border border-[#E8E6DF]'
-                    }`}
-                  >
-                    <span>{cat}</span>
-                    <span className={`px-1.5 py-0.2 rounded-full text-[9px] ${
-                      esActiva ? 'bg-white/20 text-white' : 'bg-[#E8E6DF] text-[#657373]'
-                    }`}>
-                      {cantidad}
-                    </span>
-                  </button>
-                );
-              })}
             </div>
 
             {/* Contenido del Catálogo: Cuadrícula vs Tabla */}

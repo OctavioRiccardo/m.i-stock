@@ -7,7 +7,7 @@
  * 
  * Propósito:
  * Pie de página global reutilizado en los layouts de administración y usuario.
- * Provee la marca miStock, el copyright dinámico y enlaces institucionales.
+ * Provee la marca M.I Stock y el copyright institucional dinámico.
  */
 
 import React from 'react';
@@ -15,7 +15,6 @@ import { Package } from '@phosphor-icons/react';
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
-
 
   return (
     <footer className="w-full border-t border-[#E8E6DF] bg-white py-4 mt-auto">
@@ -29,22 +28,9 @@ export function Footer() {
             <span className="text-sm font-bold text-[#1C2424]">M.I Stock</span>
           </div>
 
-          {/* Copyright & Links */}
+          {/* Copyright */}
           <div className="flex flex-wrap items-center gap-4 text-xs text-[#657373]">
             <span>&copy; {currentYear} M.I Stock. Todos los derechos reservados.</span>
-            <div className="flex gap-3">
-              <a href="#" className="hover:text-[#1C2424] transition-colors">
-                Soporte
-              </a>
-              <span>•</span>
-              <a href="#" className="hover:text-[#1C2424] transition-colors">
-                Privacidad
-              </a>
-              <span>•</span>
-              <a href="#" className="hover:text-[#1C2424] transition-colors">
-                Términos
-              </a>
-            </div>
           </div>
         </div>
       </div>

@@ -66,13 +66,15 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
     setIsModalTicketCierreOpen,
     ultimoCierre,
     cancelarVenta,
+    config,
   } = controller;
 
   const [isModalCobroOpen, setIsModalCobroOpen] = useState<boolean>(false);
   const [ventaSeleccionada, setVentaSeleccionada] = useState<VentaRecientePOS | null>(null);
+  const [autoImprimirVenta, setAutoImprimirVenta] = useState<boolean>(false);
 
   /**
-   * Pestañas operativas disponibles para el vendedor / cajero
+   * Pestañas operativas disponibles para el vendedor / cajero (en móvil/tablet)
    */
   const pestanas: { id: PestanaOperativaPOS; label: string; icon: React.ElementType; badge?: number }[] = [
     { id: 'caja', label: 'Terminal de Cobro', icon: ShoppingCart, badge: carrito.length > 0 ? carrito.length : undefined },
@@ -82,6 +84,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
   ];
 
   const handleVentaCompletada = (venta: VentaRecientePOS) => {
+    setAutoImprimirVenta(Boolean(config.pos.autoImprimirTicket));
     setVentaSeleccionada(venta);
   };
 
@@ -171,9 +174,10 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
         </div>
 
         {/* ==================================================================== */}
-        {/* SELECTOR SEGMENTADO DE PESTAÑAS OPERATIVAS                           */}
+        {/* SELECTOR SEGMENTADO DE PESTAÑAS OPERATIVAS (Visible en móvil/tablet) */}
+        {/* En escritorio (lg:) la navegación ya está presente en UserSidebar    */}
         {/* ==================================================================== */}
-        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#E8E6DF]/60 border border-[#E8E6DF] overflow-x-auto">
+        <div className="flex lg:hidden items-center gap-1.5 p-1 rounded-xl bg-[#E8E6DF]/60 border border-[#E8E6DF] overflow-x-auto">
           {pestanas.map((pestana) => {
             const Icon = pestana.icon;
             const esActiva = pestanaOperativa === pestana.id;
@@ -294,7 +298,10 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
             >
               <ModuloHistorialTickets
                 controller={controller}
-                onVerVenta={(sale) => setVentaSeleccionada(sale)}
+                onVerVenta={(sale) => {
+                  setAutoImprimirVenta(false);
+                  setVentaSeleccionada(sale);
+                }}
               />
             </motion.div>
           )}
@@ -314,10 +321,14 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
         {/* Modal de Detalle de Venta y Ticket Térmico de 80mm */}
         <ModalDetalleVenta
           isOpen={!!ventaSeleccionada}
-          onClose={() => setVentaSeleccionada(null)}
+          onClose={() => {
+            setVentaSeleccionada(null);
+            setAutoImprimirVenta(false);
+          }}
           venta={ventaSeleccionada}
           monedaSimbolo={monedaSimbolo}
           onCancelarVenta={cancelarVenta}
+          autoPrint={autoImprimirVenta}
         />
 
         {/* Modal de Apertura de Caja (Inicio de Turno / Sesión) */}

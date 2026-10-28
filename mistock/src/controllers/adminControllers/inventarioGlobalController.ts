@@ -117,7 +117,7 @@ export function useAdminInventarioGlobalController() {
     const prodsCat = productos.filter((p) => p.categoriaId === categoriaActualObj.id && p.activo);
     const unidades = prodsCat.reduce((acc, p) => acc + p.stockActual, 0);
     const valorVenta = prodsCat.reduce((acc, p) => acc + p.precioVenta * p.stockActual, 0);
-    const criticos = prodsCat.filter((p) => p.stockActual <= p.stockMinimo).length;
+    const criticos = prodsCat.filter((p) => p.stockActual > 0 && p.stockActual <= p.stockMinimo).length;
 
     return {
       totalArticulos: prodsCat.length,

@@ -24,6 +24,7 @@ import { useState } from 'react';
 import { Categoria, Producto } from '@/models/modelos_dominio/productoModel';
 import { FormularioCargaProducto } from '@/models/modelos_vista/cargaProductoModel';
 import { useInventarioData, inventarioService } from '@/services/inventarioService';
+import { useConfiguracionData } from '@/services/configuracionService';
 
 export type SeccionInventario = 'menu' | 'alta' | 'baja' | 'modificar';
 export type FiltroNivelStock = 'todos' | 'critico' | 'bajo' | 'agotado' | 'optimo';
@@ -47,6 +48,7 @@ export type FiltroNivelStock = 'todos' | 'critico' | 'bajo' | 'agotado' | 'optim
 export function useAdminInventarioController() {
   const [seccionActiva, setSeccionActiva] = useState<SeccionInventario>('menu');
   const { categorias, productos } = useInventarioData();
+  const config = useConfiguracionData();
   const [loading, setLoading] = useState<boolean>(false);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
   const [mensajeError, setMensajeError] = useState<string | null>(null);
@@ -82,21 +84,21 @@ export function useAdminInventarioController() {
     setPaginaInventario(1);
   };
 
-  // Métricas diagnósticas de existencias y salud del stock
+  // Métricas diagnósticas de existencias y salud del stock (criterio unificado con inventarioGlobalController)
   const metricasStockHub = {
     total: productos.length,
     activos: productos.filter((p) => p.activo).length,
-    criticos: productos.filter((p) => p.activo && p.stockActual <= p.stockMinimo).length,
+    criticos: productos.filter((p) => p.activo && p.stockActual > 0 && p.stockActual <= p.stockMinimo).length,
     bajasUnidades: productos.filter(
-      (p) => p.activo && p.stockActual > 0 && p.stockActual <= p.stockMinimo * 1.5
+      (p) => p.activo && p.stockActual > p.stockMinimo && p.stockActual <= p.stockMinimo * 1.5
     ).length,
     agotados: productos.filter((p) => p.activo && p.stockActual === 0).length,
     optimos: productos.filter((p) => p.activo && p.stockActual > p.stockMinimo).length,
   };
 
-  // Conteo de artículos por cada categoría
+  // Conteo de artículos activos por cada categoría (criterio unificado)
   const conteosPorCategoria = categorias.reduce<Record<string, number>>((acc, cat) => {
-    acc[cat.id] = productos.filter((p) => p.categoriaId === cat.id).length;
+    acc[cat.id] = productos.filter((p) => p.categoriaId === cat.id && p.activo).length;
     return acc;
   }, {});
 
@@ -109,9 +111,9 @@ export function useAdminInventarioController() {
     // 2. Filtro por nivel de stock
     let coincideStock = true;
     if (filtroStockHub === 'critico') {
-      coincideStock = p.stockActual <= p.stockMinimo;
+      coincideStock = p.stockActual > 0 && p.stockActual <= p.stockMinimo;
     } else if (filtroStockHub === 'bajo') {
-      coincideStock = p.stockActual > 0 && p.stockActual <= p.stockMinimo * 1.5;
+      coincideStock = p.stockActual > p.stockMinimo && p.stockActual <= p.stockMinimo * 1.5;
     } else if (filtroStockHub === 'agotado') {
       coincideStock = p.stockActual === 0;
     } else if (filtroStockHub === 'optimo') {
@@ -242,5 +244,6 @@ export function useAdminInventarioController() {
     reactivarProducto,
     modificarProducto,
     limpiarMensajes,
+    config,
   };
 }
