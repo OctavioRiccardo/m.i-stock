@@ -15,7 +15,7 @@ import React, { useState } from 'react';
 import { List, X, ShieldCheck } from '@phosphor-icons/react';
 import { AdminSidebar } from '@/views/admin/AdminSidebar';
 import { Footer } from '@/views/comunes/Footer';
-import { useRBAC } from '@/controllers/rbacController';
+import { usePermisosController } from '@/controllers/permisosController';
 import { ModalAccesoRestringido } from '@/views/comunes/ModalAccesoRestringido';
 
 export default function AdminLayout({
@@ -24,7 +24,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { esAdmin, esVendedor, esSinRol, cargando, cambiarRolSimulado } = useRBAC();
+  const { esAdmin, esVendedor, esSinRol, cargando, cambiarRolSimulado } = usePermisosController();
 
   return (
     <div className="min-h-screen bg-[#F8F7F2] text-[#1C2424] flex">

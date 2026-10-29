@@ -17,7 +17,7 @@ import React, { useState, Suspense } from 'react';
 import { List, X, UserCheck } from '@phosphor-icons/react';
 import { UserSidebar } from '@/views/user/UserSidebar';
 import { Footer } from '@/views/comunes/Footer';
-import { useRBAC } from '@/controllers/rbacController';
+import { usePermisosController } from '@/controllers/permisosController';
 import { ModalAccesoRestringido } from '@/views/comunes/ModalAccesoRestringido';
 
 export default function UserLayout({
@@ -26,7 +26,7 @@ export default function UserLayout({
   children: React.ReactNode;
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { esAdmin, esSinRol, cargando, cambiarRolSimulado } = useRBAC();
+  const { esAdmin, esSinRol, cargando, cambiarRolSimulado } = usePermisosController();
 
   return (
     <div className="min-h-screen bg-[#F8F7F2] text-[#1C2424] flex">

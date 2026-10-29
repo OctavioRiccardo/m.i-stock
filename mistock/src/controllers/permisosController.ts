@@ -2,7 +2,7 @@
 
 /**
  * ====================================================================
- * CONTROLADOR: CONTROL DE ACCESO BASADO EN ROLES (RBAC Controller)
+ * CONTROLADOR: PERMISOS Y ROLES DE ACCESO (permisosController)
  * ====================================================================
  * 
  * Propósito:
@@ -24,7 +24,7 @@ import { RolUsuario } from '@/models/modelos_dominio/userModel';
 const ROL_STORAGE_KEY = 'mistock_rol_activo';
 const USUARIO_STORAGE_KEY = 'mistock_usuario_activo';
 
-export function useRBAC() {
+export function usePermisosController() {
   const router = useRouter();
 
   const [rol, setRol] = useState<RolUsuario>(() => {
