@@ -6,44 +6,33 @@
  * ====================================================================
  * 
  * Propósito:
- * Administrar el catálogo de productos y la taxonomía de categorías del negocio.
- * Garantiza la integridad referencial y las reglas de negocio en la carga de stock.
+ * Administrar operativamente el catálogo de productos (ABMC) y la taxonomía
+ * de categorías del negocio, garantizando la integridad referencial y las
+ * reglas comerciales en el alta, edición, reposición y baja lógica de stock.
  * 
  * Regla de Negocio Fundamental:
  * "Un producto NO puede existir sin una categoría definida previamente.
  * Todo producto debe pertenecer estrictamente a una categoría válida."
  * 
  * Rol en la Arquitectura:
- * - Capa Controller ("C") consumida por `AdminGestionInventario` (View).
+ * - Capa Controller ("C") consumida por `AdminGestionInventarioView` (View).
  * - Utiliza las entidades del Modelo de Dominio (`Producto`, `Categoria`) y
  *   los DTOs del Modelo de Vista (`FormularioCargaProducto`).
  * - Sincronizado reactivamente con el servicio central de inventario (`inventarioService`).
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Categoria, Producto } from '@/models/modelos_dominio/productoModel';
 import { FormularioCargaProducto } from '@/models/modelos_vista/cargaProductoModel';
 import { useInventarioData, inventarioService } from '@/services/inventarioService';
 import { useConfiguracionData } from '@/services/configuracionService';
 
-export type SeccionInventario = 'menu' | 'alta' | 'baja' | 'modificar';
+export type SeccionInventario = 'menu' | 'alta';
 export type FiltroNivelStock = 'todos' | 'critico' | 'bajo' | 'agotado' | 'optimo';
+export type FiltroEstadoComercial = 'activos' | 'inactivos' | 'todos';
 
 /**
- * Hook Controlador para la Gestión y Alta de Inventario.
- * 
- * Responsabilidades:
- * 1. Exponer la lista reactiva de categorías y productos sincronizados.
- * 2. Gestionar la subsección activa ('menu' | 'alta' | 'baja' | 'modificar').
- * 3. Permitir la creación de nuevas categorías "al vuelo" o previas al alta.
- * 4. Validar y procesar el guardado de nuevos productos respetando la regla
- *    de categoría obligatoria y código SKU único.
- * 5. Dar de baja lógica o reactivar productos existentes.
- * 6. Modificar datos de productos existentes (precios, existencias, descripción, categoría).
- * 7. Gestionar mensajes de retroalimentación temporal (éxito/error).
- * 8. Proveer diagnósticos de stock crítico/bajo y filtros de existencias para compras y reposición.
- * 
- * @returns {Object} Estado del inventario, navegación y métodos de mutación.
+ * Hook Controlador para la Gestión Operativa de Inventario.
  */
 export function useAdminInventarioController() {
   const [seccionActiva, setSeccionActiva] = useState<SeccionInventario>('menu');
@@ -53,14 +42,27 @@ export function useAdminInventarioController() {
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
   const [mensajeError, setMensajeError] = useState<string | null>(null);
 
-  // Filtros reactivos para el catálogo por categoría y nivel de stock en el Hub de gestión
+  // Filtros reactivos unificados para el catálogo operativo
   const [categoriaFiltroHub, setCategoriaFiltroHub] = useState<string>('todas');
   const [filtroStockHub, setFiltroStockHub] = useState<FiltroNivelStock>('todos');
+  const [filtroEstadoHub, setFiltroEstadoHub] = useState<FiltroEstadoComercial>('activos');
   const [busquedaHub, setBusquedaHub] = useState<string>('');
 
   // Paginación reactiva para el catálogo de inventario (8 ítems por página)
   const [paginaInventario, setPaginaInventario] = useState<number>(1);
   const itemsPorPaginaInventario = 8;
+
+  // Soporte de navegación directa desde Inventario Global (/admingestioninven?q=SKU)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const query = params.get('q');
+    if (query && query.trim()) {
+      setBusquedaHub(query.trim());
+      setFiltroEstadoHub('todos');
+      setPaginaInventario(1);
+    }
+  }, []);
 
   const handleSetCategoriaFiltroHub = (catId: string) => {
     setCategoriaFiltroHub(catId);
@@ -72,6 +74,11 @@ export function useAdminInventarioController() {
     setPaginaInventario(1);
   };
 
+  const handleSetFiltroEstadoHub = (estado: FiltroEstadoComercial) => {
+    setFiltroEstadoHub(estado);
+    setPaginaInventario(1);
+  };
+
   const handleSetBusquedaHub = (term: string) => {
     setBusquedaHub(term);
     setPaginaInventario(1);
@@ -80,35 +87,48 @@ export function useAdminInventarioController() {
   const limpiarFiltrosHub = () => {
     setCategoriaFiltroHub('todas');
     setFiltroStockHub('todos');
+    setFiltroEstadoHub('activos');
     setBusquedaHub('');
     setPaginaInventario(1);
   };
 
-  // Métricas diagnósticas de existencias y salud del stock (criterio unificado con inventarioGlobalController)
+  // Métricas diagnósticas de existencias con 4 niveles mutuamente excluyentes
+  // (agotados + criticos + bajasUnidades + optimos === activos)
   const metricasStockHub = {
     total: productos.length,
     activos: productos.filter((p) => p.activo).length,
+    inactivos: productos.filter((p) => !p.activo).length,
     criticos: productos.filter((p) => p.activo && p.stockActual > 0 && p.stockActual <= p.stockMinimo).length,
     bajasUnidades: productos.filter(
       (p) => p.activo && p.stockActual > p.stockMinimo && p.stockActual <= p.stockMinimo * 1.5
     ).length,
     agotados: productos.filter((p) => p.activo && p.stockActual === 0).length,
-    optimos: productos.filter((p) => p.activo && p.stockActual > p.stockMinimo).length,
+    optimos: productos.filter((p) => p.activo && p.stockActual > p.stockMinimo * 1.5).length,
   };
 
-  // Conteo de artículos activos por cada categoría (criterio unificado)
+  // Conteo de artículos por categoría respetando el estado comercial seleccionado
   const conteosPorCategoria = categorias.reduce<Record<string, number>>((acc, cat) => {
-    acc[cat.id] = productos.filter((p) => p.categoriaId === cat.id && p.activo).length;
+    acc[cat.id] = productos.filter((p) => {
+      if (p.categoriaId !== cat.id) return false;
+      if (filtroEstadoHub === 'activos') return p.activo;
+      if (filtroEstadoHub === 'inactivos') return !p.activo;
+      return true;
+    }).length;
     return acc;
   }, {});
 
-  // Artículos filtrados según categoría activa, nivel de existencias y búsqueda textual
+  // Artículos filtrados según estado comercial, categoría, nivel de stock y búsqueda textual
   const productosFiltradosHub = productos.filter((p) => {
-    // 1. Filtro por categoría
+    // 1. Filtro por estado comercial
+    if (filtroEstadoHub === 'activos' && !p.activo) return false;
+    if (filtroEstadoHub === 'inactivos' && p.activo) return false;
+
+    // 2. Filtro por categoría
     const coincideCategoria =
       categoriaFiltroHub === 'todas' || p.categoriaId === categoriaFiltroHub;
+    if (!coincideCategoria) return false;
 
-    // 2. Filtro por nivel de stock
+    // 3. Filtro por nivel de stock (4 estados mutuamente excluyentes)
     let coincideStock = true;
     if (filtroStockHub === 'critico') {
       coincideStock = p.stockActual > 0 && p.stockActual <= p.stockMinimo;
@@ -117,18 +137,20 @@ export function useAdminInventarioController() {
     } else if (filtroStockHub === 'agotado') {
       coincideStock = p.stockActual === 0;
     } else if (filtroStockHub === 'optimo') {
-      coincideStock = p.stockActual > p.stockMinimo;
+      coincideStock = p.stockActual > p.stockMinimo * 1.5;
     }
+    if (!coincideStock) return false;
 
-    // 3. Búsqueda textual por código, nombre o descripción
+    // 4. Búsqueda textual por código, nombre, descripción o nombre de categoría
     const busq = busquedaHub.trim().toLowerCase();
     const coincideTexto =
       !busq ||
       p.nombre.toLowerCase().includes(busq) ||
       p.codigo.toLowerCase().includes(busq) ||
-      (p.descripcion && p.descripcion.toLowerCase().includes(busq));
+      Boolean(p.descripcion && p.descripcion.toLowerCase().includes(busq)) ||
+      Boolean(p.categoria?.nombre && p.categoria.nombre.toLowerCase().includes(busq));
 
-    return coincideCategoria && coincideStock && coincideTexto;
+    return coincideTexto;
   });
 
   /**
@@ -224,6 +246,8 @@ export function useAdminInventarioController() {
     productos,
     categoriaFiltroHub,
     setCategoriaFiltroHub: handleSetCategoriaFiltroHub,
+    filtroEstadoHub,
+    setFiltroEstadoHub: handleSetFiltroEstadoHub,
     busquedaHub,
     setBusquedaHub: handleSetBusquedaHub,
     conteosPorCategoria,

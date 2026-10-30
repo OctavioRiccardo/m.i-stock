@@ -6,8 +6,10 @@
  * ====================================================================
  * 
  * Propósito:
- * Gestionar la exploración, auditoría, filtrado, ordenamiento y valuación
- * del inventario consolidado de la empresa distribuido por familias de categorías.
+ * Gestionar la exploración ejecutiva, auditoría financiera, filtrado,
+ * ordenamiento y valuación del inventario comercial activo distribuido por
+ * familias de categorías, manteniendo criterios de estados de stock 100%
+ * unificados con `inventarioController`.
  * 
  * Rol en la Arquitectura:
  * - Capa Controller ("C") consumida por `AdminInventarioGlobalView` (View).
@@ -17,7 +19,7 @@
 import { useState, useMemo } from 'react';
 import { useInventarioData } from '@/services/inventarioService';
 
-export type FiltroEstadoStock = 'todos' | 'normal' | 'critico' | 'sin_stock';
+export type FiltroEstadoStock = 'todos' | 'optimo' | 'bajo' | 'critico' | 'sin_stock';
 export type CriterioOrdenInventario =
   | 'nombre_asc'
   | 'nombre_desc'
@@ -61,7 +63,7 @@ export function useAdminInventarioGlobalController() {
     setPagina(1);
   };
 
-  // 1. Conteo de productos por categoría
+  // 1. Conteo de productos activos por categoría
   const conteosPorCategoria = useMemo(() => {
     return categorias.reduce<Record<string, number>>((acc, cat) => {
       acc[cat.id] = productos.filter((p) => p.categoriaId === cat.id && p.activo).length;
@@ -69,12 +71,13 @@ export function useAdminInventarioGlobalController() {
     }, {});
   }, [categorias, productos]);
 
-  // 2. Métricas y KPIs globales del inventario
+  // 2. Métricas y KPIs globales del inventario activo (4 niveles mutuamente excluyentes)
   const metricasGlobales = useMemo(() => {
     let unidadesTotales = 0;
     let valuacionCosto = 0;
     let valuacionVenta = 0;
     let articulosCriticos = 0;
+    let articulosBajos = 0;
     let articulosSinStock = 0;
 
     for (const p of productos) {
@@ -87,6 +90,8 @@ export function useAdminInventarioGlobalController() {
         articulosSinStock++;
       } else if (p.stockActual <= p.stockMinimo) {
         articulosCriticos++;
+      } else if (p.stockActual <= p.stockMinimo * 1.5) {
+        articulosBajos++;
       }
     }
 
@@ -101,6 +106,7 @@ export function useAdminInventarioGlobalController() {
       valuacionVenta,
       margenEstimadoPorcentaje,
       articulosCriticos,
+      articulosBajos,
       articulosSinStock,
     };
   }, [productos, categorias]);
@@ -127,56 +133,63 @@ export function useAdminInventarioGlobalController() {
     };
   }, [categoriaActualObj, productos]);
 
-  // 5. Filtrado y ordenamiento de productos
+  // 5. Filtrado y ordenamiento de productos activos (criterio unificado de 4 estados)
   const productosFiltrados = useMemo(() => {
-    return productos.filter((p) => {
-      // Filtro de categoría
-      if (categoriaSeleccionada !== 'todas' && p.categoriaId !== categoriaSeleccionada) {
-        return false;
-      }
+    return productos
+      .filter((p) => {
+        if (!p.activo) return false;
 
-      // Filtro de búsqueda textual
-      if (busqueda.trim()) {
-        const query = busqueda.trim().toLowerCase();
-        const coincideNombre = p.nombre.toLowerCase().includes(query);
-        const coincideCodigo = p.codigo.toLowerCase().includes(query);
-        const coincideSku = (p.sku || '').toLowerCase().includes(query);
-        const coincideDesc = (p.descripcion || '').toLowerCase().includes(query);
-        if (!coincideNombre && !coincideCodigo && !coincideSku && !coincideDesc) {
+        // Filtro de categoría
+        if (categoriaSeleccionada !== 'todas' && p.categoriaId !== categoriaSeleccionada) {
           return false;
         }
-      }
 
-      // Filtro de estado de stock
-      if (filtroStock === 'critico') {
-        return p.stockActual > 0 && p.stockActual <= p.stockMinimo;
-      }
-      if (filtroStock === 'sin_stock') {
-        return p.stockActual === 0;
-      }
-      if (filtroStock === 'normal') {
-        return p.stockActual > p.stockMinimo;
-      }
+        // Filtro de búsqueda textual
+        if (busqueda.trim()) {
+          const query = busqueda.trim().toLowerCase();
+          const coincideNombre = p.nombre.toLowerCase().includes(query);
+          const coincideCodigo = p.codigo.toLowerCase().includes(query);
+          const coincideSku = (p.sku || '').toLowerCase().includes(query);
+          const coincideDesc = (p.descripcion || '').toLowerCase().includes(query);
+          if (!coincideNombre && !coincideCodigo && !coincideSku && !coincideDesc) {
+            return false;
+          }
+        }
 
-      return true;
-    }).sort((a, b) => {
-      switch (ordenarPor) {
-        case 'nombre_asc':
-          return a.nombre.localeCompare(b.nombre);
-        case 'nombre_desc':
-          return b.nombre.localeCompare(a.nombre);
-        case 'precio_asc':
-          return a.precioVenta - b.precioVenta;
-        case 'precio_desc':
-          return b.precioVenta - a.precioVenta;
-        case 'stock_asc':
-          return a.stockActual - b.stockActual;
-        case 'stock_desc':
-          return b.stockActual - a.stockActual;
-        default:
-          return 0;
-      }
-    });
+        // Filtro de estado de stock (4 niveles mutuamente excluyentes)
+        if (filtroStock === 'sin_stock') {
+          return p.stockActual === 0;
+        }
+        if (filtroStock === 'critico') {
+          return p.stockActual > 0 && p.stockActual <= p.stockMinimo;
+        }
+        if (filtroStock === 'bajo') {
+          return p.stockActual > p.stockMinimo && p.stockActual <= p.stockMinimo * 1.5;
+        }
+        if (filtroStock === 'optimo') {
+          return p.stockActual > p.stockMinimo * 1.5;
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        switch (ordenarPor) {
+          case 'nombre_asc':
+            return a.nombre.localeCompare(b.nombre);
+          case 'nombre_desc':
+            return b.nombre.localeCompare(a.nombre);
+          case 'precio_asc':
+            return a.precioVenta - b.precioVenta;
+          case 'precio_desc':
+            return b.precioVenta - a.precioVenta;
+          case 'stock_asc':
+            return a.stockActual - b.stockActual;
+          case 'stock_desc':
+            return b.stockActual - a.stockActual;
+          default:
+            return 0;
+        }
+      });
   }, [productos, categoriaSeleccionada, busqueda, filtroStock, ordenarPor]);
 
   // 6. Paginación reactiva

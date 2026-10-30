@@ -6,8 +6,8 @@
  * ====================================================================
  * 
  * Propósito:
- * Administrar las cuentas de colaboradores, asignación de roles RBAC
- * y habilitación de estados en el sistema.
+ * Administrar las cuentas de colaboradores, asignación de roles de acceso
+ * y habilitación operativa (`activo` / `inactivo`) en el sistema.
  * 
  * Sincronizado con Supabase:
  * - Tabla: `public.usuario`
@@ -26,27 +26,42 @@ import { initialUsuarios } from '@/models/mock_data/usuariosMock';
 import { supabaseService } from '@/services/supabaseService';
 
 export type FiltroRol = 'todos' | RolUsuarioDB;
-export type FiltroEstado = 'todos' | EstadoUsuario;
+export type FiltroEstado = 'todos' | 'activo' | 'inactivo';
 
 const USUARIOS_STORAGE_KEY = 'mistock_usuarios_data_test_v1';
 const LEGACY_MOCK_EMAILS = new Set(['admin@mistock.com', 'admin@test.com']);
 
+function normalizarEstadoUsuario(estado?: EstadoUsuario): 'activo' | 'inactivo' {
+  return estado === 'activo' ? 'activo' : 'inactivo';
+}
+
 export function useAdminUsuariosController() {
   const [usuarios, setUsuarios] = useState<Usuario[]>(() => {
-    if (typeof window === 'undefined') return initialUsuarios;
+    if (typeof window === 'undefined') {
+      return initialUsuarios.map((u) => ({
+        ...u,
+        estado: normalizarEstadoUsuario(u.estado),
+      }));
+    }
     try {
       const stored = window.localStorage.getItem(USUARIOS_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
-          // Filtrar cuentas ficticias heredadas de versiones de prueba anteriores
-          return parsed.filter(
-            (u: Usuario) => !LEGACY_MOCK_EMAILS.has((u.email || '').toLowerCase())
-          );
+          // Filtrar cuentas ficticias heredadas y normalizar estado operativo (activo / inactivo)
+          return parsed
+            .filter((u: Usuario) => !LEGACY_MOCK_EMAILS.has((u.email || '').toLowerCase()))
+            .map((u: Usuario) => ({
+              ...u,
+              estado: normalizarEstadoUsuario(u.estado),
+            }));
         }
       }
     } catch {}
-    return initialUsuarios;
+    return initialUsuarios.map((u) => ({
+      ...u,
+      estado: normalizarEstadoUsuario(u.estado),
+    }));
   });
 
   const guardarUsuarios = (updater: (prev: Usuario[]) => Usuario[]) => {
@@ -73,7 +88,10 @@ export function useAdminUsuariosController() {
             );
             const mapaPorEmail = new Map<string, Usuario>();
             for (const u of limpios) {
-              mapaPorEmail.set(u.email.toLowerCase(), u);
+              mapaPorEmail.set(u.email.toLowerCase(), {
+                ...u,
+                estado: normalizarEstadoUsuario(u.estado),
+              });
             }
             for (const remoto of usuariosRemotos) {
               const existente = mapaPorEmail.get(remoto.email.toLowerCase());
@@ -81,10 +99,13 @@ export function useAdminUsuariosController() {
                 mapaPorEmail.set(remoto.email.toLowerCase(), {
                   ...existente,
                   ...remoto,
-                  estado: existente.estado || 'activo',
+                  estado: normalizarEstadoUsuario(existente.estado ?? 'activo'),
                 });
               } else {
-                mapaPorEmail.set(remoto.email.toLowerCase(), remoto);
+                mapaPorEmail.set(remoto.email.toLowerCase(), {
+                  ...remoto,
+                  estado: normalizarEstadoUsuario(remoto.estado ?? 'activo'),
+                });
               }
             }
             return Array.from(mapaPorEmail.values());
@@ -162,12 +183,16 @@ export function useAdminUsuariosController() {
         return false;
       }
 
-      // Filtro de estado
-      if (filtroEstado !== 'todos' && u.estado !== filtroEstado) {
+      // Filtro de estado unificado ('activo' vs 'inactivo')
+      const esActivo = u.estado === 'activo';
+      if (filtroEstado === 'activo' && !esActivo) {
+        return false;
+      }
+      if (filtroEstado === 'inactivo' && esActivo) {
         return false;
       }
 
-      // Búsqueda por texto (nombre o email)
+      // Búsqueda por texto (nombre, email o teléfono)
       if (busqueda.trim()) {
         const query = busqueda.trim().toLowerCase();
         const coincideNombre = u.nombre.toLowerCase().includes(query);
@@ -266,6 +291,10 @@ export function useAdminUsuariosController() {
         return {
           ...u,
           ...datos,
+          estado:
+            datos.estado !== undefined
+              ? normalizarEstadoUsuario(datos.estado)
+              : normalizarEstadoUsuario(u.estado),
           nombre: datos.nombre ? datos.nombre.trim() : u.nombre,
           nombreCompleto: datos.nombre ? datos.nombre.trim() : u.nombreCompleto,
           password: datos.password !== undefined ? (datos.password.trim() || undefined) : u.password,
@@ -298,14 +327,14 @@ export function useAdminUsuariosController() {
   };
 
   /**
-   * Cambia el estado operativo (activo / suspendido / inactivo).
+   * Alterna el estado operativo de la cuenta entre `activo` e `inactivo`.
    */
   const toggleEstadoUsuario = (id: string) => {
     const usuario = usuarios.find((u) => u.id === id);
     if (!usuario) return;
 
     const proximoEstado: EstadoUsuario =
-      usuario.estado === 'activo' ? 'suspendido' : 'activo';
+      usuario.estado === 'activo' ? 'inactivo' : 'activo';
 
     actualizarUsuario(id, { estado: proximoEstado });
   };

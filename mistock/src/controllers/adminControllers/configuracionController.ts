@@ -7,11 +7,12 @@
  * 
  * Propósito:
  * Administrar la parametrización del negocio, datos de facturación para el POS,
- * métodos de cobro habilitados, umbrales de stock y exportación de respaldos.
+ * métodos de cobro habilitados, umbrales de stock, métricas en vivo de base de datos
+ * y exportación de respaldos CSV.
  * Conectado reactivamente con `configuracionService` como Single Source of Truth.
  */
 
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   ConfiguracionNegocio,
   ConfiguracionPOS,
@@ -20,17 +21,78 @@ import {
   MetodosPagoConfig,
 } from '@/models/modelos_vista/configuracionModel';
 import { configuracionService, useConfiguracionData } from '@/services/configuracionService';
-import { inventarioService } from '@/services/inventarioService';
+import { inventarioService, useInventarioData } from '@/services/inventarioService';
 import { inicializarVentasCliente } from '@/controllers/userControllers/userDashboardController';
 
 export type PestañaConfiguracion = 'negocio' | 'pos' | 'inventario' | 'metricas' | 'respaldos';
 
+const ULTIMO_RESPALDO_STORAGE_KEY = 'mistock_ultimo_respaldo_csv';
+
 export function useAdminConfiguracionController() {
   const config = useConfiguracionData();
+  const { productos, categorias } = useInventarioData();
+
   const [pestañaActiva, setPestañaActiva] = useState<PestañaConfiguracion>('negocio');
   const [guardando, setGuardando] = useState<boolean>(false);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
   const [mensajeError, setMensajeError] = useState<string | null>(null);
+
+  const [totalVentas, setTotalVentas] = useState<number>(
+    () => (inicializarVentasCliente().ventasRecientes || []).length
+  );
+
+  const [ultimoRespaldoCSV, setUltimoRespaldoCSV] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      return window.localStorage.getItem(ULTIMO_RESPALDO_STORAGE_KEY);
+    } catch {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    const sincronizarConteoVentas = () => {
+      setTotalVentas((inicializarVentasCliente().ventasRecientes || []).length);
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', sincronizarConteoVentas);
+      window.addEventListener('mistock_ventas_updated', sincronizarConteoVentas);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('storage', sincronizarConteoVentas);
+        window.removeEventListener('mistock_ventas_updated', sincronizarConteoVentas);
+      }
+    };
+  }, []);
+
+  const registrarTimestampRespaldo = () => {
+    const ahora = new Date();
+    const marca = `${ahora.toLocaleDateString('es-AR')} ${ahora.toLocaleTimeString('es-AR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    })}`;
+    setUltimoRespaldoCSV(marca);
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.setItem(ULTIMO_RESPALDO_STORAGE_KEY, marca);
+      } catch {}
+    }
+  };
+
+  // Estadísticas reales de registros almacenados en el sistema
+  const estadisticasSistema = useMemo(
+    () => ({
+      totalProductos: productos.length,
+      totalCategorias: categorias.length,
+      totalVentas,
+      totalRegistros: productos.length + categorias.length + totalVentas,
+      ultimoRespaldoCSV,
+    }),
+    [productos.length, categorias.length, totalVentas, ultimoRespaldoCSV]
+  );
 
   const limpiarMensajes = () => {
     setMensajeExito(null);
@@ -38,14 +100,14 @@ export function useAdminConfiguracionController() {
   };
 
   /**
-   * Actualiza los datos comerciales de la empresa y del ticket.
+   * Actualiza los datos comerciales de la empresa y del ticket (persistencia automática).
    */
   const actualizarNegocio = (datos: Partial<ConfiguracionNegocio>) => {
     configuracionService.actualizarNegocio(datos);
   };
 
   /**
-   * Actualiza los parámetros de operación de caja y hardware.
+   * Actualiza los parámetros de operación de caja y hardware (persistencia automática).
    */
   const actualizarPOS = (datos: Partial<ConfiguracionPOS>) => {
     configuracionService.actualizarPOS(datos);
@@ -63,21 +125,21 @@ export function useAdminConfiguracionController() {
   };
 
   /**
-   * Actualiza las directivas y umbrales de inventario.
+   * Actualiza las directivas y umbrales de inventario (persistencia automática).
    */
   const actualizarInventario = (datos: Partial<ConfiguracionInventario>) => {
     configuracionService.actualizarInventario(datos);
   };
 
   /**
-   * Actualiza los criterios y períodos base de métricas y KPIs.
+   * Actualiza los criterios y períodos base de métricas y KPIs (persistencia automática).
    */
   const actualizarMetricas = (datos: Partial<ConfiguracionMetricas>) => {
     configuracionService.actualizarMetricas(datos);
   };
 
   /**
-   * Guarda los cambios en el almacenamiento persistente.
+   * Fuerza una confirmación manual del estado actual (mantenido por retrocompatibilidad).
    */
   const guardarCambios = () => {
     setGuardando(true);
@@ -86,7 +148,7 @@ export function useAdminConfiguracionController() {
     try {
       configuracionService.guardarConfiguracion(config);
       setGuardando(false);
-      setMensajeExito('Configuración guardada exitosamente y sincronizada en tiempo real con el mostrador.');
+      setMensajeExito('Configuración sincronizada en tiempo real con el mostrador.');
       setTimeout(() => setMensajeExito(null), 3500);
     } catch {
       setGuardando(false);
@@ -132,6 +194,7 @@ export function useAdminConfiguracionController() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
+      registrarTimestampRespaldo();
       setMensajeExito('Catálogo exportado exitosamente a formato CSV.');
       setTimeout(() => setMensajeExito(null), 3500);
     } catch {
@@ -174,6 +237,7 @@ export function useAdminConfiguracionController() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
+      registrarTimestampRespaldo();
       setMensajeExito(
         `Histórico de ventas exportado exitosamente a formato CSV (${ventasReales.length} registros).`
       );
@@ -185,6 +249,7 @@ export function useAdminConfiguracionController() {
 
   return {
     config,
+    estadisticasSistema,
     pestañaActiva,
     setPestañaActiva,
     guardando,

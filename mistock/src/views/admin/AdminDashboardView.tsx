@@ -6,9 +6,10 @@
  * ====================================================================
  * 
  * Propósito:
- * Renderizar el panel analítico ejecutivo de M.I Stock focalizado en el
- * rendimiento comercial, recaudación mensual, rotación de artículos y
- * comportamiento transaccional con componentes shadcn/ui Charts (Recharts).
+ * Renderizar el panel analítico ejecutivo de M.I Stock gobernado por un
+ * único selector de período global: recaudación comparada, distribución de
+ * medios de cobro, rotación de artículos con costos reales y registro de
+ * operaciones comerciales con componentes shadcn/ui Charts (Recharts).
  * 
  * Rol en la Arquitectura:
  * - Es la capa "V" (View).
@@ -102,11 +103,11 @@ const metodosPagoChartConfig = {
     label: 'Mercado Pago (Point)',
     color: '#009EE3',
   },
-  'Efectivo': {
+  Efectivo: {
     label: 'Efectivo',
     color: '#2A7A78',
   },
-  'Transferencia': {
+  Transferencia: {
     label: 'Transferencia',
     color: '#F59E0B',
   },
@@ -118,8 +119,8 @@ const metodosPagoChartConfig = {
 
 const COLORES_METODOS: Record<string, string> = {
   'Mercado Pago (Point)': '#009EE3',
-  'Efectivo': '#2A7A78',
-  'Transferencia': '#F59E0B',
+  Efectivo: '#2A7A78',
+  Transferencia: '#F59E0B',
   'Tarjeta Débito/Crédito': '#6366F1',
 };
 
@@ -137,13 +138,6 @@ const rotacionMenosVendidosChartConfig = {
   },
 } satisfies ChartConfig;
 
-const ritmoVentasChartConfig = {
-  'Monto Facturado': {
-    label: 'Monto Facturado',
-    color: '#2A7A78',
-  },
-} satisfies ChartConfig;
-
 interface AdminDashboardViewProps {
   controller: ReturnType<typeof useAdminDashboardController>;
 }
@@ -152,9 +146,11 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
   const {
     data,
     periodoMetricasActivo,
+    etiquetaPeriodoActivo,
     cambiarPeriodoMetricas,
     configuracionMetricas,
     kpisActivos,
+    monedaSimbolo,
     rotacionTab,
     cambiarTabRotacion,
     categoriaRotacion,
@@ -162,8 +158,6 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
     paginaRotacion,
     setPaginaRotacion,
     itemsPorPaginaRotacion,
-    periodoVentasTab,
-    cambiarPeriodoVentas,
     paginaVentas,
     setPaginaVentas,
     itemsPorPaginaVentas,
@@ -183,7 +177,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
   const [menosVendidosTableBodyRef] = useAutoAnimate<HTMLTableSectionElement>({ duration: 220, easing: 'ease-out' });
   const [ventasTableBodyRef] = useAutoAnimate<HTMLTableSectionElement>({ duration: 220, easing: 'ease-out' });
 
-  // Lista de categorías únicas extraídas de ambos catálogos para filtrado interactivo
+  // Lista de categorías únicas extraídas del catálogo activo para filtrado interactivo
   const categoriasDisponibles = React.useMemo(() => {
     const cats = new Set<string>();
     data.productosMasVendidos.forEach((p) => cats.add(p.categoria));
@@ -217,7 +211,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
     inicioRotacion + itemsPorPaginaRotacion
   );
 
-  // Cálculos analíticos para gráfico y resúmenes de Rotación
+  // Cálculos analíticos para gráfico y resúmenes de Rotación (usando precioCosto real)
   const productosGraficoRotacion = React.useMemo(() => {
     return listaFiltradaRotacion.slice(0, 5);
   }, [listaFiltradaRotacion]);
@@ -231,18 +225,12 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
   }, [listaFiltradaRotacion]);
 
   const totalCapitalInmovilizadoFiltrado = React.useMemo(() => {
-    return listaFiltradaRotacion.reduce((acc, p) => acc + (p.stockActual * 1950), 0);
+    return listaFiltradaRotacion.reduce((acc, p) => acc + p.stockActual * p.precioCosto, 0);
   }, [listaFiltradaRotacion]);
 
-  // Cálculos de Paginación, Filtrado y Resumen para Detalle de Ventas
-  const listaActivaVentas =
-    periodoVentasTab === 'semana'
-      ? data.ventasDetalle.ventasSemana
-      : data.ventasDetalle.ventasMes;
-  const resumenActivoVentas =
-    periodoVentasTab === 'semana'
-      ? data.ventasDetalle.resumenSemana
-      : data.ventasDetalle.resumenMes;
+  // Transacciones sincronizadas con el período global activo
+  const listaActivaVentas = data.ventasDetalle.ventasPeriodoActivo;
+  const resumenActivoVentas = data.ventasDetalle.resumenPeriodoActivo;
 
   // Lista de vendedores únicos presentes en las transacciones del período
   const vendedoresDisponibles = React.useMemo(() => {
@@ -256,19 +244,15 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
   // Filtrado multivariado de ventas: Vendedor, Método de Pago, Estado y Búsqueda
   const listaFiltradaVentas = React.useMemo(() => {
     return listaActivaVentas.filter((v) => {
-      // 1. Filtro por vendedor / usuario
       if (filtroVendedorVentas !== 'Todos' && v.vendedor !== filtroVendedorVentas) {
         return false;
       }
-      // 2. Filtro por método de pago
       if (filtroMetodoPagoVentas !== 'Todos' && v.metodoPago !== filtroMetodoPagoVentas) {
         return false;
       }
-      // 3. Filtro por estado de transacción
       if (filtroEstadoVentas !== 'Todos' && v.estado !== filtroEstadoVentas) {
         return false;
       }
-      // 4. Búsqueda por texto (código de comprobante o nombre de vendedor)
       if (busquedaVentas.trim()) {
         const query = busquedaVentas.toLowerCase().trim();
         const coincideComprobante = v.codigoComprobante.toLowerCase().includes(query);
@@ -298,17 +282,12 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
     if (!hayFiltrosVentasActivos) {
       return resumenActivoVentas;
     }
-    const totalRecaudado = listaFiltradaVentas.reduce(
-      (acc, v) => acc + (v.estado !== 'cancelada' ? v.total : 0),
-      0
-    );
-    const cantidadVentas = listaFiltradaVentas.length;
+    const activasFiltradas = listaFiltradaVentas.filter((v) => v.estado !== 'cancelada');
+    const totalRecaudado = activasFiltradas.reduce((acc, v) => acc + v.total, 0);
+    const cantidadVentas = activasFiltradas.length;
     const ticketPromedio =
       cantidadVentas > 0 ? Math.round(totalRecaudado / cantidadVentas) : 0;
-    const unidadesTotales = listaFiltradaVentas.reduce(
-      (acc, v) => acc + (v.estado !== 'cancelada' ? v.cantidadItems : 0),
-      0
-    );
+    const unidadesTotales = activasFiltradas.reduce((acc, v) => acc + v.cantidadItems, 0);
     return {
       totalRecaudado,
       cantidadVentas,
@@ -361,15 +340,6 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
     switch (estado) {
       case 'completada':
         return <Badge variant="success" className="text-xs font-medium capitalize">Completada</Badge>;
-      case 'pendiente':
-        return (
-          <Badge
-            variant="outline"
-            className="text-xs font-medium capitalize bg-amber-50 text-amber-700 border-amber-300"
-          >
-            Pendiente
-          </Badge>
-        );
       case 'cancelada':
         return (
           <Badge
@@ -387,7 +357,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
   return (
     <MotionConfig reducedMotion="user">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Encabezado Principal */}
+        {/* Encabezado Principal con Único Selector Global de Período */}
         <motion.div
           initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
@@ -396,10 +366,10 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
         >
           <div>
             <h1 className="text-2xl font-bold text-[#1C2424] tracking-tight">
-              Métricas & KPIs de Negocio
+              Métricas de Negocio
             </h1>
             <p className="text-sm text-[#657373]">
-              Monitoreo financiero, recaudación mensual, rotación de artículos y comportamiento de cobros.
+              Monitoreo financiero integral sincronizado por período: recaudación, cobros, rotación y operaciones.
             </p>
           </div>
 
@@ -444,9 +414,8 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
           </div>
         </motion.div>
 
-
         {/* ==================================================================== */}
-        {/* 1. TARJETAS KPI DE RENDIMIENTO FINANCIERO Y MENSUAL                  */}
+        {/* 1. TARJETAS KPI DE RENDIMIENTO FINANCIERO                             */}
         {/* ==================================================================== */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {kpisActivos.map((kpi, idx) => (
@@ -476,13 +445,14 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                 </div>
 
                 {kpi.changePercentage && (
-                  <div className="mt-2.5 flex items-center">
+                  <div className="mt-2.5 flex items-center gap-1.5">
                     <Badge
                       variant={kpi.status === 'positive' ? 'success' : kpi.status === 'negative' ? 'destructive' : 'secondary'}
                       className="font-semibold text-xs px-2 py-0.5"
                     >
                       {kpi.changePercentage}
                     </Badge>
+                    <span className="text-[11px] text-[#657373]">vs. período ant.</span>
                   </div>
                 )}
               </Card>
@@ -491,7 +461,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
         </div>
 
         {/* ==================================================================== */}
-        {/* 2. ANALÍTICA VISUAL: EVOLUCIÓN TEMPORAL & MÉTODOS DE PAGO (SHADCN/UI) */}
+        {/* 2. ANALÍTICA VISUAL: EVOLUCIÓN TEMPORAL & MÉTODOS DE PAGO             */}
         {/* ==================================================================== */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Gráfico 1: Evolución Temporal de Recaudación (AreaChart) */}
@@ -510,122 +480,100 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                   </p>
                 </div>
 
-                {/* Selector de período interactivo con Motion pill */}
-                <div className="relative inline-flex items-center p-1 bg-[#F8F7F2] rounded-lg border border-[#E8E6DF] self-start sm:self-auto">
-                  <button
-                    type="button"
-                    onClick={() => cambiarPeriodoVentas('semana')}
-                    className={`relative px-3 py-1.5 rounded-md text-xs font-semibold cursor-pointer transition-colors duration-150 z-10 ${
-                      periodoVentasTab === 'semana'
-                        ? 'text-[#2A7A78]'
-                        : 'text-[#657373] hover:text-[#1C2424]'
-                    }`}
-                  >
-                    {periodoVentasTab === 'semana' && (
-                      <motion.span
-                        layoutId="areaChartPeriodIndicator"
-                        className="absolute inset-0 bg-white rounded-md shadow-xs -z-10"
-                        transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                      />
-                    )}
-                    Esta Semana
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => cambiarPeriodoVentas('mes')}
-                    className={`relative px-3 py-1.5 rounded-md text-xs font-semibold cursor-pointer transition-colors duration-150 z-10 ${
-                      periodoVentasTab === 'mes'
-                        ? 'text-[#2A7A78]'
-                        : 'text-[#657373] hover:text-[#1C2424]'
-                    }`}
-                  >
-                    {periodoVentasTab === 'mes' && (
-                      <motion.span
-                        layoutId="areaChartPeriodIndicator"
-                        className="absolute inset-0 bg-white rounded-md shadow-xs -z-10"
-                        transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                      />
-                    )}
-                    Este Mes
-                  </button>
-                </div>
+                <Badge
+                  variant="outline"
+                  className="self-start sm:self-auto bg-[#F8F7F2] text-[#2A7A78] border-[#E8E6DF] font-semibold text-xs px-2.5 py-1 flex items-center gap-1.5"
+                >
+                  <CalendarBlank className="h-3.5 w-3.5" weight="duotone" />
+                  {etiquetaPeriodoActivo}
+                </Badge>
               </CardHeader>
 
               <CardContent className="pt-4 flex-1">
                 <AnimatePresence mode="wait">
                   <motion.div
-                    key={`areachart-${periodoVentasTab}`}
+                    key={`areachart-${periodoMetricasActivo}`}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2 }}
                     className="w-full h-full"
                   >
-                    <ChartContainer
-                      config={areaChartConfig}
-                      className="h-72 w-full aspect-auto"
-                    >
-                      <AreaChart
-                        data={
-                          periodoVentasTab === 'semana'
-                            ? data.graficos.tendenciaSemana
-                            : data.graficos.tendenciaMes
-                        }
-                        margin={{ top: 12, right: 12, left: 0, bottom: 0 }}
+                    {data.graficos.tendenciaActiva.length > 0 ? (
+                      <ChartContainer
+                        config={areaChartConfig}
+                        className="h-72 w-full aspect-auto"
                       >
-                        <defs>
-                          <linearGradient id="fillActual" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#2A7A78" stopOpacity={0.35} />
-                            <stop offset="95%" stopColor="#2A7A78" stopOpacity={0.0} />
-                          </linearGradient>
-                          <linearGradient id="fillAnterior" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#94A3B8" stopOpacity={0.2} />
-                            <stop offset="95%" stopColor="#94A3B8" stopOpacity={0.0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E8E6DF" />
-                        <XAxis
-                          dataKey="fecha"
-                          tickLine={false}
-                          axisLine={false}
-                          tickMargin={8}
-                          tick={{ fill: '#657373', fontSize: 11 }}
-                        />
-                        <YAxis
-                          tickLine={false}
-                          axisLine={false}
-                          tickMargin={8}
-                          tick={{ fill: '#657373', fontSize: 11 }}
-                          tickFormatter={(value) => `$${(value / 1000).toLocaleString('es-AR')}k`}
-                        />
-                        <ChartTooltip
-                          cursor={{ stroke: '#2A7A78', strokeWidth: 1, strokeDasharray: '4 4' }}
-                          content={
-                            <ChartTooltipContent
-                              formatter={(value) => `$${Number(value).toLocaleString('es-AR')}`}
+                        <AreaChart
+                          data={data.graficos.tendenciaActiva}
+                          margin={{ top: 12, right: 12, left: 0, bottom: 0 }}
+                        >
+                          <defs>
+                            <linearGradient id="fillActual" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#2A7A78" stopOpacity={0.35} />
+                              <stop offset="95%" stopColor="#2A7A78" stopOpacity={0.0} />
+                            </linearGradient>
+                            <linearGradient id="fillAnterior" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#94A3B8" stopOpacity={0.2} />
+                              <stop offset="95%" stopColor="#94A3B8" stopOpacity={0.0} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E8E6DF" />
+                          <XAxis
+                            dataKey="fecha"
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                            tick={{ fill: '#657373', fontSize: 11 }}
+                          />
+                          <YAxis
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                            tick={{ fill: '#657373', fontSize: 11 }}
+                            tickFormatter={(value) => `${monedaSimbolo}${(value / 1000).toLocaleString('es-AR')}k`}
+                          />
+                          <ChartTooltip
+                            cursor={{ stroke: '#2A7A78', strokeWidth: 1, strokeDasharray: '4 4' }}
+                            content={
+                              <ChartTooltipContent
+                                formatter={(value) => `${monedaSimbolo}${Number(value).toLocaleString('es-AR')}`}
+                              />
+                            }
+                          />
+                          <ChartLegend content={<ChartLegendContent />} />
+                          {configuracionMetricas?.compararPeriodoAnterior !== false && (
+                            <Area
+                              type="monotone"
+                              dataKey="Período Anterior"
+                              stroke="#94A3B8"
+                              strokeWidth={1.5}
+                              strokeDasharray="4 4"
+                              fillOpacity={1}
+                              fill="url(#fillAnterior)"
                             />
-                          }
-                        />
-                        <ChartLegend content={<ChartLegendContent />} />
-                        <Area
-                          type="monotone"
-                          dataKey="Período Anterior"
-                          stroke="#94A3B8"
-                          strokeWidth={1.5}
-                          strokeDasharray="4 4"
-                          fillOpacity={1}
-                          fill="url(#fillAnterior)"
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="Recaudación Actual"
-                          stroke="#2A7A78"
-                          strokeWidth={2}
-                          fillOpacity={1}
-                          fill="url(#fillActual)"
-                        />
-                      </AreaChart>
-                    </ChartContainer>
+                          )}
+                          <Area
+                            type="monotone"
+                            dataKey="Recaudación Actual"
+                            stroke="#2A7A78"
+                            strokeWidth={2}
+                            fillOpacity={1}
+                            fill="url(#fillActual)"
+                          />
+                        </AreaChart>
+                      </ChartContainer>
+                    ) : (
+                      <div className="h-72 flex flex-col items-center justify-center text-center px-4 bg-[#F8F7F2]/50 rounded-xl border border-dashed border-[#E8E6DF]">
+                        <TrendUp className="h-7 w-7 text-[#94A3B8] mb-2" weight="duotone" />
+                        <p className="text-sm font-semibold text-[#1C2424]">
+                          Sin facturación registrada en {etiquetaPeriodoActivo.toLowerCase()}
+                        </p>
+                        <p className="text-xs text-[#657373] mt-1 max-w-sm">
+                          Aún no se contabilizaron operaciones completadas en esta ventana temporal para trazar la curva evolutiva.
+                        </p>
+                      </div>
+                    )}
                   </motion.div>
                 </AnimatePresence>
               </CardContent>
@@ -643,105 +591,102 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                   </CardTitle>
                 </div>
                 <p className="text-xs text-[#657373] mt-1">
-                  Participación en ingresos ({periodoVentasTab === 'semana' ? 'Esta Semana' : 'Este Mes'})
+                  Participación en ingresos ({etiquetaPeriodoActivo})
                 </p>
               </CardHeader>
 
               <CardContent className="pt-4 flex-1 flex flex-col justify-between">
-                <div className="flex-1 flex items-center justify-center py-2 w-full">
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={`donut-${periodoVentasTab}`}
-                      initial={{ opacity: 0, scale: 0.96 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.96 }}
-                      transition={{ duration: 0.2 }}
-                      className="w-full flex justify-center"
-                    >
-                      <ChartContainer
-                        config={metodosPagoChartConfig}
-                        className="mx-auto aspect-square max-h-[200px] w-full"
-                      >
-                        <PieChart>
-                          <ChartTooltip
-                            cursor={false}
-                            content={
-                              <ChartTooltipContent
-                                hideLabel
-                                formatter={(value, name) => (
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium text-[#1C2424]">{name}:</span>
-                                    <span className="font-bold text-[#2A7A78]">
-                                      ${Number(value).toLocaleString('es-AR')}
-                                    </span>
-                                  </div>
-                                )}
-                              />
-                            }
-                          />
-                          <Pie
-                            data={
-                              periodoVentasTab === 'semana'
-                                ? data.graficos.distribucionPagosSemana
-                                : data.graficos.distribucionPagosMes
-                            }
-                            dataKey="monto"
-                            nameKey="metodo"
-                            innerRadius={48}
-                            outerRadius={75}
-                            paddingAngle={3}
-                            strokeWidth={2}
-                            stroke="#ffffff"
+                {data.graficos.distribucionPagosActiva.length > 0 ? (
+                  <>
+                    <div className="flex-1 flex items-center justify-center py-2 w-full">
+                      <AnimatePresence mode="wait">
+                        <motion.div
+                          key={`donut-${periodoMetricasActivo}`}
+                          initial={{ opacity: 0, scale: 0.96 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.96 }}
+                          transition={{ duration: 0.2 }}
+                          className="w-full flex justify-center"
+                        >
+                          <ChartContainer
+                            config={metodosPagoChartConfig}
+                            className="mx-auto aspect-square max-h-[200px] w-full"
                           >
-                            {(periodoVentasTab === 'semana'
-                              ? data.graficos.distribucionPagosSemana
-                              : data.graficos.distribucionPagosMes
-                            ).map((entry, index) => (
-                              <Cell
-                                key={`cell-${index}`}
-                                fill={COLORES_METODOS[entry.metodo] || '#2A7A78'}
+                            <PieChart>
+                              <ChartTooltip
+                                cursor={false}
+                                content={
+                                  <ChartTooltipContent
+                                    hideLabel
+                                    formatter={(value, name) => (
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium text-[#1C2424]">{name}:</span>
+                                        <span className="font-bold text-[#2A7A78]">
+                                          {monedaSimbolo}{Number(value).toLocaleString('es-AR')}
+                                        </span>
+                                      </div>
+                                    )}
+                                  />
+                                }
                               />
-                            ))}
-                          </Pie>
-                        </PieChart>
-                      </ChartContainer>
-                    </motion.div>
-                  </AnimatePresence>
-                </div>
-
-                <div className="mt-4 space-y-2 pt-3 border-t border-[#E8E6DF]">
-                  {(periodoVentasTab === 'semana'
-                    ? data.graficos.distribucionPagosSemana
-                    : data.graficos.distribucionPagosMes
-                  ).map((pago, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`w-2.5 h-2.5 rounded-full ${
-                            idx === 0
-                              ? 'bg-blue-500'
-                              : idx === 1
-                              ? 'bg-emerald-500'
-                              : idx === 2
-                              ? 'bg-violet-500'
-                              : 'bg-amber-500'
-                          }`}
-                        />
-                        <span className="text-[#657373] font-medium">{pago.metodo}</span>
-                      </div>
-                      <span className="font-bold text-[#1C2424]">
-                        ${pago.monto.toLocaleString('es-AR')} ({pago.porcentaje}%)
-                      </span>
+                              <Pie
+                                data={data.graficos.distribucionPagosActiva}
+                                dataKey="monto"
+                                nameKey="metodo"
+                                innerRadius={48}
+                                outerRadius={75}
+                                paddingAngle={3}
+                                strokeWidth={2}
+                                stroke="#ffffff"
+                              >
+                                {data.graficos.distribucionPagosActiva.map((entry, index) => (
+                                  <Cell
+                                    key={`cell-${index}`}
+                                    fill={COLORES_METODOS[entry.metodo] || '#2A7A78'}
+                                  />
+                                ))}
+                              </Pie>
+                            </PieChart>
+                          </ChartContainer>
+                        </motion.div>
+                      </AnimatePresence>
                     </div>
-                  ))}
-                </div>
+
+                    <div className="mt-4 space-y-2 pt-3 border-t border-[#E8E6DF]">
+                      {data.graficos.distribucionPagosActiva.map((pago) => (
+                        <div key={pago.metodo} className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full shrink-0"
+                              style={{ backgroundColor: COLORES_METODOS[pago.metodo] || '#2A7A78' }}
+                            />
+                            <span className="text-[#657373] font-medium">{pago.metodo}</span>
+                          </div>
+                          <span className="font-bold text-[#1C2424]">
+                            {monedaSimbolo}{pago.monto.toLocaleString('es-AR')} ({pago.porcentaje}%)
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex-1 min-h-[240px] flex flex-col items-center justify-center text-center px-4 bg-[#F8F7F2]/50 rounded-xl border border-dashed border-[#E8E6DF]">
+                    <PieChartIcon className="h-7 w-7 text-[#94A3B8] mb-2" weight="duotone" />
+                    <p className="text-sm font-semibold text-[#1C2424]">
+                      Sin cobros en {etiquetaPeriodoActivo.toLowerCase()}
+                    </p>
+                    <p className="text-xs text-[#657373] mt-1">
+                      La distribución por medio de pago aparecerá al registrar ventas en caja.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
         </div>
 
         {/* ==================================================================== */}
-        {/* 3. REDISEÑO: ROTACIÓN DE PRODUCTOS Y SALUD DE STOCK                  */}
+        {/* 3. ROTACIÓN DE PRODUCTOS Y SALUD DE STOCK                             */}
         {/* ==================================================================== */}
         <Card className="border-[#E8E6DF] shadow-xs bg-white overflow-hidden">
           <CardHeader className="flex flex-col md:flex-row md:items-center justify-between pb-4 gap-3 border-b border-[#E8E6DF]">
@@ -749,11 +694,11 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
               <div className="flex items-center gap-2">
                 <ChartBar className="h-5 w-5 text-[#2A7A78]" weight="duotone" />
                 <CardTitle className="text-base font-bold text-[#1C2424]">
-                  Rotación de Productos y Salud de Stock
+                  Rotación de Productos y Salud de Stock ({etiquetaPeriodoActivo})
                 </CardTitle>
               </div>
               <p className="text-xs text-[#657373] mt-1">
-                Monitoreo de artículos con alta demanda comercial vs. productos con bajo movimiento o capital inmovilizado.
+                Artículos con mayor salida comercial frente a productos con baja rotación o capital inmovilizado a costo de reposición.
               </p>
             </div>
 
@@ -844,13 +789,16 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                         </span>
                         <span className="text-xs text-[#657373]">
                           {categoriaRotacion === 'Todas'
-                            ? 'Top artículos con mayor facturación acumulada en el período'
+                            ? `Top artículos con mayor facturación acumulada (${etiquetaPeriodoActivo.toLowerCase()})`
                             : `Artículos con mayor recaudación en la categoría ${categoriaRotacion}`}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-[#657373]">
-                          Facturación segmento: <strong className="text-[#1C2424]">${totalFacturadoFiltrado.toLocaleString('es-AR')}</strong>
+                          Facturación segmento:{' '}
+                          <strong className="text-[#1C2424]">
+                            {monedaSimbolo}{totalFacturadoFiltrado.toLocaleString('es-AR')}
+                          </strong>
                         </span>
                         <span className="text-[#E8E6DF]">•</span>
                         <span className="text-xs text-[#657373]">
@@ -888,13 +836,13 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                             axisLine={false}
                             tickMargin={8}
                             tick={{ fill: '#657373', fontSize: 11 }}
-                            tickFormatter={(val) => `$${(val / 1000).toLocaleString('es-AR')}k`}
+                            tickFormatter={(val) => `${monedaSimbolo}${(val / 1000).toLocaleString('es-AR')}k`}
                           />
                           <ChartTooltip
                             cursor={{ fill: '#F3F4F6', opacity: 0.5 }}
                             content={
                               <ChartTooltipContent
-                                formatter={(value) => `$${Number(value).toLocaleString('es-AR')}`}
+                                formatter={(value) => `${monedaSimbolo}${Number(value).toLocaleString('es-AR')}`}
                               />
                             }
                           />
@@ -908,7 +856,8 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                       </ChartContainer>
                     ) : (
                       <div className="py-10 text-center text-xs text-[#657373] bg-white rounded-lg border border-dashed border-[#E8E6DF]">
-                        No se registraron productos de alta rotación en la categoría &quot;{categoriaRotacion}&quot;.
+                        No se registraron salidas comerciales en {etiquetaPeriodoActivo.toLowerCase()} para{' '}
+                        {categoriaRotacion === 'Todas' ? 'el catálogo' : `la categoría "${categoriaRotacion}"`}.
                       </div>
                     )}
                   </div>
@@ -931,12 +880,12 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                         {productosRotacionPaginados.length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={7} className="h-28 text-center text-xs text-[#657373]">
-                              No hay artículos registrados para esta categoría.
+                              No hay artículos con ventas registradas en este segmento durante {etiquetaPeriodoActivo.toLowerCase()}.
                             </TableCell>
                           </TableRow>
                         ) : (
                           productosRotacionPaginados.map((prod, idx) => {
-                            const esStockBajo = prod.stockActual <= 10;
+                            const esStockCritico = prod.stockActual <= prod.stockMinimo;
                             return (
                               <TableRow key={prod.id} className="transition-colors">
                                 <TableCell className="text-center font-bold text-xs text-[#2A7A78]">
@@ -959,17 +908,20 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                                   </span>
                                 </TableCell>
                                 <TableCell className="font-bold text-sm text-[#1C2424]">
-                                  ${prod.montoTotal.toLocaleString('es-AR')}
+                                  {monedaSimbolo}{prod.montoTotal.toLocaleString('es-AR')}
                                 </TableCell>
                                 <TableCell>
                                   <span className="font-medium text-sm text-[#1C2424]">
                                     {prod.stockActual} un.
                                   </span>
+                                  <span className="text-[11px] text-[#657373] ml-1">
+                                    (mín. {prod.stockMinimo})
+                                  </span>
                                 </TableCell>
                                 <TableCell className="text-right">
-                                  {esStockBajo ? (
+                                  {esStockCritico ? (
                                     <Badge variant="warning" className="text-xs">
-                                      Demanda Alta / Stock Bajo
+                                      Demanda Alta / Reponer Stock
                                     </Badge>
                                   ) : (
                                     <Badge variant="success" className="text-xs">
@@ -1046,17 +998,23 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                         </span>
                         <span className="text-xs text-[#657373]">
                           {categoriaRotacion === 'Todas'
-                            ? 'Productos con menor volumen de venta o rotación estancada'
+                            ? `Productos activos con menor volumen de salida (${etiquetaPeriodoActivo.toLowerCase()})`
                             : `Artículos con menor movimiento en la categoría ${categoriaRotacion}`}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-[#657373]">
-                          Facturación registrada: <strong className="text-[#1C2424]">${totalFacturadoFiltrado.toLocaleString('es-AR')}</strong>
+                          Facturación segmento:{' '}
+                          <strong className="text-[#1C2424]">
+                            {monedaSimbolo}{totalFacturadoFiltrado.toLocaleString('es-AR')}
+                          </strong>
                         </span>
                         <span className="text-[#E8E6DF]">•</span>
                         <span className="text-xs text-[#657373]">
-                          Stock inmovilizado: <strong className="text-amber-800">${totalCapitalInmovilizadoFiltrado.toLocaleString('es-AR')}</strong>
+                          Capital a costo:{' '}
+                          <strong className="text-amber-800">
+                            {monedaSimbolo}{totalCapitalInmovilizadoFiltrado.toLocaleString('es-AR')}
+                          </strong>
                         </span>
                       </div>
                     </div>
@@ -1090,13 +1048,13 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                             axisLine={false}
                             tickMargin={8}
                             tick={{ fill: '#657373', fontSize: 11 }}
-                            tickFormatter={(val) => `$${(val / 1000).toLocaleString('es-AR')}k`}
+                            tickFormatter={(val) => `${monedaSimbolo}${(val / 1000).toLocaleString('es-AR')}k`}
                           />
                           <ChartTooltip
                             cursor={{ fill: '#F3F4F6', opacity: 0.5 }}
                             content={
                               <ChartTooltipContent
-                                formatter={(value) => `$${Number(value).toLocaleString('es-AR')}`}
+                                formatter={(value) => `${monedaSimbolo}${Number(value).toLocaleString('es-AR')}`}
                               />
                             }
                           />
@@ -1110,7 +1068,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                       </ChartContainer>
                     ) : (
                       <div className="py-10 text-center text-xs text-[#657373] bg-white rounded-lg border border-dashed border-[#E8E6DF]">
-                        No se registraron productos de baja rotación en la categoría &quot;{categoriaRotacion}&quot;.
+                        No se registraron productos activos en la categoría &quot;{categoriaRotacion}&quot;.
                       </div>
                     )}
                   </div>
@@ -1125,7 +1083,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                           <TableHead>Categoría</TableHead>
                           <TableHead>Unidades Vendidas</TableHead>
                           <TableHead>Monto Recaudado</TableHead>
-                          <TableHead>Stock Inmovilizado</TableHead>
+                          <TableHead>Stock / Capital a Costo</TableHead>
                           <TableHead className="text-right">Diagnóstico</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -1159,15 +1117,18 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                                 </span>
                               </TableCell>
                               <TableCell className="font-medium text-sm text-[#657373]">
-                                ${prod.montoTotal.toLocaleString('es-AR')}
+                                {monedaSimbolo}{prod.montoTotal.toLocaleString('es-AR')}
                               </TableCell>
                               <TableCell>
-                                <span className="font-bold text-sm text-red-600">
+                                <span className="font-bold text-sm text-[#1C2424]">
                                   {prod.stockActual} un.
+                                </span>
+                                <span className="text-xs text-amber-800 ml-1.5 font-medium">
+                                  ({monedaSimbolo}{(prod.stockActual * prod.precioCosto).toLocaleString('es-AR')})
                                 </span>
                               </TableCell>
                               <TableCell className="text-right">
-                                {prod.unidadesVendidas <= 1 ? (
+                                {prod.unidadesVendidas === 0 ? (
                                   <Badge variant="destructive" className="text-xs">
                                     Sin Salida Comercial
                                   </Badge>
@@ -1230,167 +1191,32 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
         </Card>
 
         {/* ==================================================================== */}
-        {/* 4. DETALLE DE VENTAS: MÉTRICAS, GRÁFICO BARCHART & TRANSACCIONES    */}
+        {/* 4. REGISTRO DE TRANSACCIONES DEL PERÍODO                              */}
         {/* ==================================================================== */}
         <Card className="border-[#E8E6DF] shadow-xs bg-white overflow-hidden">
           <CardHeader className="flex flex-col md:flex-row md:items-center justify-between pb-4 gap-3 border-b border-[#E8E6DF]">
             <div>
               <div className="flex items-center gap-2">
-                <Receipt className="h-5 w-5 text-[#2A7A78]" />
+                <Receipt className="h-5 w-5 text-[#2A7A78]" weight="duotone" />
                 <CardTitle className="text-base font-bold text-[#1C2424]">
-                  Detalle de Ventas y Comportamiento Transaccional
+                  Registro de Operaciones Comerciales
                 </CardTitle>
               </div>
               <p className="text-xs text-[#657373] mt-1">
-                Visualización gráfica del ritmo de ventas y registro pormenorizado de operaciones comerciales.
+                Auditoría pormenorizada de comprobantes emitidos en caja durante el período seleccionado.
               </p>
             </div>
 
-            {/* Segmented Control de período con pill deslizante Motion */}
-            <div className="relative inline-flex items-center p-1 bg-[#F8F7F2] rounded-lg border border-[#E8E6DF] self-start md:self-auto">
-              <button
-                type="button"
-                onClick={() => cambiarPeriodoVentas('semana')}
-                className={`relative px-3 py-1.5 rounded-md text-xs font-semibold cursor-pointer transition-colors duration-150 z-10 ${
-                  periodoVentasTab === 'semana'
-                    ? 'text-[#2A7A78]'
-                    : 'text-[#657373] hover:text-[#1C2424]'
-                }`}
-              >
-                {periodoVentasTab === 'semana' && (
-                  <motion.span
-                    layoutId="ventasPeriodoIndicator"
-                    className="absolute inset-0 bg-white rounded-md shadow-xs -z-10"
-                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                  />
-                )}
-                Esta Semana
-              </button>
-
-              <button
-                type="button"
-                onClick={() => cambiarPeriodoVentas('mes')}
-                className={`relative px-3 py-1.5 rounded-md text-xs font-semibold cursor-pointer transition-colors duration-150 z-10 ${
-                  periodoVentasTab === 'mes'
-                    ? 'text-[#2A7A78]'
-                    : 'text-[#657373] hover:text-[#1C2424]'
-                }`}
-              >
-                {periodoVentasTab === 'mes' && (
-                  <motion.span
-                    layoutId="ventasPeriodoIndicator"
-                    className="absolute inset-0 bg-white rounded-md shadow-xs -z-10"
-                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                  />
-                )}
-                Este Mes
-              </button>
-            </div>
+            <Badge
+              variant="outline"
+              className="self-start md:self-auto bg-[#F8F7F2] text-[#2A7A78] border-[#E8E6DF] font-semibold text-xs px-2.5 py-1 flex items-center gap-1.5"
+            >
+              <CalendarBlank className="h-3.5 w-3.5" weight="duotone" />
+              {etiquetaPeriodoActivo} ({listaActivaVentas.length} {listaActivaVentas.length === 1 ? 'operación' : 'operaciones'})
+            </Badge>
           </CardHeader>
 
-          <CardContent className="pt-4 overflow-hidden space-y-5">
-            {/* Métricas Resumen del Período / Filtro */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-3 rounded-lg border border-[#E8E6DF] bg-[#F8F7F2]/60">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-[#657373] uppercase tracking-wider block">
-                    Total Facturado
-                  </span>
-                  {hayFiltrosVentasActivos && (
-                    <span className="text-[10px] font-semibold py-0.5 px-1.5 rounded-full border border-[#2A7A78]/30 text-[#2A7A78] bg-[#E2F1F0]">
-                      Filtrado
-                    </span>
-                  )}
-                </div>
-                <span className="text-lg font-bold text-[#1C2424] mt-0.5 block">
-                  ${resumenFiltradoVentas.totalRecaudado.toLocaleString('es-AR')}
-                </span>
-              </div>
-
-              <div className="p-3 rounded-lg border border-[#E8E6DF] bg-[#F8F7F2]/60">
-                <span className="text-[11px] font-semibold text-[#657373] uppercase tracking-wider block">
-                  Transacciones
-                </span>
-                <span className="text-lg font-bold text-[#1C2424] mt-0.5 block">
-                  {resumenFiltradoVentas.cantidadVentas} ventas
-                </span>
-              </div>
-
-              <div className="p-3 rounded-lg border border-[#E8E6DF] bg-[#F8F7F2]/60">
-                <span className="text-[11px] font-semibold text-[#657373] uppercase tracking-wider block">
-                  Ticket Promedio
-                </span>
-                <span className="text-lg font-bold text-[#1C2424] mt-0.5 block">
-                  ${resumenFiltradoVentas.ticketPromedio.toLocaleString('es-AR')}
-                </span>
-              </div>
-
-              <div className="p-3 rounded-lg border border-[#E8E6DF] bg-[#F8F7F2]/60">
-                <span className="text-[11px] font-semibold text-[#657373] uppercase tracking-wider block">
-                  Unidades Despachadas
-                </span>
-                <span className="text-lg font-bold text-[#1C2424] mt-0.5 block">
-                  {resumenFiltradoVentas.unidadesTotales} un.
-                </span>
-              </div>
-            </div>
-
-            {/* Gráfico shadcn/ui BarChart: Comportamiento y Ritmo de Ventas */}
-            <div className="p-4 rounded-lg border border-[#E8E6DF] bg-[#F8F7F2]/40">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-[#1C2424] uppercase tracking-wider flex items-center gap-1.5">
-                  <ChartBar className="h-4 w-4 text-[#2A7A78]" weight="duotone" />
-                  Ritmo de Facturación {periodoVentasTab === 'semana' ? 'Diario (Esta Semana)' : 'Semanal (Este Mes)'}
-                </span>
-                <span className="text-xs text-[#657373]">
-                  Valores expresados en ARS ($)
-                </span>
-              </div>
-              <ChartContainer
-                config={ritmoVentasChartConfig}
-                className="h-64 w-full aspect-auto mt-3"
-              >
-                <BarChart
-                  data={
-                    periodoVentasTab === 'semana'
-                      ? data.graficos.barrasVentasSemana
-                      : data.graficos.barrasVentasMes
-                  }
-                  margin={{ top: 10, right: 10, left: 0, bottom: 10 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E8E6DF" />
-                  <XAxis
-                    dataKey="periodo"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    tick={{ fill: '#657373', fontSize: 11 }}
-                  />
-                  <YAxis
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    tick={{ fill: '#657373', fontSize: 11 }}
-                    tickFormatter={(val) => `$${(val / 1000).toLocaleString('es-AR')}k`}
-                  />
-                  <ChartTooltip
-                    cursor={{ fill: '#F3F4F6', opacity: 0.5 }}
-                    content={
-                      <ChartTooltipContent
-                        formatter={(value) => `$${Number(value).toLocaleString('es-AR')}`}
-                      />
-                    }
-                  />
-                  <Bar
-                    dataKey="Monto Facturado"
-                    fill="#2A7A78"
-                    radius={[4, 4, 0, 0]}
-                    maxBarSize={45}
-                  />
-                </BarChart>
-              </ChartContainer>
-            </div>
-
+          <CardContent className="pt-4 overflow-hidden space-y-4">
             {/* Barra de Filtros Interactivos para la Tabla de Ventas */}
             <div className="p-3 bg-[#F8F7F2]/80 rounded-xl border border-[#E8E6DF] space-y-2.5">
               <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5">
@@ -1481,7 +1307,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                     </Select>
                   </div>
 
-                  {/* Selector Estado */}
+                  {/* Selector Estado (solo estados reales de venta POS) */}
                   <div className="w-full sm:w-36">
                     <Select
                       value={filtroEstadoVentas}
@@ -1495,8 +1321,6 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                               ? 'Todos los estados'
                               : filtroEstadoVentas === 'completada'
                               ? 'Completadas'
-                              : filtroEstadoVentas === 'pendiente'
-                              ? 'Pendientes'
                               : 'Canceladas'}
                           </span>
                         </div>
@@ -1504,7 +1328,6 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                       <SelectContent>
                         <SelectItem value="Todos" className="text-xs">Todos los estados</SelectItem>
                         <SelectItem value="completada" className="text-xs">Completadas</SelectItem>
-                        <SelectItem value="pendiente" className="text-xs">Pendientes</SelectItem>
                         <SelectItem value="cancelada" className="text-xs">Canceladas</SelectItem>
                       </SelectContent>
                     </Select>
@@ -1527,16 +1350,32 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                 </div>
               </div>
 
-              {/* Indicador de Filtros Activos */}
+              {/* Resumen compacto exclusivamente cuando hay filtros aplicados sobre la tabla */}
               {hayFiltrosVentasActivos && (
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs pt-1 px-1 border-t border-[#E8E6DF]/70 text-[#657373] gap-1">
+                <div className="flex flex-wrap items-center justify-between text-xs pt-2 px-1 border-t border-[#E8E6DF]/70 text-[#657373] gap-2">
                   <span>
-                    Filtros aplicados: <strong className="text-[#1C2424]">{totalVentas}</strong> operaciones encontradas de{' '}
-                    <strong className="text-[#1C2424]">{listaActivaVentas.length}</strong> registradas en el período.
+                    Mostrando <strong className="text-[#1C2424]">{totalVentas}</strong> de{' '}
+                    <strong className="text-[#1C2424]">{listaActivaVentas.length}</strong> operaciones
                   </span>
-                  <span className="text-[11px] text-[#2A7A78] font-medium">
-                    Métricas del panel recalculadas
-                  </span>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span>
+                      Total filtrado:{' '}
+                      <strong className="text-[#2A7A78]">
+                        {monedaSimbolo}{resumenFiltradoVentas.totalRecaudado.toLocaleString('es-AR')}
+                      </strong>
+                    </span>
+                    <span className="text-[#E8E6DF]">•</span>
+                    <span>
+                      Ticket prom.:{' '}
+                      <strong className="text-[#1C2424]">
+                        {monedaSimbolo}{resumenFiltradoVentas.ticketPromedio.toLocaleString('es-AR')}
+                      </strong>
+                    </span>
+                    <span className="text-[#E8E6DF]">•</span>
+                    <span>
+                      Unidades: <strong className="text-[#1C2424]">{resumenFiltradoVentas.unidadesTotales} un.</strong>
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
@@ -1544,7 +1383,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
             {/* Tabla de Detalle de Ventas con animación de transición */}
             <AnimatePresence mode="wait">
               <motion.div
-                key={`ventas-${periodoVentasTab}-${filtroVendedorVentas}-${filtroMetodoPagoVentas}-${filtroEstadoVentas}`}
+                key={`ventas-${periodoMetricasActivo}-${filtroVendedorVentas}-${filtroMetodoPagoVentas}-${filtroEstadoVentas}`}
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
@@ -1586,7 +1425,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                               {v.cantidadItems} {v.cantidadItems === 1 ? 'producto' : 'productos'}
                             </TableCell>
                             <TableCell className="font-bold text-sm text-[#1C2424]">
-                              ${v.total.toLocaleString('es-AR')}
+                              {monedaSimbolo}{v.total.toLocaleString('es-AR')}
                             </TableCell>
                             <TableCell className="text-right">
                               {getEstadoBadge(v.estado)}
@@ -1599,20 +1438,26 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                             <div className="flex flex-col items-center justify-center gap-2 py-4">
                               <Funnel className="h-6 w-6 text-[#94A3B8]" weight="duotone" />
                               <p className="text-sm font-semibold text-[#1C2424]">
-                                No se encontraron transacciones
+                                {hayFiltrosVentasActivos
+                                  ? 'No se encontraron transacciones para los filtros aplicados'
+                                  : `No se registraron ventas en ${etiquetaPeriodoActivo.toLowerCase()}`}
                               </p>
                               <p className="text-xs text-[#657373]">
-                                Ninguna venta coincide con los criterios de filtrado seleccionados.
+                                {hayFiltrosVentasActivos
+                                  ? 'Prueba ajustando el vendedor, medio de pago o término de búsqueda.'
+                                  : 'Las operaciones concretadas en la terminal POS aparecerán automáticamente aquí.'}
                               </p>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={limpiarFiltrosVentas}
-                                className="h-7 px-3 text-xs mt-1 border-[#E8E6DF] hover:bg-[#F8F7F2] cursor-pointer"
-                              >
-                                Restablecer filtros
-                              </Button>
+                              {hayFiltrosVentasActivos && (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={limpiarFiltrosVentas}
+                                  className="h-7 px-3 text-xs mt-1 border-[#E8E6DF] hover:bg-[#F8F7F2] cursor-pointer"
+                                >
+                                  Restablecer filtros
+                                </Button>
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>
@@ -1632,7 +1477,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                       de <span className="font-semibold text-[#1C2424]">{totalVentas}</span> ventas{' '}
                       {hayFiltrosVentasActivos
                         ? `(filtradas de ${listaActivaVentas.length})`
-                        : `(${periodoVentasTab === 'semana' ? 'esta semana' : 'este mes'})`}
+                        : `(${etiquetaPeriodoActivo.toLowerCase()})`}
                     </div>
                     <div className="flex items-center gap-1.5">
                       <Button

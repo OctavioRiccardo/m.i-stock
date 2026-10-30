@@ -7,7 +7,7 @@
  * 
  * Propósito:
  * Proporcionar una interfaz limpia, segura y profesional para administrar
- * las cuentas de empleados, permisos de acceso RBAC y estados operativos.
+ * las cuentas de empleados, asignación de roles y estados operativos (`activo` / `inactivo`).
  * 
  * Sincronizado con Supabase:
  * - Tabla: `public.usuario`
@@ -141,7 +141,6 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
   const [mostrarEditPassword, setMostrarEditPassword] = useState(false);
   const [copiadoEditPassword, setCopiadoEditPassword] = useState(false);
 
-
   const copiarAlPortapapeles = (texto: string, setCopiado: (val: boolean) => void) => {
     if (!texto) return;
     navigator.clipboard.writeText(texto);
@@ -149,11 +148,11 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
     setTimeout(() => setCopiado(false), 2000);
   };
 
-  // Al abrir edición, inicializar valores
+  // Al abrir edición, inicializar valores con estado normalizado ('activo' | 'inactivo')
   const handleAbrirEdicion = (usuario: Usuario) => {
     setEditNombre(usuario.nombre);
     setEditRol((usuario.rol as RolUsuarioDB) || 'vendedor');
-    setEditEstado(usuario.estado || 'activo');
+    setEditEstado(usuario.estado === 'activo' ? 'activo' : 'inactivo');
     setEditTelefono(usuario.telefono || '');
     setEditPassword(usuario.password || '');
     setMostrarEditPassword(false);
@@ -223,7 +222,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
               </h1>
             </div>
             <p className="text-sm text-[#657373] mt-1">
-              Control de acceso basado en roles (RBAC), altas de colaboradores y permisos en caja.
+              Administración de colaboradores, asignación de roles y habilitación de permisos de acceso.
             </p>
           </div>
 
@@ -391,7 +390,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                   </Select>
                 </div>
 
-                {/* Filtro Estado */}
+                {/* Filtro Estado Unificado */}
                 <div className="w-full sm:w-36">
                   <Select
                     value={filtroEstado}
@@ -405,7 +404,6 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                       <SelectItem value="todos">Todos los estados</SelectItem>
                       <SelectItem value="activo">Activo</SelectItem>
                       <SelectItem value="inactivo">Inactivo</SelectItem>
-                      <SelectItem value="suspendido">Suspendido</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -515,7 +513,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                             </div>
                           </TableCell>
 
-                          {/* Rol RBAC con cambio rápido */}
+                          {/* Rol con cambio rápido */}
                           <TableCell>
                             <Select
                               value={usr.rol}
@@ -547,15 +545,11 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                             </Select>
                           </TableCell>
 
-                          {/* Estado de Cuenta */}
+                          {/* Estado de Cuenta Unificado */}
                           <TableCell>
                             {usr.estado === 'activo' ? (
                               <Badge variant="success" className="text-xs">
                                 Activo
-                              </Badge>
-                            ) : usr.estado === 'suspendido' ? (
-                              <Badge variant="destructive" className="text-xs">
-                                Suspendido
                               </Badge>
                             ) : (
                               <Badge variant="secondary" className="text-xs">
@@ -593,7 +587,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                                 Editar
                               </Button>
 
-                              {/* Toggle Activo / Suspendido */}
+                              {/* Toggle Activo / Inactivo */}
                               <Button
                                 type="button"
                                 size="sm"
@@ -606,8 +600,8 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                                 onClick={() => toggleEstadoUsuario(usr.id)}
                                 title={
                                   usr.estado === 'activo'
-                                    ? 'Suspender acceso a este usuario'
-                                    : 'Habilitar acceso'
+                                    ? 'Desactivar cuenta de usuario'
+                                    : 'Reactivar cuenta de usuario'
                                 }
                               >
                                 <Power className="h-3.5 w-3.5" />
@@ -901,7 +895,6 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                       <SelectContent>
                         <SelectItem value="activo">Activo</SelectItem>
                         <SelectItem value="inactivo">Inactivo</SelectItem>
-                        <SelectItem value="suspendido">Suspendido</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

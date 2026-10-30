@@ -7,9 +7,12 @@
  * 
  * Propósito:
  * Proveer el menú de navegación principal para las secciones administrativas:
- * - Métricas & KPIs (`/adminmetricas#`)
- * - Gestión de Inventario & Alta (`/admingestioninven#`)
- * - Enlaces rápidos a cambio de rol y cierre de sesión.
+ * - Métricas (`/admin`)
+ * - Gestión de Inventario (`/admingestioninven`)
+ * - Inventario Global (`/admininventarioglobal`)
+ * - Gestión de Usuarios (`/adminusuarios`)
+ * - Configuración (`/adminconfiguracion`)
+ * - Enlaces rápidos a Punto de Venta / Caja y cierre de sesión.
  * 
  * Comportamiento Reactivo:
  * Detecta la ruta activa mediante `usePathname()` para destacar visualmente el enlace actual.
@@ -33,12 +36,13 @@ import { cn } from '@/lib/utils';
 
 /**
  * Estructura de elementos del menú de navegación de administración.
+ * Los módulos de inventario se agrupan de forma contigua para facilitar el flujo operativo.
  */
 const adminNavData = [
-  { link: '/admin', label: 'Métricas & KPIs', icon: ChartBar },
+  { link: '/admin', label: 'Métricas', icon: ChartBar },
   { link: '/admingestioninven', label: 'Gestión de Inventario', icon: Package },
-  { link: '/adminusuarios', label: 'Gestión de Usuarios', icon: Users },
   { link: '/admininventarioglobal', label: 'Inventario Global', icon: Stack },
+  { link: '/adminusuarios', label: 'Gestión de Usuarios', icon: Users },
   { link: '/adminconfiguracion', label: 'Configuración', icon: Gear },
 ];
 
@@ -50,13 +54,11 @@ interface AdminSidebarProps {
 export function AdminSidebar({ onNavigate, className }: AdminSidebarProps = {}) {
   const pathname = usePathname();
 
-  // Detección dinámica de la ruta activa para aplicar los estilos visuales de Dub.co
+  // Detección dinámica de la ruta activa
   const activeItem = adminNavData.find((item) => {
     return pathname === item.link || (item.link !== '/admin' && pathname?.startsWith(item.link));
   });
-  const activeLabel = activeItem ? activeItem.label : (pathname === '/admin' ? 'Métricas & KPIs' : '');
-
-
+  const activeLabel = activeItem ? activeItem.label : (pathname === '/admin' ? 'Métricas' : '');
 
   return (
     <nav className={cn('flex flex-col h-full bg-white border-r border-[#E8E6DF] w-64', className)}>

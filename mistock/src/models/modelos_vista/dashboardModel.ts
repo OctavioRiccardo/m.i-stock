@@ -5,7 +5,7 @@
  * 
  * Propósito:
  * Define las estructuras de datos agregadas consumidas por las vistas de panel:
- * - `AdminDashboardData`: Tarjetas KPI, resumen financiero, alertas de reposición y detalle de ventas.
+ * - `AdminDashboardData`: Tarjetas KPI, gráficos comparativos, rotación de inventario y detalle de ventas.
  * - `UserDashboardData`: Terminal de venta POS, ventas del día, catálogo rápido de despacho.
  * 
  * Razón de Existencia en la Arquitectura:
@@ -117,12 +117,14 @@ export interface ProductoRankingVentas {
   categoria: string;
   unidadesVendidas: number;
   stockActual: number;
+  stockMinimo: number;
+  precioCosto: number;
   montoTotal: number;
   tendencia: 'alza' | 'baja' | 'estancada';
 }
 
 /**
- * Métricas consolidadas de un período de facturación (semana / mes).
+ * Métricas consolidadas del período de facturación activo.
  */
 export interface ResumenVentasPeriodo {
   totalRecaudado: number;
@@ -146,13 +148,11 @@ export interface DetalleVentaItem {
 }
 
 /**
- * Bloque de datos para el panel de análisis temporal de ventas.
+ * Bloque de datos para el registro transaccional sincronizado con el período activo.
  */
 export interface VentasDetalleData {
-  resumenSemana: ResumenVentasPeriodo;
-  resumenMes: ResumenVentasPeriodo;
-  ventasSemana: DetalleVentaItem[];
-  ventasMes: DetalleVentaItem[];
+  resumenPeriodoActivo: ResumenVentasPeriodo;
+  ventasPeriodoActivo: DetalleVentaItem[];
 }
 
 export interface PuntoTendenciaVentas {
@@ -174,12 +174,8 @@ export interface PuntoBarraVenta {
 }
 
 export interface GraficosMetricasData {
-  tendenciaSemana: PuntoTendenciaVentas[];
-  tendenciaMes: PuntoTendenciaVentas[];
-  distribucionPagosSemana: PuntoDistribucionPago[];
-  distribucionPagosMes: PuntoDistribucionPago[];
-  barrasVentasSemana: PuntoBarraVenta[];
-  barrasVentasMes: PuntoBarraVenta[];
+  tendenciaActiva: PuntoTendenciaVentas[];
+  distribucionPagosActiva: PuntoDistribucionPago[];
 }
 
 /**

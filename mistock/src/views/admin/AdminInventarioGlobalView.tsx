@@ -6,8 +6,9 @@
  * ====================================================================
  * 
  * Propósito:
- * Proporcionar una pantalla integral para consultar, explorar y auditar
- * el catálogo completo de productos clasificados por familias de categorías.
+ * Proporcionar una pantalla ejecutiva de auditoría patrimonial para consultar
+ * la valuación a costo/venta, márgenes unitarios y distribución del catálogo
+ * comercial activo clasificado por familias de categorías.
  * 
  * Rol en la Arquitectura:
  * - Capa View ("V") consumida por la ruta `/admininventarioglobal`.
@@ -24,6 +25,7 @@ import {
   CaretLeft,
   CaretRight,
   Warning,
+  WarningCircle,
   CheckCircle,
   CurrencyDollar,
   Package,
@@ -108,11 +110,11 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
                 <Stack className="h-4 w-4" weight="duotone" />
               </div>
               <h1 className="text-2xl font-bold text-[#1C2424] tracking-tight">
-                Inventario Global
+                Inventario Global y Valuación
               </h1>
             </div>
             <p className="text-sm text-[#657373] mt-1">
-              Explora y audita el catálogo completo de productos organizado por familias de categorías.
+              Auditoría financiera del capital en mercadería, márgenes de rentabilidad y distribución por familias comerciales.
             </p>
           </div>
 
@@ -124,7 +126,7 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
             >
               <Link href="/admingestioninven">
                 <Package className="h-4 w-4" weight="bold" />
-                <span>Gestión de Inventario</span>
+                <span>Ir a Gestión Operativa</span>
               </Link>
             </Button>
           </div>
@@ -136,7 +138,7 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
           <Card className="p-4 border-[#E8E6DF] shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-[#657373]">
-                Total de Artículos
+                Catálogo Activo
               </span>
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78]">
                 <Package className="h-4 w-4" weight="duotone" />
@@ -197,11 +199,19 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
                 <Warning className="h-4 w-4" weight="duotone" />
               </div>
             </div>
-            <div className="flex items-baseline gap-2 mt-2">
+            <div className="flex flex-wrap items-baseline gap-2 mt-2">
               <p className="text-2xl font-extrabold text-[#1C2424] tracking-tight">
                 {metricasGlobales.articulosCriticos}
               </p>
-              <span className="text-xs text-amber-700 font-semibold">críticos</span>
+              <span className="text-xs text-rose-700 font-semibold">críticos</span>
+              {metricasGlobales.articulosBajos > 0 && (
+                <>
+                  <span className="text-xs text-[#657373]">•</span>
+                  <span className="text-xs text-amber-700 font-semibold">
+                    {metricasGlobales.articulosBajos} bajos
+                  </span>
+                </>
+              )}
               {metricasGlobales.articulosSinStock > 0 && (
                 <>
                   <span className="text-xs text-[#657373]">•</span>
@@ -228,7 +238,7 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
                   Familias de Categorías
                 </CardTitle>
                 <p className="text-xs text-[#657373] mt-0.5">
-                  Selecciona una categoría para examinar sus artículos o consulta el catálogo completo.
+                  Selecciona una familia comercial para analizar su valuación parcial y artículos asociados.
                 </p>
               </div>
 
@@ -372,11 +382,11 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
                   </Badge>
                 </div>
                 <p className="text-xs text-[#657373] mt-0.5">
-                  Lista detallada con precios de costo, venta, existencias actuales y umbrales mínimos.
+                  Comparativa de costo, precio de venta, margen unitario y acceso directo a edición puntual.
                 </p>
               </div>
 
-              {/* Controles: Buscador, Filtro de Stock y Ordenamiento */}
+              {/* Controles: Buscador, Filtro de Stock (4 niveles unificados) y Ordenamiento */}
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
                 {/* Buscador de texto */}
                 <div className="relative w-full sm:w-56">
@@ -389,8 +399,8 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
                   />
                 </div>
 
-                {/* Filtro por estado de stock */}
-                <div className="w-full sm:w-44">
+                {/* Filtro por estado de stock (4 estados unificados) */}
+                <div className="w-full sm:w-48">
                   <Select
                     value={filtroStock}
                     onValueChange={(val) => setFiltroStock(val as FiltroEstadoStock)}
@@ -401,7 +411,8 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="todos">Todos los estados</SelectItem>
-                      <SelectItem value="normal">Stock Óptimo</SelectItem>
+                      <SelectItem value="optimo">Stock Óptimo</SelectItem>
+                      <SelectItem value="bajo">Bajas Unidades</SelectItem>
                       <SelectItem value="critico">Stock Crítico</SelectItem>
                       <SelectItem value="sin_stock">Sin Stock (Agotados)</SelectItem>
                     </SelectContent>
@@ -480,7 +491,8 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
                   <TableBody ref={tableBodyRef}>
                     {productosPaginados.map((prod) => {
                       const sinStock = prod.stockActual === 0;
-                      const esBajoStock = !sinStock && prod.stockActual <= prod.stockMinimo;
+                      const esCritico = !sinStock && prod.stockActual <= prod.stockMinimo;
+                      const esBajo = !sinStock && !esCritico && prod.stockActual <= prod.stockMinimo * 1.5;
                       const margenUnitario = prod.precioVenta - prod.precioCosto;
                       const porcentajeMargen =
                         prod.precioCosto > 0
@@ -542,8 +554,12 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
                             <div className="text-sm font-bold text-[#1C2424]">
                               ${prod.precioVenta.toLocaleString('es-AR')}
                             </div>
-                            <div className="text-[11px] text-emerald-700 font-medium">
-                              +{porcentajeMargen}% ganancia
+                            <div
+                              className={`text-[11px] font-medium ${
+                                margenUnitario >= 0 ? 'text-emerald-700' : 'text-red-600'
+                              }`}
+                            >
+                              {margenUnitario >= 0 ? `+${porcentajeMargen}%` : `${porcentajeMargen}%`} ganancia
                             </div>
                           </TableCell>
 
@@ -554,7 +570,9 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
                                 className={`font-bold text-sm ${
                                   sinStock
                                     ? 'text-red-600'
-                                    : esBajoStock
+                                    : esCritico
+                                    ? 'text-rose-600'
+                                    : esBajo
                                     ? 'text-amber-700'
                                     : 'text-[#1C2424]'
                                 }`}
@@ -568,15 +586,20 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
                             </div>
                           </TableCell>
 
-                          {/* Badge de Estado de Stock */}
+                          {/* Badge de Estado de Stock (4 niveles unificados con Gestión de Inventario) */}
                           <TableCell>
                             {sinStock ? (
                               <Badge variant="destructive" className="text-xs">
                                 Sin Stock
                               </Badge>
-                            ) : esBajoStock ? (
-                              <Badge variant="warning" className="text-xs">
+                            ) : esCritico ? (
+                              <Badge variant="destructive" className="text-xs border-rose-200 bg-rose-50 text-rose-700">
                                 Stock Crítico
+                              </Badge>
+                            ) : esBajo ? (
+                              <Badge variant="warning" className="text-xs flex items-center gap-1 w-fit">
+                                <WarningCircle className="h-3 w-3" />
+                                Bajas Unidades
                               </Badge>
                             ) : (
                               <Badge variant="success" className="text-xs">
@@ -585,16 +608,16 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
                             )}
                           </TableCell>
 
-                          {/* Acciones */}
+                          {/* Acciones: Enlace directo con pre-filtro del SKU seleccionado */}
                           <TableCell className="text-right">
                             <Button
                               asChild
                               size="sm"
                               variant="outline"
                               className="h-7 text-xs px-2.5 text-[#2A7A78] hover:bg-[#E2F1F0] border-[#E8E6DF] gap-1"
-                              title="Editar en Gestión de Inventario"
+                              title={`Abrir ${prod.nombre} (${prod.codigo}) en Gestión de Inventario`}
                             >
-                              <Link href="/admingestioninven">
+                              <Link href={`/admingestioninven?q=${encodeURIComponent(prod.codigo)}`}>
                                 <ArrowSquareOut className="h-3 w-3" />
                                 <span>Gestionar</span>
                               </Link>

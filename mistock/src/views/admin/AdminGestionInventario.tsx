@@ -4,6 +4,11 @@
  * ====================================================================
  * VISTA: GESTIÓN DE INVENTARIO (Patrón MVC - View)
  * ====================================================================
+ * 
+ * Propósito:
+ * Centralizar en una única consola operativa libre de duplicaciones el
+ * alta de productos y categorías, el diagnóstico de salud de stock con
+ * filtrado directo, la reposición/edición comercial y las bajas lógicas.
  */
 
 import React, { useState } from 'react';
@@ -29,14 +34,13 @@ import {
   CaretLeft as ChevronLeft,
   CaretRight as ChevronRight,
   Warning as AlertTriangle,
-  Funnel as Filter,
   Package as Boxes,
   CheckCircle as PackageCheck,
-  MagnifyingGlass as PackageSearch,
+  X,
 } from '@phosphor-icons/react';
 import {
   useAdminInventarioController,
-  FiltroNivelStock,
+  FiltroEstadoComercial,
 } from '@/controllers/adminControllers/inventarioController';
 import {
   FormularioCargaProducto,
@@ -79,7 +83,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-interface AdminGestionInventarioProps { controller: ReturnType<typeof useAdminInventarioController>; }
+interface AdminGestionInventarioProps {
+  controller: ReturnType<typeof useAdminInventarioController>;
+}
 
 // Opciones predefinidas para la unidad de medida
 const unidadesDisponibles: { value: UnidadMedida; label: string }[] = [
@@ -96,11 +102,12 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
     seccionActiva,
     setSeccionActiva,
     categorias,
-    productos,
     categoriaFiltroHub,
     setCategoriaFiltroHub,
     filtroStockHub,
     setFiltroStockHub,
+    filtroEstadoHub,
+    setFiltroEstadoHub,
     busquedaHub,
     setBusquedaHub,
     conteosPorCategoria,
@@ -122,18 +129,28 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
     config,
   } = controller;
 
-  // Auto-animaciones para tablas (transiciones suaves al filtrar, paginar o actualizar)
-  const [inventarioTableBodyRef] = useAutoAnimate<HTMLTableSectionElement>({ duration: 200, easing: 'ease-out' });
-  const [bajasTableBodyRef] = useAutoAnimate<HTMLTableSectionElement>({ duration: 200, easing: 'ease-out' });
-  const [modificarTableBodyRef] = useAutoAnimate<HTMLTableSectionElement>({ duration: 200, easing: 'ease-out' });
+  // Auto-animaciones para transiciones suaves en la tabla unificada
+  const [inventarioTableBodyRef] = useAutoAnimate<HTMLTableSectionElement>({
+    duration: 200,
+    easing: 'ease-out',
+  });
 
-  // Cálculos de Paginación para el Catálogo de Inventario
-  const totalPaginasInventario = Math.max(1, Math.ceil(productosFiltradosHub.length / itemsPorPaginaInventario));
+  // Paginación del catálogo operativo
+  const totalPaginasInventario = Math.max(
+    1,
+    Math.ceil(productosFiltradosHub.length / itemsPorPaginaInventario)
+  );
   const inicioInventario = (paginaInventario - 1) * itemsPorPaginaInventario;
   const productosPaginadosHub = productosFiltradosHub.slice(
     inicioInventario,
     inicioInventario + itemsPorPaginaInventario
   );
+
+  const hayFiltrosHubActivos =
+    categoriaFiltroHub !== 'todas' ||
+    filtroStockHub !== 'todos' ||
+    filtroEstadoHub !== 'activos' ||
+    busquedaHub.trim() !== '';
 
   // ==========================================
   // ESTADOS: MODAL DE NUEVA CATEGORÍA
@@ -144,7 +161,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
   const [errorCat, setErrorCat] = useState<string | null>(null);
 
   // ==========================================
-  // ESTADOS: FORMULARIO DE ALTA 
+  // ESTADOS: FORMULARIO DE ALTA
   // ==========================================
   const [formData, setFormData] = useState<FormularioCargaProducto>(() => ({
     ...valoresInicialesCargaProducto,
@@ -152,14 +169,17 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
   }));
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof FormularioCargaProducto, string>>>({});
 
-  const setFieldValue = <K extends keyof FormularioCargaProducto>(field: K, value: FormularioCargaProducto[K]) => {
+  const setFieldValue = <K extends keyof FormularioCargaProducto>(
+    field: K,
+    value: FormularioCargaProducto[K]
+  ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
   const categoriaSeleccionada = categorias.find((c) => c.id === formData.categoriaId);
 
-  // Rentabilidad calculada en tiempo real
+  // Rentabilidad calculada en tiempo real (Alta)
   const costo = Number(formData.precioCosto) || 0;
   const venta = Number(formData.precioVenta) || 0;
   const gananciaNeta = venta - costo;
@@ -167,31 +187,12 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
   const esRentable = venta >= costo;
 
   // ==========================================
-  // ESTADOS: SECCIÓN BAJAS
+  // ESTADOS: MODALES DE BAJA Y EDICIÓN
   // ==========================================
-  const [busquedaBaja, setBusquedaBaja] = useState('');
-  const [filtroEstadoBaja, setFiltroEstadoBaja] = useState<'todos' | 'activos' | 'inactivos'>('activos');
   const [productoABajar, setProductoABajar] = useState<Producto | null>(null);
   const [motivoBaja, setMotivoBaja] = useState('');
 
-  // ==========================================
-  // ESTADOS: SECCIÓN MODIFICAR
-  // ==========================================
-  const [busquedaModificar, setBusquedaModificar] = useState('');
-  const [categoriaFiltroModificar, setCategoriaFiltroModificar] = useState('todas');
-  const [filtroStockModificar, setFiltroStockModificar] = useState<FiltroNivelStock>('todos');
-  const [filtroEstadoModificar, setFiltroEstadoModificar] = useState<'todos' | 'activos' | 'inactivos'>('activos');
-  const [paginaModificar, setPaginaModificar] = useState(1);
-  const itemsPorPaginaModificar = 8;
   const [modalEditarOpened, setModalEditarOpened] = useState(false);
-
-  const limpiarFiltrosModificar = () => {
-    setBusquedaModificar('');
-    setCategoriaFiltroModificar('todas');
-    setFiltroStockModificar('todos');
-    setFiltroEstadoModificar('activos');
-    setPaginaModificar(1);
-  };
   const [productoAEditar, setProductoAEditar] = useState<Producto | null>(null);
   const [formEdicion, setFormEdicion] = useState<{
     nombre: string;
@@ -215,10 +216,16 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
     descripcion: '',
   });
 
+  // Rentabilidad calculada en tiempo real (Edición)
+  const costoEdicion = Number(formEdicion.precioCosto) || 0;
+  const ventaEdicion = Number(formEdicion.precioVenta) || 0;
+  const gananciaEdicion = ventaEdicion - costoEdicion;
+  const margenEdicion = costoEdicion > 0 ? ((gananciaEdicion / costoEdicion) * 100).toFixed(1) : '100.0';
+  const esRentableEdicion = ventaEdicion >= costoEdicion;
+
   // ==========================================
   // HANDLERS
   // ==========================================
-
   const handleCrearCategoria = () => {
     if (!nuevaCatNombre.trim()) {
       setErrorCat('El nombre de la categoría es obligatorio.');
@@ -226,7 +233,9 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
     }
 
     const nueva = agregarCategoria(nuevaCatNombre, nuevaCatDesc);
-    setFieldValue('categoriaId', nueva.id);
+    if (seccionActiva === 'alta') {
+      setFieldValue('categoriaId', nueva.id);
+    }
     setNuevaCatNombre('');
     setNuevaCatDesc('');
     setErrorCat(null);
@@ -312,82 +321,12 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
     }
   };
 
-  // ==========================================
-  // FILTRADO DE PRODUCTOS
-  // ==========================================
-  const productosFiltradosBaja = productos.filter((p) => {
-    const coincideTexto =
-      p.nombre.toLowerCase().includes(busquedaBaja.toLowerCase()) ||
-      p.codigo.toLowerCase().includes(busquedaBaja.toLowerCase()) ||
-      (p.categoria?.nombre || '').toLowerCase().includes(busquedaBaja.toLowerCase());
-
-    if (filtroEstadoBaja === 'activos') return coincideTexto && p.activo;
-    if (filtroEstadoBaja === 'inactivos') return coincideTexto && !p.activo;
-    return coincideTexto;
-  });
-
-  // Métricas diagnósticas específicas para el catálogo de modificación
-  const metricasModificar = {
-    total: productos.length,
-    activos: productos.filter((p) => p.activo).length,
-    criticos: productos.filter((p) => p.activo && p.stockActual > 0 && p.stockActual <= p.stockMinimo).length,
-    bajasUnidades: productos.filter(
-      (p) => p.activo && p.stockActual > p.stockMinimo && p.stockActual <= p.stockMinimo * 1.5
-    ).length,
-    agotados: productos.filter((p) => p.activo && p.stockActual === 0).length,
-    optimos: productos.filter((p) => p.activo && p.stockActual > p.stockMinimo).length,
-  };
-
-  const conteosPorCategoriaModificar = categorias.reduce<Record<string, number>>((acc, cat) => {
-    acc[cat.id] = productos.filter((p) => {
-      if (filtroEstadoModificar === 'activos' && !p.activo) return false;
-      if (filtroEstadoModificar === 'inactivos' && p.activo) return false;
-      return p.categoriaId === cat.id;
-    }).length;
-    return acc;
-  }, {});
-
-  const productosFiltradosModificar = productos.filter((p) => {
-    // 1. Filtro por estado activo / inactivo
-    if (filtroEstadoModificar === 'activos' && !p.activo) return false;
-    if (filtroEstadoModificar === 'inactivos' && p.activo) return false;
-
-    // 2. Filtro por categoría
-    if (categoriaFiltroModificar !== 'todas' && p.categoriaId !== categoriaFiltroModificar) {
-      return false;
-    }
-
-    // 3. Filtro por nivel de stock
-    if (filtroStockModificar === 'critico') {
-      if (!(p.stockActual > 0 && p.stockActual <= p.stockMinimo)) return false;
-    } else if (filtroStockModificar === 'bajo') {
-      if (!(p.stockActual > p.stockMinimo && p.stockActual <= p.stockMinimo * 1.5)) return false;
-    } else if (filtroStockModificar === 'agotado') {
-      if (p.stockActual !== 0) return false;
-    } else if (filtroStockModificar === 'optimo') {
-      if (p.stockActual <= p.stockMinimo) return false;
-    }
-
-    // 4. Búsqueda por texto (SKU, nombre, descripción o categoría)
-    const busq = busquedaModificar.trim().toLowerCase();
-    if (busq) {
-      const coincide =
-        p.codigo.toLowerCase().includes(busq) ||
-        p.nombre.toLowerCase().includes(busq) ||
-        (p.descripcion && p.descripcion.toLowerCase().includes(busq)) ||
-        (p.categoria?.nombre && p.categoria.nombre.toLowerCase().includes(busq));
-      if (!coincide) return false;
-    }
-
-    return true;
-  });
-
-  const totalPaginasModificar = Math.max(1, Math.ceil(productosFiltradosModificar.length / itemsPorPaginaModificar));
-  const inicioModificar = (paginaModificar - 1) * itemsPorPaginaModificar;
-  const productosPaginadosModificar = productosFiltradosModificar.slice(
-    inicioModificar,
-    inicioModificar + itemsPorPaginaModificar
-  );
+  const totalBaseEstado =
+    filtroEstadoHub === 'activos'
+      ? metricasStockHub.activos
+      : filtroEstadoHub === 'inactivos'
+      ? metricasStockHub.inactivos
+      : metricasStockHub.total;
 
   return (
     <MotionConfig reducedMotion="user">
@@ -415,100 +354,52 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
         )}
 
         {/* ====================================================================
-          CASO 1: PANTALLA PRINCIPAL / HUB (3 TARJETAS DE OPCIÓN)
+          CASO 1: HUB OPERATIVO UNIFICADO DE INVENTARIO
           ==================================================================== */}
         {seccionActiva === 'menu' && (
-          <div className="space-y-8">
-            {/* Encabezado Principal */}
-            <div>
-              <h1 className="text-2xl font-bold text-[#1C2424] tracking-tight">
-                Gestión de Inventario
-              </h1>
-              <p className="text-sm text-[#657373]">
-                Selecciona una operación para administrar el catálogo comercial y existencias de productos.
-              </p>
-            </div>
+          <div className="space-y-6">
+            {/* Encabezado Principal con Acciones Directas */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-bold text-[#1C2424] tracking-tight">
+                  Gestión de Inventario
+                </h1>
+                <p className="text-sm text-[#657373] mt-0.5">
+                  Administración operativa del catálogo comercial: altas, reposición de stock, edición de precios y bajas lógicas.
+                </p>
+              </div>
 
-            {/* Grid de las 3 Tarjetas */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Tarjeta 1: Cargar Producto Nuevo */}
-              <Card
-                onClick={() => setSeccionActiva('alta')}
-                className="flex flex-col justify-between cursor-pointer border-[#E8E6DF] hover:border-[#2A7A78] hover:shadow-md transition-all duration-200 group"
-              >
-                <CardHeader className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#E2F1F0] text-[#2A7A78] group-hover:scale-105 transition-transform">
-                      <PackagePlus className="h-6 w-6" />
-                    </div>
-                    <Badge variant="default" className="text-xs">
-                      Alta
-                    </Badge>
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg group-hover:text-[#2A7A78] transition-colors">
-                      Cargar Producto Nuevo
-                    </CardTitle>
-                    <CardDescription className="pt-2 text-xs leading-relaxed text-[#657373]">
-                      Registra un nuevo artículo asociándolo a una categoría, definiendo costos, precios de venta y existencias iniciales.
-                    </CardDescription>
-                  </div>
-                </CardHeader>
-              </Card>
+              <div className="flex flex-wrap items-center gap-2.5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setModalCatOpened(true)}
+                  className="text-xs border-[#2A7A78]/30 text-[#2A7A78] hover:bg-[#E2F1F0] gap-1.5 cursor-pointer"
+                >
+                  <FolderPlus className="h-4 w-4" weight="duotone" />
+                  <span>Nueva Categoría</span>
+                </Button>
 
-              {/* Tarjeta 2: Dar de Baja un Producto */}
-              <Card
-                onClick={() => setSeccionActiva('baja')}
-                className="flex flex-col justify-between cursor-pointer border-[#E8E6DF] hover:border-red-500 hover:shadow-md transition-all duration-200 group"
-              >
-                <CardHeader className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 text-red-600 group-hover:scale-105 transition-transform">
-                      <Archive className="h-6 w-6" />
-                    </div>
-                    <Badge variant="destructive" className="text-xs">
-                      Baja de un producto
-                    </Badge>
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg group-hover:text-red-600 transition-colors">
-                      Dar de Baja un Producto
-                    </CardTitle>
-                    <CardDescription className="pt-2 text-xs leading-relaxed text-[#657373]">
-                      Retira de la comercialización artículos vencidos, dañados o discontinuados sin perder su trazabilidad histórica.
-                    </CardDescription>
-                  </div>
-                </CardHeader>
-              </Card>
-
-              {/* Tarjeta 3: Modificar Producto Existente */}
-              <Card
-                onClick={() => setSeccionActiva('modificar')}
-                className="flex flex-col justify-between cursor-pointer border-[#E8E6DF] hover:border-[#2A7A78] hover:shadow-md transition-all duration-200 group"
-              >
-                <CardHeader className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-50 text-amber-600 group-hover:scale-105 transition-transform">
-                      <FileEdit className="h-6 w-6" />
-                    </div>
-                    <Badge variant="secondary" className="text-xs">
-                      Edición
-                    </Badge>
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg group-hover:text-[#2A7A78] transition-colors">
-                      Modificar Producto Existente
-                    </CardTitle>
-                    <CardDescription className="pt-2 text-xs leading-relaxed text-[#657373]">
-                      Actualiza precios de venta, costos de reposición, umbrales de alerta de stock mínimo o datos descriptivos.
-                    </CardDescription>
-                  </div>
-                </CardHeader>
-              </Card>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    if (categoriaFiltroHub !== 'todas') {
+                      setFieldValue('categoriaId', categoriaFiltroHub);
+                    }
+                    setSeccionActiva('alta');
+                  }}
+                  className="bg-[#2A7A78] hover:bg-[#205E5C] text-white shadow-sm text-xs gap-1.5 cursor-pointer"
+                >
+                  <Plus className="h-4 w-4" weight="bold" />
+                  <span>Nuevo Producto</span>
+                </Button>
+              </div>
             </div>
 
             {/* ====================================================================
-              DIAGNÓSTICO Y CONTROL DE SALUD DEL INVENTARIO
+              DIAGNÓSTICO Y CONTROL DE SALUD DEL INVENTARIO (Filtro Único de Stock)
               ==================================================================== */}
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -518,7 +409,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                     Diagnóstico y Control de Stock
                   </h2>
                   <p className="text-xs text-[#657373]">
-                    Monitoreo de existencias en tiempo real, alertas de desabastecimiento y cálculo de reposición.
+                    Selecciona una tarjeta para filtrar instantáneamente los artículos según su estado de abastecimiento.
                   </p>
                 </div>
 
@@ -528,10 +419,10 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                     variant="outline"
                     size="sm"
                     onClick={() => setFiltroStockHub('todos')}
-                    className="h-8 text-xs border-[#E8E6DF] text-[#657373] hover:text-[#1C2424]"
+                    className="h-8 text-xs border-[#E8E6DF] text-[#657373] hover:text-[#1C2424] cursor-pointer"
                   >
                     <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                    Restablecer filtro de stock
+                    Ver todos los niveles
                   </Button>
                 )}
               </div>
@@ -545,7 +436,8 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                     </div>
                     <div>
                       <h3 className="text-sm font-semibold text-rose-900">
-                        Atención: {metricasStockHub.criticos} {metricasStockHub.criticos === 1 ? 'producto requiere' : 'productos requieren'} revisión inmediata por stock crítico
+                        Atención: {metricasStockHub.criticos}{' '}
+                        {metricasStockHub.criticos === 1 ? 'producto requiere' : 'productos requieren'} revisión inmediata por stock crítico
                       </h3>
                       <p className="text-xs text-rose-700 mt-0.5">
                         Las existencias físicas están iguales o por debajo del umbral mínimo configurado. Filtra para priorizar órdenes de compra o reponer unidades.
@@ -556,142 +448,199 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                     <Button
                       type="button"
                       size="sm"
-                      className="h-8 text-xs font-medium bg-rose-600 hover:bg-rose-700 text-white"
-                      onClick={() => setFiltroStockHub('critico')}
+                      className="h-8 text-xs font-medium bg-rose-600 hover:bg-rose-700 text-white cursor-pointer"
+                      onClick={() => setFiltroStockHub(filtroStockHub === 'critico' ? 'todos' : 'critico')}
                     >
-                      Ver críticos ({metricasStockHub.criticos})
+                      {filtroStockHub === 'critico' ? 'Mostrar todos' : `Ver críticos (${metricasStockHub.criticos})`}
                     </Button>
-                    {filtroStockHub === 'critico' && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-8 text-xs bg-white text-rose-700 border-rose-300 hover:bg-rose-50"
-                        onClick={() => setFiltroStockHub('todos')}
-                      >
-                        Mostrar todos
-                      </Button>
-                    )}
                   </div>
                 </div>
               )}
 
-              {/* Grid de Métricas de Salud de Stock */}
+              {/* Grid de Métricas de Salud de Stock (4 estados mutuamente excluyentes) */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
                 {/* Crítico */}
                 <button
                   type="button"
+                  aria-pressed={filtroStockHub === 'critico'}
                   onClick={() => setFiltroStockHub(filtroStockHub === 'critico' ? 'todos' : 'critico')}
-                  className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${filtroStockHub === 'critico'
+                  className={`p-4 rounded-xl border text-left transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40 ${
+                    filtroStockHub === 'critico'
                       ? 'border-rose-500 bg-rose-50/80 shadow-xs ring-2 ring-rose-500/20'
                       : 'border-[#E8E6DF] bg-white hover:border-rose-300 hover:bg-rose-50/30'
-                    }`}
+                  }`}
                 >
-                  <div className="flex items-center justify-between text-xs text-[#657373]">
-                    <span className="font-medium text-rose-700">Stock Crítico</span>
-                    <AlertTriangle className="h-3.5 w-3.5 text-rose-600" />
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <span className="font-semibold text-rose-700">Stock Crítico</span>
+                    <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0" />
                   </div>
-                  <div className="mt-2 flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-rose-700">{metricasStockHub.criticos}</span>
-                    <span className="text-[11px] text-[#657373]">Por debajo del mínimo</span>
+                  <div className="mt-2 flex items-baseline gap-1.5">
+                    <span className="text-2xl font-extrabold tracking-tight tabular-nums text-rose-700">
+                      {metricasStockHub.criticos}
+                    </span>
+                    <span className="text-xs font-medium text-rose-700/80">
+                      {metricasStockHub.criticos === 1 ? 'producto' : 'productos'}
+                    </span>
                   </div>
-                  <p className="text-[11px] text-rose-600/90 mt-1">
-                    {filtroStockHub === 'critico' ? 'Filtro activo' : 'Clic para filtrar'}
+                  <p className="mt-1 text-[11px] text-[#657373]">
+                    Igual o por debajo del stock mínimo
+                  </p>
+                  <p className="mt-2 text-[11px] font-medium text-rose-600/90">
+                    {filtroStockHub === 'critico' ? 'Filtro activo • Clic para quitar' : 'Clic para filtrar'}
                   </p>
                 </button>
 
                 {/* Bajas Unidades */}
                 <button
                   type="button"
+                  aria-pressed={filtroStockHub === 'bajo'}
                   onClick={() => setFiltroStockHub(filtroStockHub === 'bajo' ? 'todos' : 'bajo')}
-                  className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${filtroStockHub === 'bajo'
+                  className={`p-4 rounded-xl border text-left transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 ${
+                    filtroStockHub === 'bajo'
                       ? 'border-amber-500 bg-amber-50/80 shadow-xs ring-2 ring-amber-500/20'
                       : 'border-[#E8E6DF] bg-white hover:border-amber-300 hover:bg-amber-50/30'
-                    }`}
+                  }`}
                 >
-                  <div className="flex items-center justify-between text-xs text-[#657373]">
-                    <span className="font-medium text-amber-700">Bajas Unidades</span>
-                    <AlertCircle className="h-3.5 w-3.5 text-amber-600" />
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <span className="font-semibold text-amber-700">Bajas Unidades</span>
+                    <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
                   </div>
-                  <div className="mt-2 flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-amber-700">{metricasStockHub.bajasUnidades}</span>
-                    <span className="text-[11px] text-[#657373]">Próximo al mínimo</span>
+                  <div className="mt-2 flex items-baseline gap-1.5">
+                    <span className="text-2xl font-extrabold tracking-tight tabular-nums text-amber-700">
+                      {metricasStockHub.bajasUnidades}
+                    </span>
+                    <span className="text-xs font-medium text-amber-700/80">
+                      {metricasStockHub.bajasUnidades === 1 ? 'producto' : 'productos'}
+                    </span>
                   </div>
-                  <p className="text-[11px] text-amber-600/90 mt-1">
-                    {filtroStockHub === 'bajo' ? 'Filtro activo' : 'Clic para filtrar'}
+                  <p className="mt-1 text-[11px] text-[#657373]">
+                    Próximos al umbral mínimo
+                  </p>
+                  <p className="mt-2 text-[11px] font-medium text-amber-600/90">
+                    {filtroStockHub === 'bajo' ? 'Filtro activo • Clic para quitar' : 'Clic para filtrar'}
                   </p>
                 </button>
 
                 {/* Agotados */}
                 <button
                   type="button"
+                  aria-pressed={filtroStockHub === 'agotado'}
                   onClick={() => setFiltroStockHub(filtroStockHub === 'agotado' ? 'todos' : 'agotado')}
-                  className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${filtroStockHub === 'agotado'
+                  className={`p-4 rounded-xl border text-left transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-red-600/40 ${
+                    filtroStockHub === 'agotado'
                       ? 'border-red-600 bg-red-50/80 shadow-xs ring-2 ring-red-600/20'
                       : 'border-[#E8E6DF] bg-white hover:border-red-300 hover:bg-red-50/30'
-                    }`}
+                  }`}
                 >
-                  <div className="flex items-center justify-between text-xs text-[#657373]">
-                    <span className="font-medium text-red-700">Sin Existencias</span>
-                    <Archive className="h-3.5 w-3.5 text-red-600" />
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <span className="font-semibold text-red-700">Sin Existencias</span>
+                    <Archive className="h-4 w-4 text-red-600 shrink-0" />
                   </div>
-                  <div className="mt-2 flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-red-700">{metricasStockHub.agotados}</span>
-                    <span className="text-[11px] text-[#657373]">0 unidades disponibles</span>
+                  <div className="mt-2 flex items-baseline gap-1.5">
+                    <span className="text-2xl font-extrabold tracking-tight tabular-nums text-red-700">
+                      {metricasStockHub.agotados}
+                    </span>
+                    <span className="text-xs font-medium text-red-700/80">
+                      {metricasStockHub.agotados === 1 ? 'producto' : 'productos'}
+                    </span>
                   </div>
-                  <p className="text-[11px] text-red-600/90 mt-1">
-                    {filtroStockHub === 'agotado' ? 'Filtro activo' : 'Clic para filtrar'}
+                  <p className="mt-1 text-[11px] text-[#657373]">
+                    Stock agotado en depósito
+                  </p>
+                  <p className="mt-2 text-[11px] font-medium text-red-600/90">
+                    {filtroStockHub === 'agotado' ? 'Filtro activo • Clic para quitar' : 'Clic para filtrar'}
                   </p>
                 </button>
 
                 {/* Óptimo */}
                 <button
                   type="button"
+                  aria-pressed={filtroStockHub === 'optimo'}
                   onClick={() => setFiltroStockHub(filtroStockHub === 'optimo' ? 'todos' : 'optimo')}
-                  className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${filtroStockHub === 'optimo'
+                  className={`p-4 rounded-xl border text-left transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[#2A7A78]/40 ${
+                    filtroStockHub === 'optimo'
                       ? 'border-[#2A7A78] bg-[#E2F1F0]/50 shadow-xs ring-2 ring-[#2A7A78]/20'
                       : 'border-[#E8E6DF] bg-white hover:border-[#2A7A78]/40 hover:bg-[#E2F1F0]/20'
-                    }`}
+                  }`}
                 >
-                  <div className="flex items-center justify-between text-xs text-[#657373]">
-                    <span className="font-medium text-[#2A7A78]">Stock Óptimo</span>
-                    <PackageCheck className="h-3.5 w-3.5 text-[#2A7A78]" />
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <span className="font-semibold text-[#2A7A78]">Stock Óptimo</span>
+                    <PackageCheck className="h-4 w-4 text-[#2A7A78] shrink-0" />
                   </div>
-                  <div className="mt-2 flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-[#2A7A78]">{metricasStockHub.optimos}</span>
-                    <span className="text-[11px] text-[#657373]">Por encima del mínimo</span>
+                  <div className="mt-2 flex items-baseline gap-1.5">
+                    <span className="text-2xl font-extrabold tracking-tight tabular-nums text-[#2A7A78]">
+                      {metricasStockHub.optimos}
+                    </span>
+                    <span className="text-xs font-medium text-[#2A7A78]/80">
+                      {metricasStockHub.optimos === 1 ? 'producto' : 'productos'}
+                    </span>
                   </div>
-                  <p className="text-[11px] text-[#2A7A78]/90 mt-1">
-                    {filtroStockHub === 'optimo' ? 'Filtro activo' : 'Clic para filtrar'}
+                  <p className="mt-1 text-[11px] text-[#657373]">
+                    Abastecimiento saludable
+                  </p>
+                  <p className="mt-2 text-[11px] font-medium text-[#2A7A78]/90">
+                    {filtroStockHub === 'optimo' ? 'Filtro activo • Clic para quitar' : 'Clic para filtrar'}
                   </p>
                 </button>
               </div>
             </div>
 
             {/* ====================================================================
-              LISTADO Y FILTRO DE PRODUCTOS POR CATEGORÍA Y EXISTENCIAS
+              CATÁLOGO OPERATIVO UNIFICADO (1 control por dimensión de filtrado)
               ==================================================================== */}
             <Card className="border-[#E8E6DF] shadow-sm">
-              <CardHeader className="pb-4 border-b border-[#E8E6DF] space-y-4">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <CardHeader className="pb-4 border-b border-[#E8E6DF]">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <CardTitle className="text-base font-bold text-[#1C2424]">
-                        Listado de Productos del Inventario
+                        Catálogo Operativo de Productos
                       </CardTitle>
                       <Badge variant="default" className="text-xs">
                         {productosFiltradosHub.length}{' '}
                         {productosFiltradosHub.length === 1 ? 'artículo' : 'artículos'}
                       </Badge>
+                      {filtroStockHub !== 'todos' && (
+                        <Badge variant="outline" className="text-xs border-[#2A7A78]/40 text-[#2A7A78] bg-[#E2F1F0]/50">
+                          Nivel: {filtroStockHub === 'critico'
+                            ? 'Stock Crítico'
+                            : filtroStockHub === 'bajo'
+                            ? 'Bajas Unidades'
+                            : filtroStockHub === 'agotado'
+                            ? 'Sin Existencias'
+                            : 'Stock Óptimo'}
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-xs text-[#657373] mt-1">
-                      Administra existencias físicas, umbrales de alerta y estado operativo por categoría.
+                      Edita precios, repone existencias físicas, o da de baja y reactiva productos desde la misma tabla.
                     </p>
                   </div>
 
-                  {/* Controles de Filtrado: Selector de Categoría, Nivel de Stock, Buscador y Reset */}
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-                    {/* Selector Dropdown de Categoría */}
+                  {/* Barra compacta sin duplicidades: Búsqueda + Categoría + Estado Comercial + Limpiar */}
+                  <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2.5">
+                    {/* Buscador por SKU, nombre o categoría */}
+                    <div className="relative w-full sm:w-56">
+                      <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-[#657373]" />
+                      <Input
+                        placeholder="Buscar SKU o producto..."
+                        value={busquedaHub}
+                        onChange={(e) => setBusquedaHub(e.target.value)}
+                        className="h-9 pl-8 pr-7 text-xs"
+                      />
+                      {busquedaHub && (
+                        <button
+                          type="button"
+                          onClick={() => setBusquedaHub('')}
+                          className="absolute right-2 top-2.5 text-[#657373] hover:text-[#1C2424] cursor-pointer"
+                          title="Borrar búsqueda"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Filtro único de Categoría */}
                     <div className="w-full sm:w-52">
                       <Select
                         value={categoriaFiltroHub}
@@ -702,7 +651,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="todas">
-                            Todas las categorías ({productos.length})
+                            Todas las categorías ({totalBaseEstado})
                           </SelectItem>
                           {categorias.map((c) => (
                             <SelectItem key={c.id} value={c.id}>
@@ -713,52 +662,36 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                       </Select>
                     </div>
 
-                    {/* Selector Dropdown de Nivel de Stock */}
-                    <div className="w-full sm:w-48">
+                    {/* Filtro de Estado Comercial (reemplaza la subpantalla duplicada de Bajas) */}
+                    <div className="w-full sm:w-44">
                       <Select
-                        value={filtroStockHub}
-                        onValueChange={(val) => setFiltroStockHub(val as FiltroNivelStock)}
+                        value={filtroEstadoHub}
+                        onValueChange={(val) => setFiltroEstadoHub(val as FiltroEstadoComercial)}
                       >
                         <SelectTrigger className="h-9 text-xs">
-                          <SelectValue placeholder="Nivel de stock" />
+                          <SelectValue placeholder="Estado comercial" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="todos">Todos los niveles ({productos.length})</SelectItem>
-                          <SelectItem value="critico">
-                            Crítico / Reponer ({metricasStockHub.criticos})
+                          <SelectItem value="activos">
+                            Activos ({metricasStockHub.activos})
                           </SelectItem>
-                          <SelectItem value="bajo">
-                            Bajas unidades ({metricasStockHub.bajasUnidades})
+                          <SelectItem value="inactivos">
+                            Dados de Baja ({metricasStockHub.inactivos})
                           </SelectItem>
-                          <SelectItem value="agotado">
-                            Agotados ({metricasStockHub.agotados})
-                          </SelectItem>
-                          <SelectItem value="optimo">
-                            Óptimo ({metricasStockHub.optimos})
+                          <SelectItem value="todos">
+                            Todos ({metricasStockHub.total})
                           </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
-                    {/* Campo de búsqueda opcional */}
-                    <div className="relative w-full sm:w-44">
-                      <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-[#657373]" />
-                      <Input
-                        placeholder="Buscar SKU o nombre..."
-                        value={busquedaHub}
-                        onChange={(e) => setBusquedaHub(e.target.value)}
-                        className="h-9 pl-8 text-xs"
-                      />
-                    </div>
-
-                    {/* Botón Restablecer Filtros si hay alguno activo */}
-                    {(categoriaFiltroHub !== 'todas' || filtroStockHub !== 'todos' || busquedaHub.trim() !== '') && (
+                    {hayFiltrosHubActivos && (
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={limpiarFiltrosHub}
-                        className="h-9 text-xs text-[#657373] hover:text-[#1C2424] px-2.5"
+                        className="h-9 text-xs text-[#657373] hover:text-[#1C2424] px-2.5 cursor-pointer"
                         title="Restablecer todos los filtros"
                       >
                         <RotateCcw className="h-3.5 w-3.5 mr-1" />
@@ -767,123 +700,10 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                     )}
                   </div>
                 </div>
-
-                {/* Botones Pill de Selección Rápida de Categorías */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pt-1 pb-1">
-                  <span className="text-[11px] font-semibold text-[#657373] uppercase tracking-wider mr-1 shrink-0">
-                    Categoría:
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setCategoriaFiltroHub('todas')}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer ${categoriaFiltroHub === 'todas'
-                        ? 'bg-[#2A7A78] text-white shadow-sm'
-                        : 'bg-[#F8F7F2] text-[#657373] hover:text-[#1C2424] hover:bg-[#E8E6DF]'
-                      }`}
-                  >
-                    Todas
-                    <span
-                      className={`px-1.5 py-0.2 rounded-full text-[10px] ${categoriaFiltroHub === 'todas'
-                          ? 'bg-white/20 text-white'
-                          : 'bg-[#E8E6DF] text-[#657373]'
-                        }`}
-                    >
-                      {productos.length}
-                    </span>
-                  </button>
-
-                  {categorias.map((cat) => {
-                    const activa = categoriaFiltroHub === cat.id;
-                    const cantidad = conteosPorCategoria[cat.id] || 0;
-                    return (
-                      <button
-                        key={cat.id}
-                        type="button"
-                        onClick={() => setCategoriaFiltroHub(cat.id)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${activa
-                            ? 'bg-[#2A7A78] text-white shadow-sm'
-                            : 'bg-[#F8F7F2] text-[#657373] hover:text-[#1C2424] hover:bg-[#E8E6DF]'
-                          }`}
-                      >
-                        {cat.nombre}
-                        <span
-                          className={`px-1.5 py-0.2 rounded-full text-[10px] ${activa
-                              ? 'bg-white/20 text-white'
-                              : 'bg-[#E8E6DF] text-[#657373]'
-                            }`}
-                        >
-                          {cantidad}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Barra de Filtros Rápidos de Nivel de Stock */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pt-2 border-t border-[#E8E6DF]/60">
-                  <span className="text-[11px] font-semibold text-[#657373] uppercase tracking-wider mr-1 flex items-center gap-1 shrink-0">
-                    <Filter className="h-3 w-3" />
-                    Estado Stock:
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setFiltroStockHub('todos')}
-                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium transition-all cursor-pointer ${filtroStockHub === 'todos'
-                        ? 'bg-[#1C2424] text-white shadow-xs'
-                        : 'bg-[#F8F7F2] text-[#657373] hover:bg-[#E8E6DF]'
-                      }`}
-                  >
-                    Todos ({productos.length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFiltroStockHub('critico')}
-                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium transition-all cursor-pointer ${filtroStockHub === 'critico'
-                        ? 'bg-rose-600 text-white shadow-xs'
-                        : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200/60'
-                      }`}
-                  >
-                    <AlertTriangle className="h-3 w-3" />
-                    Críticos ({metricasStockHub.criticos})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFiltroStockHub('bajo')}
-                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium transition-all cursor-pointer ${filtroStockHub === 'bajo'
-                        ? 'bg-amber-600 text-white shadow-xs'
-                        : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200/60'
-                      }`}
-                  >
-                    <AlertCircle className="h-3 w-3" />
-                    Bajas unidades ({metricasStockHub.bajasUnidades})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFiltroStockHub('agotado')}
-                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium transition-all cursor-pointer ${filtroStockHub === 'agotado'
-                        ? 'bg-red-700 text-white shadow-xs'
-                        : 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200/60'
-                      }`}
-                  >
-                    Agotados ({metricasStockHub.agotados})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFiltroStockHub('optimo')}
-                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium transition-all cursor-pointer ${filtroStockHub === 'optimo'
-                        ? 'bg-[#2A7A78] text-white shadow-xs'
-                        : 'bg-[#E2F1F0] text-[#2A7A78] hover:bg-[#cbeae8]'
-                      }`}
-                  >
-                    <PackageCheck className="h-3 w-3" />
-                    Óptimos ({metricasStockHub.optimos})
-                  </button>
-                </div>
               </CardHeader>
 
               <CardContent className="p-0">
                 {productosFiltradosHub.length === 0 ? (
-                  /* Estado cuando no hay productos registrados o coincidentes con los filtros */
                   <div className="py-12 text-center flex flex-col items-center justify-center space-y-3 px-4">
                     <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#F8F7F2] text-[#657373]">
                       <Search className="h-6 w-6" />
@@ -893,24 +713,26 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                         No se encontraron productos coincidentes
                       </p>
                       <p className="text-xs text-[#657373] mt-1">
-                        No hay artículos que coincidan con la categoría, el nivel de stock o la búsqueda textual aplicada.
+                        No hay artículos que coincidan con la categoría, estado comercial, nivel de stock o búsqueda aplicada.
                       </p>
                     </div>
                     <div className="flex items-center gap-2 pt-1">
+                      {hayFiltrosHubActivos && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="text-xs cursor-pointer"
+                          onClick={limpiarFiltrosHub}
+                        >
+                          <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                          Restablecer filtros
+                        </Button>
+                      )}
                       <Button
                         type="button"
                         size="sm"
-                        variant="outline"
-                        className="text-xs"
-                        onClick={limpiarFiltrosHub}
-                      >
-                        <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-                        Restablecer filtros
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="text-xs bg-[#2A7A78] text-white hover:bg-[#2A7A78]/90"
+                        className="text-xs bg-[#2A7A78] text-white hover:bg-[#2A7A78]/90 cursor-pointer"
                         onClick={() => {
                           if (categoriaFiltroHub !== 'todas') {
                             setFieldValue('categoriaId', categoriaFiltroHub);
@@ -925,7 +747,6 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                   </div>
                 ) : (
                   <>
-                    {/* Tabla de Productos de la Categoría */}
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -941,8 +762,8 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                       <TableBody ref={inventarioTableBodyRef}>
                         {productosPaginadosHub.map((prod) => {
                           const esAgotado = prod.stockActual === 0;
-                          const esCritico = prod.stockActual <= prod.stockMinimo;
-                          const esBajo = !esCritico && prod.stockActual <= prod.stockMinimo * 1.5;
+                          const esCritico = !esAgotado && prod.stockActual <= prod.stockMinimo;
+                          const esBajo = !esAgotado && !esCritico && prod.stockActual <= prod.stockMinimo * 1.5;
                           const deficit = Math.max(0, prod.stockMinimo - prod.stockActual);
 
                           return (
@@ -977,14 +798,15 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                                 <div className="space-y-1">
                                   <div className="flex items-center gap-1.5">
                                     <span
-                                      className={`text-sm font-bold ${esAgotado
+                                      className={`text-sm font-bold ${
+                                        esAgotado
                                           ? 'text-red-700'
                                           : esCritico
-                                            ? 'text-rose-600'
-                                            : esBajo
-                                              ? 'text-amber-600'
-                                              : 'text-[#1C2424]'
-                                        }`}
+                                          ? 'text-rose-600'
+                                          : esBajo
+                                          ? 'text-amber-600'
+                                          : 'text-[#1C2424]'
+                                      }`}
                                     >
                                       {prod.stockActual}
                                     </span>
@@ -1005,16 +827,25 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                               </TableCell>
                               <TableCell>
                                 {!prod.activo ? (
-                                  <Badge variant="secondary" className="text-xs text-[#657373] bg-[#F8F7F2] border-[#E8E6DF]">
-                                    Inactivo / Baja
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs text-[#657373] bg-[#F8F7F2] border-[#E8E6DF]"
+                                  >
+                                    Dado de Baja
                                   </Badge>
                                 ) : esAgotado ? (
-                                  <Badge variant="destructive" className="text-xs flex items-center gap-1 w-fit border-red-300 bg-red-100/90 text-red-800">
+                                  <Badge
+                                    variant="destructive"
+                                    className="text-xs flex items-center gap-1 w-fit border-red-300 bg-red-100/90 text-red-800"
+                                  >
                                     <Archive className="h-3 w-3 text-red-700" />
                                     Agotado
                                   </Badge>
                                 ) : esCritico ? (
-                                  <Badge variant="destructive" className="text-xs flex items-center gap-1 w-fit border-rose-200 bg-rose-50 text-rose-700">
+                                  <Badge
+                                    variant="destructive"
+                                    className="text-xs flex items-center gap-1 w-fit border-rose-200 bg-rose-50 text-rose-700"
+                                  >
                                     <AlertTriangle className="h-3 w-3 text-rose-600" />
                                     Crítico / Reponer
                                   </Badge>
@@ -1036,7 +867,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                                     type="button"
                                     size="sm"
                                     variant="outline"
-                                    className="h-7 text-xs px-2 text-[#2A7A78] hover:bg-[#E2F1F0]"
+                                    className="h-7 text-xs px-2 text-[#2A7A78] hover:bg-[#E2F1F0] cursor-pointer"
                                     onClick={() => handleAbrirEdicion(prod)}
                                     title="Modificar datos o reponer existencias físicas"
                                   >
@@ -1048,8 +879,11 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                                       type="button"
                                       size="sm"
                                       variant="outline"
-                                      className="h-7 text-xs px-2 text-red-600 hover:bg-red-50 border-red-200"
-                                      onClick={() => setProductoABajar(prod)}
+                                      className="h-7 text-xs px-2 text-red-600 hover:bg-red-50 border-red-200 cursor-pointer"
+                                      onClick={() => {
+                                        setProductoABajar(prod);
+                                        setMotivoBaja('');
+                                      }}
                                       title="Dar de baja este producto"
                                     >
                                       <Archive className="h-3.5 w-3.5 mr-1" />
@@ -1060,9 +894,9 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                                       type="button"
                                       size="sm"
                                       variant="outline"
-                                      className="h-7 text-xs px-2 text-[#2A7A78] hover:bg-[#E2F1F0]"
+                                      className="h-7 text-xs px-2 text-[#2A7A78] hover:bg-[#E2F1F0] cursor-pointer"
                                       onClick={() => reactivarProducto(prod.id)}
-                                      title="Reactivar este producto"
+                                      title="Reactivar este producto en el catálogo activo"
                                     >
                                       <RotateCcw className="h-3.5 w-3.5 mr-1" />
                                       Reactivar
@@ -1082,7 +916,10 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                         <div>
                           Mostrando <span className="font-semibold text-[#1C2424]">{inicioInventario + 1}</span> a{' '}
                           <span className="font-semibold text-[#1C2424]">
-                            {Math.min(inicioInventario + itemsPorPaginaInventario, productosFiltradosHub.length)}
+                            {Math.min(
+                              inicioInventario + itemsPorPaginaInventario,
+                              productosFiltradosHub.length
+                            )}
                           </span>{' '}
                           de <span className="font-semibold text-[#1C2424]">{productosFiltradosHub.length}</span> productos
                         </div>
@@ -1106,7 +943,9 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                             size="sm"
                             variant="outline"
                             className="h-7 px-2.5 text-xs text-[#1C2424] border-[#E8E6DF] hover:bg-[#F8F7F2] active:scale-95 transition-all duration-150 cursor-pointer"
-                            onClick={() => setPaginaInventario((p) => Math.min(p + 1, totalPaginasInventario))}
+                            onClick={() =>
+                              setPaginaInventario((p) => Math.min(p + 1, totalPaginasInventario))
+                            }
                             disabled={paginaInventario >= totalPaginasInventario}
                           >
                             Siguiente
@@ -1123,7 +962,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
         )}
 
         {/* ====================================================================
-          CASO 2: FORMULARIO DE CARGA DE PRODUCTO (Sin marcas de pasos)
+          CASO 2: FORMULARIO DE CARGA DE PRODUCTO NUEVO
           ==================================================================== */}
         {seccionActiva === 'alta' && (
           <div className="space-y-6">
@@ -1136,30 +975,30 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                     variant="outline"
                     size="sm"
                     onClick={() => setSeccionActiva('menu')}
-                    className="gap-1.5 text-[#657373] hover:text-[#1C2424]"
+                    className="gap-1.5 text-[#657373] hover:text-[#1C2424] cursor-pointer"
                   >
                     <ArrowLeft className="h-4 w-4" />
-                    <span>Volver a opciones</span>
+                    <span>Volver al catálogo</span>
                   </Button>
-                  <Badge variant="default">Carga de Producto</Badge>
+                  <Badge variant="default">Alta de Producto</Badge>
                 </div>
                 <h1 className="text-2xl font-bold text-[#1C2424] tracking-tight mt-2">
                   Cargar Producto Nuevo
                 </h1>
                 <p className="text-sm text-[#657373]">
-                  Ingresa los datos comerciales, existencias y costos para incorporar el artículo al catálogo.
+                  Ingresa los datos comerciales, existencias iniciales y costos para incorporar el artículo al catálogo.
                 </p>
               </div>
             </div>
 
-            {/* Formulario Unificado */}
+            {/* Formulario Unificado (solo campos persistidos en el modelo de dominio) */}
             <Card>
               <CardHeader className="border-b border-[#E8E6DF] pb-4">
                 <CardTitle className="text-base font-bold text-[#1C2424]">
                   Formulario de Producto
                 </CardTitle>
                 <CardDescription className="text-xs text-[#657373]">
-                  Completa los campos obligatorios para dar de alta el producto en el sistema.
+                  Completa los campos obligatorios (*) para registrar el artículo y sincronizarlo con el mostrador.
                 </CardDescription>
               </CardHeader>
 
@@ -1176,7 +1015,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="gap-1.5 text-xs text-[#2A7A78] border-[#2A7A78]/30 hover:bg-[#E2F1F0]"
+                        className="gap-1.5 text-xs text-[#2A7A78] border-[#2A7A78]/30 hover:bg-[#E2F1F0] cursor-pointer"
                         onClick={() => setModalCatOpened(true)}
                       >
                         <FolderPlus className="h-3.5 w-3.5" />
@@ -1187,8 +1026,9 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                     <select
                       value={formData.categoriaId}
                       onChange={(e) => setFieldValue('categoriaId', e.target.value)}
-                      className={`flex h-10 w-full rounded-lg border bg-white px-3 py-1 text-sm text-[#1C2424] shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2A7A78]/20 focus-visible:border-[#2A7A78] ${fieldErrors.categoriaId ? 'border-red-500' : 'border-[#E8E6DF]'
-                        }`}
+                      className={`flex h-10 w-full rounded-lg border bg-white px-3 py-1 text-sm text-[#1C2424] shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2A7A78]/20 focus-visible:border-[#2A7A78] ${
+                        fieldErrors.categoriaId ? 'border-red-500' : 'border-[#E8E6DF]'
+                      }`}
                     >
                       <option value="">-- Selecciona una categoría existente --</option>
                       {categorias.map((c) => (
@@ -1221,7 +1061,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                         <button
                           type="button"
                           onClick={handleGenerarSku}
-                          className="text-[11px] text-[#2A7A78] hover:underline flex items-center gap-1 font-medium"
+                          className="text-[11px] text-[#2A7A78] hover:underline flex items-center gap-1 font-medium cursor-pointer"
                         >
                           <RefreshCw className="h-3 w-3" /> Auto
                         </button>
@@ -1341,53 +1181,42 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                       </div>
                     </div>
 
-                    {/* Stock y Almacén */}
-                    <div className="p-4 rounded-xl border border-[#E8E6DF] bg-[#F8F7F2]/60 space-y-4">
-                      <span className="text-xs font-bold uppercase tracking-wider text-[#2A7A78]">
-                        Control de Stock y Almacén
-                      </span>
+                    {/* Control de Stock (solo campos reales persistidos) */}
+                    <div className="p-4 rounded-xl border border-[#E8E6DF] bg-[#F8F7F2]/60 space-y-4 flex flex-col justify-between">
+                      <div className="space-y-4">
+                        <span className="text-xs font-bold uppercase tracking-wider text-[#2A7A78]">
+                          Existencias y Umbral de Reposición
+                        </span>
 
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-medium text-[#1C2424]">Stock Inicial *</label>
-                          <Input
-                            type="number"
-                            min="0"
-                            placeholder="1"
-                            value={formData.stockInicial}
-                            onChange={(e) => setFieldValue('stockInicial', parseInt(e.target.value) || 0)}
-                            error={fieldErrors.stockInicial}
-                          />
-                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-medium text-[#1C2424]">Stock Inicial *</label>
+                            <Input
+                              type="number"
+                              min="0"
+                              placeholder="1"
+                              value={formData.stockInicial}
+                              onChange={(e) => setFieldValue('stockInicial', parseInt(e.target.value) || 0)}
+                              error={fieldErrors.stockInicial}
+                            />
+                          </div>
 
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-medium text-[#1C2424]">Stock Mínimo (Alerta) *</label>
-                          <Input
-                            type="number"
-                            min="0"
-                            placeholder="5"
-                            value={formData.stockMinimo}
-                            onChange={(e) => setFieldValue('stockMinimo', parseInt(e.target.value) || 0)}
-                          />
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-medium text-[#1C2424]">Stock Mínimo (Alerta) *</label>
+                            <Input
+                              type="number"
+                              min="0"
+                              placeholder="5"
+                              value={formData.stockMinimo}
+                              onChange={(e) => setFieldValue('stockMinimo', parseInt(e.target.value) || 0)}
+                            />
+                          </div>
                         </div>
+                      </div>
 
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-medium text-[#1C2424]">Ubicación en Depósito</label>
-                          <Input
-                            placeholder="Ej: Pasillo 2 - Estante B"
-                            value={formData.ubicacion}
-                            onChange={(e) => setFieldValue('ubicacion', e.target.value)}
-                          />
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-medium text-[#1C2424]">Proveedor / Distribuidor</label>
-                          <Input
-                            placeholder="Ej: Distribuidora Norte"
-                            value={formData.proveedor}
-                            onChange={(e) => setFieldValue('proveedor', e.target.value)}
-                          />
-                        </div>
+                      <div className="p-3 rounded-lg bg-white border border-[#E8E6DF] text-xs text-[#657373]">
+                        Cuando el stock físico sea menor o igual a{' '}
+                        <strong className="text-[#1C2424]">{formData.stockMinimo} {formData.unidadMedida}</strong>, el sistema activará automáticamente la alerta de reposición crítica.
                       </div>
                     </div>
                   </div>
@@ -1397,7 +1226,14 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => setFormData({ ...valoresInicialesCargaProducto, stockMinimo: config?.inventario?.umbralMinimoPorDefecto ?? valoresInicialesCargaProducto.stockMinimo })}
+                      onClick={() =>
+                        setFormData({
+                          ...valoresInicialesCargaProducto,
+                          stockMinimo:
+                            config?.inventario?.umbralMinimoPorDefecto ??
+                            valoresInicialesCargaProducto.stockMinimo,
+                        })
+                      }
                       disabled={loading}
                     >
                       Limpiar Formulario
@@ -1408,688 +1244,6 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                     </Button>
                   </div>
                 </form>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* ====================================================================
-          CASO 3: DAR DE BAJA PRODUCTOS
-          ==================================================================== */}
-        {seccionActiva === 'baja' && (
-          <div className="space-y-6">
-            {/* Cabecera con Botón Volver */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSeccionActiva('menu')}
-                    className="gap-1.5 text-[#657373] hover:text-[#1C2424]"
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                    <span>Volver a opciones</span>
-                  </Button>
-                  <Badge variant="destructive">Bajas de Catálogo</Badge>
-                </div>
-                <h1 className="text-2xl font-bold text-[#1C2424] tracking-tight mt-2">
-                  Dar de Baja un Producto
-                </h1>
-                <p className="text-sm text-[#657373]">
-                  Desactiva productos del inventario activo. El historial se conserva para auditoría y reportes.
-                </p>
-              </div>
-            </div>
-
-            {/* Filtros y Buscador */}
-            <Card className="p-4">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="relative w-full sm:w-80">
-                  <Input
-                    placeholder="Buscar por código, nombre o categoría..."
-                    value={busquedaBaja}
-                    onChange={(e) => setBusquedaBaja(e.target.value)}
-                    className="pl-9"
-                  />
-                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-[#657373]" />
-                </div>
-
-                <div className="flex items-center gap-2 self-end sm:self-auto">
-                  <Button
-                    size="sm"
-                    variant={filtroEstadoBaja === 'activos' ? 'default' : 'outline'}
-                    onClick={() => setFiltroEstadoBaja('activos')}
-                  >
-                    Activos
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={filtroEstadoBaja === 'inactivos' ? 'default' : 'outline'}
-                    onClick={() => setFiltroEstadoBaja('inactivos')}
-                  >
-                    Dados de Baja
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={filtroEstadoBaja === 'todos' ? 'default' : 'outline'}
-                    onClick={() => setFiltroEstadoBaja('todos')}
-                  >
-                    Todos
-                  </Button>
-                </div>
-              </div>
-            </Card>
-
-            {/* Tabla de Productos para Baja */}
-            <Card>
-              <CardHeader className="pb-3 border-b border-[#E8E6DF]">
-                <CardTitle className="text-base font-bold text-[#1C2424]">
-                  Productos ({productosFiltradosBaja.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Código</TableHead>
-                      <TableHead>Producto</TableHead>
-                      <TableHead>Categoría</TableHead>
-                      <TableHead>Stock Actual</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead className="text-right">Acción</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody ref={bajasTableBodyRef}>
-                    {productosFiltradosBaja.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-6 text-sm text-[#657373]">
-                          No se encontraron productos con el filtro aplicado.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      productosFiltradosBaja.map((prod) => (
-                        <TableRow key={prod.id}>
-                          <TableCell className="font-mono text-xs font-bold text-[#1C2424]">
-                            {prod.codigo}
-                          </TableCell>
-                          <TableCell>
-                            <div className="font-semibold text-sm text-[#1C2424]">{prod.nombre}</div>
-                            {prod.descripcion && (
-                              <div className="text-xs text-[#657373] line-clamp-1">{prod.descripcion}</div>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="default">{prod.categoria?.nombre || 'General'}</Badge>
-                          </TableCell>
-                          <TableCell className="font-medium text-[#1C2424]">
-                            {prod.stockActual} {prod.unidadMedida}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={prod.activo ? 'success' : 'destructive'}>
-                              {prod.activo ? 'Activo' : 'Dado de baja'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {prod.activo ? (
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => {
-                                  setProductoABajar(prod);
-                                  setMotivoBaja('');
-                                }}
-                                className="gap-1"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                                <span>Dar de Baja</span>
-                              </Button>
-                            ) : (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => reactivarProducto(prod.id)}
-                                className="gap-1 text-[#2A7A78] border-[#2A7A78]/30 hover:bg-[#E2F1F0]"
-                              >
-                                <RotateCcw className="h-3.5 w-3.5" />
-                                <span>Reactivar</span>
-                              </Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* ====================================================================
-          CASO 4: MODIFICAR PRODUCTO EXISTENTE
-          ==================================================================== */}
-        {seccionActiva === 'modificar' && (
-          <div className="space-y-6">
-            {/* Cabecera con Botón Volver */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSeccionActiva('menu')}
-                    className="gap-1.5 text-[#657373] hover:text-[#1C2424]"
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                    <span>Volver a opciones</span>
-                  </Button>
-                  <Badge variant="secondary">Edición de Catálogo</Badge>
-                </div>
-                <h1 className="text-2xl font-bold text-[#1C2424] tracking-tight mt-2">
-                  Modificar Producto Existente
-                </h1>
-                <p className="text-sm text-[#657373]">
-                  Selecciona un artículo para actualizar precios de venta, costos, existencias físicas, umbrales mínimos o descripciones.
-                </p>
-              </div>
-
-              {(categoriaFiltroModificar !== 'todas' ||
-                filtroStockModificar !== 'todos' ||
-                filtroEstadoModificar !== 'activos' ||
-                busquedaModificar.trim() !== '') && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={limpiarFiltrosModificar}
-                    className="h-8 text-xs border-[#E8E6DF] text-[#657373] hover:text-[#1C2424]"
-                  >
-                    <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                    Restablecer todos los filtros
-                  </Button>
-                )}
-            </div>
-
-            {/* Grid de Métricas de Salud de Stock (Click-to-Filter) */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
-              {/* Crítico */}
-              <button
-                type="button"
-                onClick={() => {
-                  setFiltroStockModificar(filtroStockModificar === 'critico' ? 'todos' : 'critico');
-                  setPaginaModificar(1);
-                }}
-                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${filtroStockModificar === 'critico'
-                    ? 'border-rose-500 bg-rose-50/80 shadow-xs ring-2 ring-rose-500/20'
-                    : 'border-[#E8E6DF] bg-white hover:border-rose-300 hover:bg-rose-50/30'
-                  }`}
-              >
-                <div className="flex items-center justify-between text-xs text-[#657373]">
-                  <span className="font-medium text-rose-700">Stock Crítico</span>
-                  <AlertTriangle className="h-3.5 w-3.5 text-rose-600" />
-                </div>
-                <div className="mt-2 flex items-baseline gap-2">
-                  <span className="text-2xl font-bold text-rose-700">{metricasModificar.criticos}</span>
-                  <span className="text-[11px] text-[#657373]">Por debajo del mínimo</span>
-                </div>
-                <p className="text-[11px] text-rose-600/90 mt-1">
-                  {filtroStockModificar === 'critico' ? 'Filtro activo' : 'Clic para filtrar'}
-                </p>
-              </button>
-
-              {/* Bajas Unidades */}
-              <button
-                type="button"
-                onClick={() => {
-                  setFiltroStockModificar(filtroStockModificar === 'bajo' ? 'todos' : 'bajo');
-                  setPaginaModificar(1);
-                }}
-                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${filtroStockModificar === 'bajo'
-                    ? 'border-amber-500 bg-amber-50/80 shadow-xs ring-2 ring-amber-500/20'
-                    : 'border-[#E8E6DF] bg-white hover:border-amber-300 hover:bg-amber-50/30'
-                  }`}
-              >
-                <div className="flex items-center justify-between text-xs text-[#657373]">
-                  <span className="font-medium text-amber-700">Bajas Unidades</span>
-                  <TrendingDown className="h-3.5 w-3.5 text-amber-600" />
-                </div>
-                <div className="mt-2 flex items-baseline gap-2">
-                  <span className="text-2xl font-bold text-amber-700">{metricasModificar.bajasUnidades}</span>
-                  <span className="text-[11px] text-[#657373]">Próximo al mínimo</span>
-                </div>
-                <p className="text-[11px] text-amber-600/90 mt-1">
-                  {filtroStockModificar === 'bajo' ? 'Filtro activo' : 'Clic para filtrar'}
-                </p>
-              </button>
-
-              {/* Agotados */}
-              <button
-                type="button"
-                onClick={() => {
-                  setFiltroStockModificar(filtroStockModificar === 'agotado' ? 'todos' : 'agotado');
-                  setPaginaModificar(1);
-                }}
-                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${filtroStockModificar === 'agotado'
-                    ? 'border-red-600 bg-red-50/80 shadow-xs ring-2 ring-red-600/20'
-                    : 'border-[#E8E6DF] bg-white hover:border-red-300 hover:bg-red-50/30'
-                  }`}
-              >
-                <div className="flex items-center justify-between text-xs text-[#657373]">
-                  <span className="font-medium text-red-700">Sin Existencias</span>
-                  <Archive className="h-3.5 w-3.5 text-red-600" />
-                </div>
-                <div className="mt-2 flex items-baseline gap-2">
-                  <span className="text-2xl font-bold text-red-700">{metricasModificar.agotados}</span>
-                  <span className="text-[11px] text-[#657373]">0 unidades disponibles</span>
-                </div>
-                <p className="text-[11px] text-red-600/90 mt-1">
-                  {filtroStockModificar === 'agotado' ? 'Filtro activo' : 'Clic para filtrar'}
-                </p>
-              </button>
-
-              {/* Óptimo */}
-              <button
-                type="button"
-                onClick={() => {
-                  setFiltroStockModificar(filtroStockModificar === 'optimo' ? 'todos' : 'optimo');
-                  setPaginaModificar(1);
-                }}
-                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${filtroStockModificar === 'optimo'
-                    ? 'border-[#2A7A78] bg-[#E2F1F0]/50 shadow-xs ring-2 ring-[#2A7A78]/20'
-                    : 'border-[#E8E6DF] bg-white hover:border-[#2A7A78]/40 hover:bg-[#E2F1F0]/20'
-                  }`}
-              >
-                <div className="flex items-center justify-between text-xs text-[#657373]">
-                  <span className="font-medium text-[#2A7A78]">Stock Óptimo</span>
-                  <PackageCheck className="h-3.5 w-3.5 text-[#2A7A78]" />
-                </div>
-                <div className="mt-2 flex items-baseline gap-2">
-                  <span className="text-2xl font-bold text-[#2A7A78]">{metricasModificar.optimos}</span>
-                  <span className="text-[11px] text-[#657373]">Por encima del mínimo</span>
-                </div>
-                <p className="text-[11px] text-[#2A7A78]/90 mt-1">
-                  {filtroStockModificar === 'optimo' ? 'Filtro activo' : 'Clic para filtrar'}
-                </p>
-              </button>
-            </div>
-
-            {/* Card Principal con Filtros y Tabla */}
-            <Card className="border-[#E8E6DF] shadow-sm">
-              <CardHeader className="pb-4 border-b border-[#E8E6DF] space-y-4">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <CardTitle className="text-base font-bold text-[#1C2424]">
-                        Catálogo para Modificación
-                      </CardTitle>
-                      <Badge variant="default" className="text-xs">
-                        {productosFiltradosModificar.length}{' '}
-                        {productosFiltradosModificar.length === 1 ? 'artículo' : 'artículos'}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-[#657373] mt-1">
-                      Filtra por categoría, estado de existencias o busca un producto puntual para abrir el editor.
-                    </p>
-                  </div>
-
-                  {/* Controles de Filtrado: Dropdown de Categoría, Nivel de Stock, Estado Comercial, Buscador y Reset */}
-                  <div className="flex flex-wrap items-center gap-2.5">
-                    {/* Selector de Categoría */}
-                    <div className="w-full sm:w-48">
-                      <Select
-                        value={categoriaFiltroModificar}
-                        onValueChange={(val) => {
-                          setCategoriaFiltroModificar(val);
-                          setPaginaModificar(1);
-                        }}
-                      >
-                        <SelectTrigger className="h-9 text-xs">
-                          <SelectValue placeholder="Todas las categorías" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="todas">
-                            Todas las categorías ({productos.length})
-                          </SelectItem>
-                          {categorias.map((c) => (
-                            <SelectItem key={c.id} value={c.id}>
-                              {c.nombre} ({conteosPorCategoriaModificar[c.id] || 0})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Selector de Nivel de Stock */}
-                    <div className="w-full sm:w-44">
-                      <Select
-                        value={filtroStockModificar}
-                        onValueChange={(val) => {
-                          setFiltroStockModificar(val as FiltroNivelStock);
-                          setPaginaModificar(1);
-                        }}
-                      >
-                        <SelectTrigger className="h-9 text-xs">
-                          <SelectValue placeholder="Nivel de stock" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="todos">Todos los niveles ({productos.length})</SelectItem>
-                          <SelectItem value="critico">
-                            Crítico / Reponer ({metricasModificar.criticos})
-                          </SelectItem>
-                          <SelectItem value="bajo">
-                            Bajas unidades ({metricasModificar.bajasUnidades})
-                          </SelectItem>
-                          <SelectItem value="agotado">
-                            Agotados ({metricasModificar.agotados})
-                          </SelectItem>
-                          <SelectItem value="optimo">
-                            Óptimo ({metricasModificar.optimos})
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Selector de Estado Comercial */}
-                    <div className="w-full sm:w-36">
-                      <Select
-                        value={filtroEstadoModificar}
-                        onValueChange={(val) => {
-                          setFiltroEstadoModificar(val as 'todos' | 'activos' | 'inactivos');
-                          setPaginaModificar(1);
-                        }}
-                      >
-                        <SelectTrigger className="h-9 text-xs">
-                          <SelectValue placeholder="Estado" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="activos">Solo Activos ({metricasModificar.activos})</SelectItem>
-                          <SelectItem value="inactivos">Inactivos ({productos.length - metricasModificar.activos})</SelectItem>
-                          <SelectItem value="todos">Todos ({productos.length})</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Campo de Búsqueda */}
-                    <div className="relative w-full sm:w-48">
-                      <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-[#657373]" />
-                      <Input
-                        placeholder="Buscar SKU o nombre..."
-                        value={busquedaModificar}
-                        onChange={(e) => {
-                          setBusquedaModificar(e.target.value);
-                          setPaginaModificar(1);
-                        }}
-                        className="h-9 pl-8 text-xs"
-                      />
-                    </div>
-
-                    {/* Botón Restablecer */}
-                    {(categoriaFiltroModificar !== 'todas' ||
-                      filtroStockModificar !== 'todos' ||
-                      filtroEstadoModificar !== 'activos' ||
-                      busquedaModificar.trim() !== '') && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={limpiarFiltrosModificar}
-                          className="h-9 text-xs text-[#657373] hover:text-[#1C2424] px-2.5"
-                          title="Restablecer filtros"
-                        >
-                          <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                          Limpiar
-                        </Button>
-                      )}
-                  </div>
-                </div>
-
-                {/* Botones Pill de Acceso Rápido por Categoría */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pt-1 pb-1">
-                  <span className="text-[11px] font-semibold text-[#657373] uppercase tracking-wider mr-1 shrink-0">
-                    Categoría:
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCategoriaFiltroModificar('todas');
-                      setPaginaModificar(1);
-                    }}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all shrink-0 cursor-pointer ${categoriaFiltroModificar === 'todas'
-                        ? 'bg-[#2A7A78] text-white shadow-xs'
-                        : 'bg-[#F8F7F2] text-[#657373] hover:bg-[#E8E6DF] hover:text-[#1C2424] border border-[#E8E6DF]'
-                      }`}
-                  >
-                    <span>Todas</span>
-                    <span
-                      className={`text-[10px] px-1.5 py-0.2 rounded-full ${categoriaFiltroModificar === 'todas'
-                          ? 'bg-white/20 text-white'
-                          : 'bg-[#E8E6DF] text-[#657373]'
-                        }`}
-                    >
-                      {productos.length}
-                    </span>
-                  </button>
-                  {categorias.map((cat) => {
-                    const activa = categoriaFiltroModificar === cat.id;
-                    const cantidad = conteosPorCategoriaModificar[cat.id] || 0;
-                    return (
-                      <button
-                        key={cat.id}
-                        type="button"
-                        onClick={() => {
-                          setCategoriaFiltroModificar(cat.id);
-                          setPaginaModificar(1);
-                        }}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all shrink-0 cursor-pointer ${activa
-                            ? 'bg-[#2A7A78] text-white shadow-xs'
-                            : 'bg-[#F8F7F2] text-[#657373] hover:bg-[#E8E6DF] hover:text-[#1C2424] border border-[#E8E6DF]'
-                          }`}
-                      >
-                        <span>{cat.nombre}</span>
-                        <span
-                          className={`text-[10px] px-1.5 py-0.2 rounded-full ${activa ? 'bg-white/20 text-white' : 'bg-[#E8E6DF] text-[#657373]'
-                            }`}
-                        >
-                          {cantidad}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </CardHeader>
-
-              <CardContent className="p-0">
-                {productosFiltradosModificar.length === 0 ? (
-                  <div className="py-12 px-4 text-center space-y-3">
-                    <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#F8F7F2] text-[#657373] border border-[#E8E6DF]">
-                      <PackageSearch className="h-6 w-6" />
-                    </div>
-                    <div className="space-y-1">
-                      <p className="font-semibold text-sm text-[#1C2424]">
-                        No se encontraron productos para modificar
-                      </p>
-                      <p className="text-xs text-[#657373] max-w-sm mx-auto">
-                        Ningún artículo coincide con los criterios de búsqueda o filtros de categoría y stock seleccionados.
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="text-xs"
-                      onClick={limpiarFiltrosModificar}
-                    >
-                      <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-                      Restablecer filtros
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Código / SKU</TableHead>
-                          <TableHead>Producto</TableHead>
-                          <TableHead>Categoría</TableHead>
-                          <TableHead>Costo ($)</TableHead>
-                          <TableHead>Venta ($)</TableHead>
-                          <TableHead>Stock Actual</TableHead>
-                          <TableHead>Stock Mínimo</TableHead>
-                          <TableHead>Estado</TableHead>
-                          <TableHead className="text-right">Acción</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody ref={modificarTableBodyRef}>
-                        {productosPaginadosModificar.map((prod) => {
-                          const esAgotado = prod.stockActual === 0;
-                          const esCritico = prod.stockActual <= prod.stockMinimo;
-                          const esBajo = !esCritico && prod.stockActual <= prod.stockMinimo * 1.5;
-                          const deficit = Math.max(0, prod.stockMinimo - prod.stockActual);
-
-                          return (
-                            <TableRow key={prod.id} className="hover:bg-[#F8F7F2]/50">
-                              <TableCell className="font-mono text-xs font-bold text-[#1C2424]">
-                                {prod.codigo}
-                              </TableCell>
-                              <TableCell>
-                                <div>
-                                  <p className="font-semibold text-sm text-[#1C2424]">{prod.nombre}</p>
-                                  {prod.descripcion && (
-                                    <p className="text-xs text-[#657373] line-clamp-1">{prod.descripcion}</p>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant="default" className="text-xs">
-                                  {prod.categoria?.nombre || 'General'}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-xs text-[#657373]">
-                                ${prod.precioCosto.toLocaleString('es-AR')}
-                              </TableCell>
-                              <TableCell className="text-sm font-bold text-[#1C2424]">
-                                ${prod.precioVenta.toLocaleString('es-AR')}
-                              </TableCell>
-                              <TableCell>
-                                <div className="space-y-0.5">
-                                  <div className="flex items-baseline gap-1.5">
-                                    <span
-                                      className={`font-semibold text-sm ${esAgotado
-                                          ? 'text-red-700 font-extrabold'
-                                          : esCritico
-                                            ? 'text-rose-600 font-bold'
-                                            : esBajo
-                                              ? 'text-amber-700 font-bold'
-                                              : 'text-[#1C2424]'
-                                        }`}
-                                    >
-                                      {prod.stockActual}
-                                    </span>
-                                    <span className="text-xs text-[#657373]">
-                                      {prod.unidadMedida}
-                                    </span>
-                                  </div>
-                                  {deficit > 0 && prod.activo && (
-                                    <div className="inline-flex items-center gap-1 text-[10px] font-semibold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
-                                      <AlertTriangle className="h-2.5 w-2.5" />
-                                      Déficit: {deficit}
-                                    </div>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-xs text-[#657373]">
-                                {prod.stockMinimo} {prod.unidadMedida}
-                              </TableCell>
-                              <TableCell>
-                                {!prod.activo ? (
-                                  <Badge variant="secondary" className="text-xs text-[#657373] bg-[#F8F7F2] border-[#E8E6DF]">
-                                    Inactivo
-                                  </Badge>
-                                ) : esAgotado ? (
-                                  <Badge variant="destructive" className="text-xs flex items-center gap-1 w-fit border-red-300 bg-red-100/90 text-red-800">
-                                    <Archive className="h-3 w-3 text-red-700" />
-                                    Agotado
-                                  </Badge>
-                                ) : esCritico ? (
-                                  <Badge variant="destructive" className="text-xs flex items-center gap-1 w-fit border-rose-200 bg-rose-50 text-rose-700">
-                                    <AlertTriangle className="h-3 w-3 text-rose-600" />
-                                    Crítico
-                                  </Badge>
-                                ) : esBajo ? (
-                                  <Badge variant="warning" className="text-xs flex items-center gap-1 w-fit">
-                                    <AlertCircle className="h-3 w-3" />
-                                    Bajas unidades
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="success" className="text-xs flex items-center gap-1 w-fit">
-                                    <PackageCheck className="h-3 w-3" />
-                                    Óptimo
-                                  </Badge>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  onClick={() => handleAbrirEdicion(prod)}
-                                  className="h-8 gap-1.5 text-xs text-[#1C2424] hover:bg-[#E8E6DF]"
-                                >
-                                  <FileEdit className="h-3.5 w-3.5 text-[#2A7A78]" />
-                                  <span>Editar</span>
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-
-                    {/* Paginación */}
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t border-[#E8E6DF] bg-[#F8F7F2]/30">
-                      <p className="text-xs text-[#657373]">
-                        Mostrando del{' '}
-                        <strong>{inicioModificar + 1}</strong> al{' '}
-                        <strong>
-                          {Math.min(inicioModificar + itemsPorPaginaModificar, productosFiltradosModificar.length)}
-                        </strong>{' '}
-                        de <strong>{productosFiltradosModificar.length}</strong> artículos
-                      </p>
-
-                      <div className="flex items-center gap-1.5">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="h-8 text-xs gap-1 border-[#E8E6DF]"
-                          disabled={paginaModificar === 1}
-                          onClick={() => setPaginaModificar((prev) => Math.max(1, prev - 1))}
-                        >
-                          <ChevronLeft className="h-3.5 w-3.5" />
-                          <span>Anterior</span>
-                        </Button>
-
-                        <span className="text-xs text-[#657373] px-2 font-medium">
-                          Página {paginaModificar} de {totalPaginasModificar}
-                        </span>
-
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="h-8 text-xs gap-1 border-[#E8E6DF]"
-                          disabled={paginaModificar >= totalPaginasModificar}
-                          onClick={() => setPaginaModificar((prev) => Math.min(totalPaginasModificar, prev + 1))}
-                        >
-                          <span>Siguiente</span>
-                          <ChevronRight className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  </>
-                )}
               </CardContent>
             </Card>
           </div>
@@ -2179,7 +1333,10 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                     Código: {productoABajar.codigo} • Categoría: {productoABajar.categoria?.nombre || 'General'}
                   </p>
                   <p className="text-xs text-[#657373] mt-1">
-                    Stock actual en depósito: <strong>{productoABajar.stockActual} {productoABajar.unidadMedida}</strong>
+                    Stock actual en depósito:{' '}
+                    <strong>
+                      {productoABajar.stockActual} {productoABajar.unidadMedida}
+                    </strong>
                   </p>
                 </div>
 
@@ -2188,7 +1345,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                     Motivo de la Baja (Opcional)
                   </label>
                   <Input
-                    placeholder="Ej: Mercadería discontinuada por proveedor, rotura, vencimiento"
+                    placeholder="Ej: Mercadería discontinuada por proveedor, rotura"
                     value={motivoBaja}
                     onChange={(e) => setMotivoBaja(e.target.value)}
                   />
@@ -2209,14 +1366,14 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
         </Dialog>
 
         {/* ====================================================================
-          MODAL: MODIFICAR PRODUCTO EXISTENTE
+          MODAL: MODIFICAR / REPONER PRODUCTO EXISTENTE
           ==================================================================== */}
         <Dialog open={modalEditarOpened} onOpenChange={setModalEditarOpened}>
           <DialogContent className="max-w-xl">
             <DialogHeader>
-              <DialogTitle>Modificar Producto</DialogTitle>
+              <DialogTitle>Reponer o Modificar Producto</DialogTitle>
               <DialogDescription>
-                Actualiza los valores comerciales del artículo. Los cambios impactarán de inmediato en el catálogo.
+                Actualiza existencias físicas, precios o datos comerciales. Los cambios impactan de inmediato en caja.
               </DialogDescription>
             </DialogHeader>
 
@@ -2293,6 +1450,25 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                     />
                   </div>
 
+                  {/* Vista previa de margen en vivo también en Edición */}
+                  <div className="sm:col-span-2 flex items-center justify-between px-3 py-2 rounded-lg bg-[#F8F7F2] border border-[#E8E6DF]">
+                    <div>
+                      <span className="text-xs text-[#657373]">Ganancia unitaria: </span>
+                      <strong className={`text-xs ${esRentableEdicion ? 'text-[#2A7A78]' : 'text-red-600'}`}>
+                        ${gananciaEdicion.toLocaleString('es-AR')}
+                      </strong>
+                      {!esRentableEdicion && config?.inventario?.alertarMargenNegativo && ventaEdicion > 0 && (
+                        <span className="block text-[11px] font-semibold text-red-600">
+                          ¡Alerta! El precio de venta es inferior al costo de reposición.
+                        </span>
+                      )}
+                    </div>
+                    <Badge variant={esRentableEdicion ? 'success' : 'destructive'} className="gap-1 text-xs">
+                      {esRentableEdicion ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                      {margenEdicion}%
+                    </Badge>
+                  </div>
+
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-[#1C2424] uppercase tracking-wider">
                       Stock Físico Actual *
@@ -2322,7 +1498,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                     />
                   </div>
 
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 sm:col-span-2">
                     <label className="text-xs font-semibold text-[#1C2424] uppercase tracking-wider">
                       Unidad de Medida
                     </label>
@@ -2359,7 +1535,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                   </Button>
                   <Button type="submit" className="gap-1.5">
                     <Check className="h-4 w-4" />
-                    <span>Guardar Cambios</span>
+                    <span>Aplicar Cambios</span>
                   </Button>
                 </DialogFooter>
               </form>
@@ -2373,4 +1549,3 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
 
 // Alias de compatibilidad hacia atrás
 export const AdminGestionInventario = AdminGestionInventarioView;
-

@@ -6,11 +6,13 @@
  * ====================================================================
  * 
  * Propósito:
- * Proporcionar una consola centralizada de configuración para:
- * 1. Identidad comercial de la empresa y personalización de tickets térmicos.
+ * Proporcionar una consola centralizada de configuración con guardado
+ * reactivo automático en tiempo real para:
+ * 1. Identidad comercial de la empresa y simulador coherente de tickets térmicos.
  * 2. Políticas y métodos de pago habilitados en caja (POS).
  * 3. Reglas y umbrales globales de inventario.
- * 4. Monitor de infraestructura Supabase y exportación de respaldos CSV.
+ * 4. Criterios y períodos analíticos del dashboard.
+ * 5. Monitor de registros reales y exportación de respaldos CSV.
  */
 
 import React, { useState } from 'react';
@@ -20,7 +22,6 @@ import {
   CreditCard,
   SlidersHorizontal,
   Database,
-  FloppyDisk,
   ArrowCounterClockwise,
   Check,
   WarningCircle,
@@ -116,9 +117,9 @@ function SwitchToggle({
 export function AdminConfiguracionView({ controller }: AdminConfiguracionViewProps) {
   const {
     config,
+    estadisticasSistema,
     pestañaActiva,
     setPestañaActiva,
-    guardando,
     mensajeExito,
     mensajeError,
     actualizarNegocio,
@@ -126,7 +127,6 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
     toggleMetodoPago,
     actualizarInventario,
     actualizarMetricas,
-    guardarCambios,
     restablecerPorDefecto,
     exportarCatalogoCSV,
     exportarVentasCSV,
@@ -151,7 +151,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
       id: 'pos',
       etiqueta: 'Caja & Métodos de Pago',
       icono: CreditCard,
-      descripcion: 'Medios de cobro habilitados, descuentos y escaneo en mostrador.',
+      descripcion: 'Medios de cobro habilitados, control de stock en caja y periféricos.',
     },
     {
       id: 'inventario',
@@ -173,10 +173,14 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
     },
   ];
 
+  const discriminaIvaFactura =
+    config.negocio.modoComprobante === 'factura_afip' &&
+    config.negocio.condicionIva === 'responsable_inscripto';
+
   return (
     <MotionConfig reducedMotion="user">
       <div className="space-y-6 pb-20">
-        {/* Cabecera Principal */}
+        {/* Cabecera Principal con Indicador de Guardado Automático */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E8E6DF] pb-5">
           <div>
             <div className="flex items-center gap-2">
@@ -192,28 +196,9 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setModalRestablecerAbierto(true)}
-              className="text-xs border-[#E8E6DF] text-[#657373] hover:text-[#1C2424] hover:bg-[#F2F1EA] gap-1.5 cursor-pointer"
-            >
-              <ArrowCounterClockwise className="h-3.5 w-3.5" />
-              <span>Restablecer</span>
-            </Button>
-
-            <Button
-              type="button"
-              size="sm"
-              onClick={guardarCambios}
-              disabled={guardando}
-              className="bg-[#2A7A78] hover:bg-[#205E5C] text-white shadow-sm gap-1.5 cursor-pointer text-xs"
-            >
-              <FloppyDisk className="h-3.5 w-3.5" weight="bold" />
-              <span>{guardando ? 'Guardando...' : 'Guardar Cambios'}</span>
-            </Button>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#E2F1F0]/60 border border-[#2A7A78]/25 text-xs font-medium text-[#2A7A78] self-start sm:self-auto">
+            <CheckCircle className="h-4 w-4 shrink-0" weight="duotone" />
+            <span>Guardado automático en tiempo real</span>
           </div>
         </div>
 
@@ -617,7 +602,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
               </Card>
             </div>
 
-            {/* Columna Derecha: Vista Previa en Vivo del Ticket Térmico 80mm (5 cols) */}
+            {/* Columna Derecha: Vista Previa en Vivo del Ticket Térmico (5 cols) */}
             <div className="lg:col-span-5 space-y-4">
               <Card className="border-[#E8E6DF] shadow-sm sticky top-6">
                 <CardHeader className="pb-3 border-b border-[#E8E6DF] bg-[#F8F7F2]/60">
@@ -631,11 +616,13 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
 
                 <CardContent className="p-4 bg-[#F2F1EA]/40">
                   {/* Papel Térmico Simulado */}
-                  <div className={`bg-white border border-[#D5D3C8] shadow-md rounded-md font-mono mx-auto leading-relaxed transition-all duration-200 ${
-                    config.pos.anchoPapelTicket === '58mm'
-                      ? 'max-w-[270px] p-3 text-[10px]'
-                      : 'max-w-sm p-5 text-[11px]'
-                  } text-[#2C3539]`}>
+                  <div
+                    className={`bg-white border border-[#D5D3C8] shadow-md rounded-md font-mono mx-auto leading-relaxed transition-all duration-200 ${
+                      config.pos.anchoPapelTicket === '58mm'
+                        ? 'max-w-[270px] p-3 text-[10px]'
+                        : 'max-w-sm p-5 text-[11px]'
+                    } text-[#2C3539]`}
+                  >
                     {/* Header */}
                     <div className="text-center space-y-1 pb-3 border-b border-dashed border-[#A0A8A8]">
                       <p className="font-bold text-sm tracking-wide text-[#111827] uppercase">
@@ -667,7 +654,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                         </p>
                       )}
 
-                      {/* Caja Destacada de Validez Legal según el Régimen */}
+                      {/* Caja Destacada de Validez Legal según el Régimen y Condición IVA */}
                       {config.negocio.modoComprobante === 'no_fiscal' ? (
                         config.negocio.mostrarAclaracionLegal && (
                           <div className="my-2 p-1.5 border border-dashed border-[#111827] bg-[#F9F9F6] text-center">
@@ -682,7 +669,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                       ) : (
                         <div className="my-2 p-1.5 border-2 border-solid border-[#111827] bg-[#F9F9F6] text-center">
                           <p className="font-extrabold text-xs tracking-wider text-[#111827]">
-                            FACTURA B
+                            {discriminaIvaFactura ? 'FACTURA B' : 'FACTURA C'}
                           </p>
                           <p className="text-[9px] text-[#4B5563] font-semibold">
                             PTO. VTA: {String(config.negocio.puntoVenta || 1).padStart(4, '0')} - COMP. NRO: 00042891
@@ -737,16 +724,25 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                       </div>
                     </div>
 
-                    {/* Totales */}
+                    {/* Totales matemáticamente coherentes según Régimen y Condición IVA */}
                     <div className="py-2.5 space-y-1 border-b border-dashed border-[#A0A8A8]">
-                      <div className="flex justify-between text-[10px]">
-                        <span>SUBTOTAL:</span>
-                        <span>{config.negocio.monedaSimbolo} 5.350,00</span>
-                      </div>
-                      <div className="flex justify-between text-[10px]">
-                        <span>IVA (21.0%):</span>
-                        <span>{config.negocio.monedaSimbolo} 1.123,50</span>
-                      </div>
+                      {discriminaIvaFactura ? (
+                        <>
+                          <div className="flex justify-between text-[10px]">
+                            <span>SUBTOTAL NETO:</span>
+                            <span>{config.negocio.monedaSimbolo} 4.421,49</span>
+                          </div>
+                          <div className="flex justify-between text-[10px]">
+                            <span>IVA CONTENIDO (21%):</span>
+                            <span>{config.negocio.monedaSimbolo} 928,51</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex justify-between text-[10px]">
+                          <span>ARTÍCULOS:</span>
+                          <span>3 un.</span>
+                        </div>
+                      )}
                       <div className="flex justify-between font-bold text-sm pt-1 text-[#111827]">
                         <span>TOTAL:</span>
                         <span>{config.negocio.monedaSimbolo} 5.350,00</span>
@@ -1017,19 +1013,19 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
               </CardContent>
             </Card>
 
-            {/* Sección: Políticas Operativas de Venta y Permisos */}
+            {/* Sección: Políticas Operativas de Venta y Periféricos */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Card: Venta Sin Stock & Margen de Descuento */}
+              {/* Card: Política de Disponibilidad en Caja */}
               <Card className="border-[#E8E6DF] shadow-sm">
                 <CardHeader className="pb-3 border-b border-[#E8E6DF]">
                   <CardTitle className="text-sm font-bold text-[#1C2424]">
-                    Políticas de Venta y Descuentos
+                    Política de Disponibilidad en Caja
                   </CardTitle>
                   <p className="text-xs text-[#657373]">
-                    Límites de tolerancia para los operadores de mostrador y cajeros.
+                    Controla la validación de existencias físicas durante el cobro en mostrador.
                   </p>
                 </CardHeader>
-                <CardContent className="p-4 space-y-5">
+                <CardContent className="p-4 space-y-4">
                   {/* Switch: Permitir venta sin stock */}
                   <div className="flex items-start justify-between gap-4">
                     <div>
@@ -1044,7 +1040,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                         )}
                       </div>
                       <p className="text-xs text-[#657373] mt-1">
-                        Si está habilitado, la caja permitirá concretar el cobro de artículos cuyo stock en sistema sea 0 o insuficiente.
+                        Si está deshabilitado (recomendado), la terminal POS bloquea agregar al carrito más unidades que las disponibles en depósito. Si se habilita, permite facturar mercadería aún no ingresada al sistema.
                       </p>
                     </div>
                     <SwitchToggle
@@ -1055,46 +1051,11 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                     />
                   </div>
 
-                  <div className="border-t border-[#E8E6DF] pt-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <p className="text-xs font-semibold text-[#1C2424]">
-                          Límite de Descuento Manual para Vendedor
-                        </p>
-                        <p className="text-xs text-[#657373]">
-                          Porcentaje máximo que el vendedor puede rebajar sin clave de administrador.
-                        </p>
-                      </div>
-                      <Badge className="bg-[#E2F1F0] text-[#2A7A78] hover:bg-[#E2F1F0] text-xs font-bold px-2 py-0.5">
-                        {config.pos.limiteDescuentoVendedor}% Máx
-                      </Badge>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="range"
-                        min="0"
-                        max="50"
-                        step="5"
-                        value={config.pos.limiteDescuentoVendedor}
-                        onChange={(e) =>
-                          actualizarPOS({ limiteDescuentoVendedor: Number(e.target.value) })
-                        }
-                        className="w-full accent-[#2A7A78] cursor-pointer"
-                      />
-                      <div className="w-16">
-                        <Input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={config.pos.limiteDescuentoVendedor}
-                          onChange={(e) =>
-                            actualizarPOS({ limiteDescuentoVendedor: Math.max(0, Math.min(100, Number(e.target.value))) })
-                          }
-                          className="h-8 text-xs text-center"
-                        />
-                      </div>
-                    </div>
+                  <div className="p-3 rounded-lg bg-[#F8F7F2] border border-[#E8E6DF] flex items-start gap-2.5">
+                    <Question className="h-4 w-4 text-[#2A7A78] mt-0.5 shrink-0" weight="duotone" />
+                    <p className="text-[11px] text-[#657373]">
+                      Esta regla impacta instantáneamente en la terminal del operador POS sin requerir cierre de turno ni recarga de página.
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -1268,14 +1229,14 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                     <span className="text-xs text-[#657373]">unidades de seguridad</span>
                   </div>
                   <p className="text-xs text-[#657373] mt-2">
-                    Cuando se dé de alta un nuevo producto sin especificar su stock mínimo, se utilizará esta cifra. Los productos cuyo stock sea menor o igual a este valor se marcarán automáticamente con alerta de reposición.
+                    Cuando se dé de alta un nuevo producto en <strong>Gestión de Inventario</strong>, el campo de stock mínimo iniciará con esta cifra. Los productos activos cuyo stock sea menor o igual a su mínimo se marcarán automáticamente como <strong>Stock Crítico</strong>.
                   </p>
                 </div>
 
                 <div className="p-3 rounded-lg bg-[#F8F7F2] border border-[#E8E6DF] flex items-start gap-2.5">
                   <Question className="h-4 w-4 text-[#657373] mt-0.5 flex-shrink-0" weight="duotone" />
                   <p className="text-[11px] text-[#657373]">
-                    El stock crítico se gestiona de forma centralizada en la tabla de <strong>Gestión de Inventario</strong>, donde puedes filtrar artículos en estado de alerta o sin existencias.
+                    El diagnóstico de existencias se monitorea de forma unificada en <strong>Gestión de Inventario</strong> e <strong>Inventario Global</strong> en 4 niveles: Sin Stock, Stock Crítico, Bajas Unidades y Stock Óptimo.
                   </p>
                 </div>
               </CardContent>
@@ -1301,11 +1262,11 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                     <div className="flex items-center gap-1.5">
                       <Warning className="h-4 w-4 text-amber-600" weight="duotone" />
                       <p className="text-xs font-semibold text-[#1C2424]">
-                        Bloqueo o Alerta de Margen Negativo
+                        Alerta de Margen Negativo o Nulo
                       </p>
                     </div>
                     <p className="text-xs text-[#657373] mt-1">
-                      Advierte al administrador si el precio de venta final es menor o igual al precio de costo del producto.
+                      Advierte visualmente al administrador durante el alta o modificación si el precio de venta es menor o igual al costo de reposición.
                     </p>
                   </div>
                   <SwitchToggle
@@ -1333,26 +1294,6 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                     <Badge variant="outline" className="text-[10px] text-emerald-700 border-emerald-300 bg-emerald-50 shrink-0">
                       Activo por DB
                     </Badge>
-                  </div>
-                </div>
-
-                <div className="border-t border-[#E8E6DF] pt-4">
-                  {/* Switch: Control de Vencimientos */}
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-xs font-semibold text-[#1C2424]">
-                        Seguimiento de Lotes y Vencimientos
-                      </p>
-                      <p className="text-xs text-[#657373] mt-1">
-                        Habilita la fecha de caducidad en el inventario para alimentos, farmacia o productos perecederos.
-                      </p>
-                    </div>
-                    <SwitchToggle
-                      id="toggle-vencimientos"
-                      checked={Boolean(config.inventario.controlarVencimientos)}
-                      onChange={(val) => actualizarInventario({ controlarVencimientos: val })}
-                      label="Control de vencimientos"
-                    />
                   </div>
                 </div>
               </CardContent>
@@ -1385,7 +1326,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                   </Badge>
                 </div>
                 <p className="text-xs text-[#657373] mt-1">
-                  Define qué ventana de tiempo analizan las métricas (Recaudación, Ticket Promedio, Operaciones) cada vez que el Administrador accede al panel.
+                  Define qué ventana de tiempo gobierna inicialmente todas las métricas, gráficos y rankings cuando el Administrador accede a <strong>Métricas</strong>.
                 </p>
               </CardHeader>
               <CardContent className="p-4 space-y-4">
@@ -1394,19 +1335,19 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                     {
                       id: 'mensual',
                       titulo: 'Mes Calendario (Recomendado)',
-                      descripcion: 'Del día 1 al último día del mes en curso. Ideal para balances mensuales y control contable.',
+                      descripcion: 'Desde el día de corte mensual en curso. Ideal para balances mensuales y control contable.',
                       badge: 'Balance Mensual',
                     },
                     {
                       id: 'semanal',
                       titulo: 'Semana en Curso',
-                      descripcion: 'Monitorea de lunes a domingo. Ideal para comercios de alta rotación (minimercados, almacenes).',
+                      descripcion: 'Monitorea la semana actual completa. Ideal para comercios de alta rotación (minimercados, almacenes).',
                       badge: 'Rotación Alta',
                     },
                     {
                       id: 'diario',
                       titulo: 'Jornada de Hoy (Diario)',
-                      descripcion: 'Enfocado en las ventas y caja del día en vivo. Arranca en cero al inicio de cada jornada.',
+                      descripcion: 'Enfocado en las ventas y caja del día en vivo, comparado contra la jornada de ayer.',
                       badge: 'En Vivo',
                     },
                     {
@@ -1512,7 +1453,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                       className="text-xs h-9"
                     />
                     <p className="text-[11px] text-[#657373] mt-1">
-                      Día del mes donde inicia el balance (habitualmente el día 1).
+                      Día del mes donde inicia el balance contable (habitualmente el día 1).
                     </p>
                   </div>
                 </div>
@@ -1524,7 +1465,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                       Comparativa porcentual vs. período anterior
                     </p>
                     <p className="text-xs text-[#657373] mt-0.5">
-                      Muestra badges con la variación porcentual (+12.5%, -4.2%) contra la misma ventana temporal previa.
+                      Muestra indicadores con la variación porcentual real y la curva comparativa contra la ventana temporal previa.
                     </p>
                   </div>
                   <SwitchToggle
@@ -1549,7 +1490,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
             transition={{ duration: 0.15 }}
             className="space-y-6"
           >
-            {/* Monitor de Salud de la Infraestructura Supabase */}
+            {/* Monitor de Salud de la Infraestructura Supabase con Conteos Reales */}
             <Card className="border-[#E8E6DF] shadow-sm">
               <CardHeader className="pb-3 border-b border-[#E8E6DF]">
                 <div className="flex items-center justify-between">
@@ -1565,7 +1506,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                   </Badge>
                 </div>
                 <p className="text-xs text-[#657373]">
-                  Diagnóstico en tiempo real del motor relacional PostgreSQL y las políticas de seguridad.
+                  Diagnóstico en tiempo real del motor relacional PostgreSQL y volumen efectivo de registros activos.
                 </p>
               </CardHeader>
               <CardContent className="p-4">
@@ -1578,7 +1519,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                       {config.sistema.versionEsquema}
                     </p>
                     <p className="text-[11px] text-emerald-700 font-medium mt-0.5">
-                      ✓ Políticas RLS verificadas
+                      Políticas RLS verificadas
                     </p>
                   </div>
 
@@ -1596,13 +1537,13 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
 
                   <div className="p-3 rounded-lg bg-[#F8F7F2] border border-[#E8E6DF]">
                     <span className="text-[11px] font-semibold text-[#657373] uppercase tracking-wider">
-                      Último Respaldo Local
+                      Última Exportación CSV
                     </span>
                     <p className="text-sm font-bold text-[#1C2424] mt-1">
-                      {config.sistema.ultimoRespaldo}
+                      {estadisticasSistema.ultimoRespaldoCSV || 'Sin exportaciones recientes'}
                     </p>
                     <p className="text-[11px] text-[#657373] mt-0.5">
-                      Almacenamiento persistente
+                      Respaldo manual descargado
                     </p>
                   </div>
 
@@ -1611,10 +1552,10 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                       Volumen de Registros
                     </span>
                     <p className="text-sm font-bold text-[#1C2424] mt-1">
-                      {config.sistema.filasTotalesDB} registros
+                      {estadisticasSistema.totalRegistros} registros
                     </p>
                     <p className="text-[11px] text-[#657373] mt-0.5">
-                      Artículos, ventas y auditoría
+                      {estadisticasSistema.totalProductos} prod. • {estadisticasSistema.totalCategorias} cat. • {estadisticasSistema.totalVentas} ventas
                     </p>
                   </div>
                 </div>
@@ -1644,14 +1585,14 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                           <Package className="h-5 w-5" weight="duotone" />
                         </div>
                         <Badge variant="outline" className="text-[10px]">
-                          Formato UTF-8 .CSV
+                          {estadisticasSistema.totalProductos} artículos • UTF-8 .CSV
                         </Badge>
                       </div>
                       <p className="font-bold text-xs text-[#1C2424] mt-3">
                         Catálogo Completo de Productos
                       </p>
                       <p className="text-xs text-[#657373] mt-1 leading-relaxed">
-                        Exporta el listado completo con códigos de barras, descripciones, categorías, precios de compra y venta, y stock físico en tiempo real.
+                        Exporta el listado completo con códigos SKU, descripciones, categorías, precios de compra y venta, y stock físico en tiempo real.
                       </p>
                     </div>
 
@@ -1677,7 +1618,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                           <CurrencyDollar className="h-5 w-5" weight="duotone" />
                         </div>
                         <Badge variant="outline" className="text-[10px]">
-                          Formato UTF-8 .CSV
+                          {estadisticasSistema.totalVentas} ventas • UTF-8 .CSV
                         </Badge>
                       </div>
                       <p className="font-bold text-xs text-[#1C2424] mt-3">
@@ -1715,7 +1656,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                   </CardTitle>
                 </div>
                 <p className="text-xs text-red-700">
-                  Acciones irreversibles sobre los parámetros de configuración local.
+                  Acciones sobre los parámetros de configuración local del comercio.
                 </p>
               </CardHeader>
               <CardContent className="p-4">
@@ -1725,7 +1666,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                       Restablecer Parámetros de Fábrica
                     </p>
                     <p className="text-xs text-[#657373] mt-0.5">
-                      Vuelve todos los nombres de comercio, medios de pago y límites a los valores sugeridos por defecto.
+                      Vuelve todos los nombres de comercio, medios de pago, períodos base y umbrales a los valores predeterminados.
                     </p>
                   </div>
                   <Button
