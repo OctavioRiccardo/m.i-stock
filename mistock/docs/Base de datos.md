@@ -33,8 +33,16 @@ erDiagram
         uuid id_usuario PK,FK
         text nombre
         text email
+        text telefono
         user_rol rol
+        boolean activo
         timestamptz creado_el
+        timestamptz actualizado_el
+    }
+
+    configuracion_negocio {
+        integer id_config PK
+        jsonb config
         timestamptz actualizado_el
     }
 
@@ -126,6 +134,8 @@ erDiagram
 Extiende el esquema interno de Supabase (`auth.users`) almacenando metadatos de los empleados.
 * **`id_usuario` (UUID, PK):** Clave primaria que apunta directamente a `auth.users(id) ON DELETE CASCADE`. Si el usuario es eliminado de la autenticación de Supabase, su registro público se elimina en cascada.
 * **`rol` (`user_rol`):** Por defecto `'no_rol'`. Evita la escalada de privilegios inadvertida tras el primer login con Google u OAuth.
+* **`telefono` (TEXT):** Número de contacto telefónico del colaborador (opcional, validado a 6-15 dígitos numéricos).
+* **`activo` (BOOLEAN, Default: true):** Habilitación operativa del usuario. Si es `false`, el sistema bloquea el inicio de sesión.
 * **Trazabilidad:** Marcas de tiempo `creado_el` y `actualizado_el` con zona horaria (`timestamptz`).
 
 ---
@@ -191,6 +201,16 @@ Gestión de cobros asociados a la venta.
 
 ---
 
+### 3.5. Módulo de Configuración del Comercio
+
+#### Tabla: `public.configuracion_negocio`
+Persistencia de los parámetros comerciales, identidad fiscal y reglas de funcionamiento del sistema.
+* **`id_config` (INTEGER, PK):** Clave única (registro singleton `id = 1`).
+* **`config` (JSONB, NOT NULL):** Estructura consolidada de `ConfiguracionCompleta` (identidad de empresa, moneda, métodos de pago habilitados, venta sin stock, modo de ticket no_fiscal/fiscal y períodos analíticos).
+* **`actualizado_el` (TIMESTAMPTZ):** Marca temporal de la última modificación.
+
+---
+
 ## 4. Automatizaciones en la Base de Datos (Funciones y Triggers)
 
 ### 4.1. Sincronización Automática de Usuarios (`handle_new_user`)
@@ -215,7 +235,19 @@ Gestión de cobros asociados a la venta.
 
 ### 4.4. Validación de Permisos sin Recursión RLS (`is_admin`)
 * **Mecanismo:** Función `SECURITY DEFINER` y `STABLE` con `SET search_path = public`.
-* **Beneficio:** Comprueba si el usuario autenticado tiene rol `'admin'` sin disparar recursión infinita en las políticas RLS de `public.usuario`.
+* **Beneficio:** Comprueba si el usuario autenticado tiene rol `'admin'` y se encuentra activo (`activo = true`) sin disparar recursión infinita en las políticas RLS de `public.usuario`.
+
+---
+
+### 4.5. Reintegro Automático de Stock por Anulación (`reintegrar_stock_por_cancelacion`)
+* **Mecanismo:** Trigger `tr_cancelar_venta_reintegrar_stock` (`AFTER UPDATE OF estado ON public.ventas`).
+* **Beneficio:** Cuando una venta cambia su estado a `'cancelada'`, la función recorre automáticamente los renglones de `detalle_ventas`, genera movimientos de tipo `'devolucion'` en `movimientos_stock` con cantidad positiva y restituye el stock físico en `productos.stock_actual`.
+
+---
+
+### 4.6. Procedimientos Almacenados de Administración (RPCs Seguras)
+* **`public.crear_colaborador_admin(email, password, nombre, rol, telefono)`:** Función `SECURITY DEFINER` que aprovisiona criptográficamente al usuario en `auth.users` y en `public.usuario` sin almacenar contraseñas en texto plano.
+* **`public.actualizar_password_colaborador_admin(usuario_id, password)`:** Función `SECURITY DEFINER` para restablecer contraseñas de colaboradores desde la consola de administración. Ejecución restringida exclusivamente a usuarios autenticados con rol `admin`.
 
 ---
 
@@ -232,13 +264,16 @@ Todas las tablas tienen RLS habilitado explícitamente (`ENABLE ROW LEVEL SECURI
 | `usuario` | SELECT | `authenticated` (Staff) | `USING (true)` (Para ver nombres de cajeros/empleados) |
 | `usuario` | INSERT / UPDATE / DELETE | `authenticated` (Solo Admin) | `USING ((SELECT public.is_admin()))` |
 | `ventas` | SELECT / INSERT | `authenticated` (Staff) | Todo el staff autenticado puede registrar ventas |
+| `ventas` | UPDATE (Anulación) | `authenticated` (Staff) | Política `"Staff anula ventas activas"` (`WITH CHECK (estado = 'cancelada')`) |
+| `configuracion_negocio` | SELECT | `authenticated` (Staff) | Todo el personal consulta parámetros comerciales |
+| `configuracion_negocio` | INSERT / UPDATE | `authenticated` (Solo Admin) | `USING ((SELECT public.is_admin()))` |
 | `detalle_ventas` | SELECT / INSERT | `authenticated` (Staff) | Todo el staff autenticado puede cargar renglones |
 | `pagos` | SELECT / INSERT | `authenticated` (Staff) | Todo el staff autenticado puede registrar pagos |
 | `movimientos_stock` | SELECT / INSERT | `authenticated` (Staff) | Staff registra ingresos/egresos |
 
 > [!NOTE]
-> **Modelo de Apéndice Único (*Append-Only*):**  
-> Para `ventas`, `detalle_ventas`, `pagos` y `movimientos_stock` **NO existen políticas de `UPDATE` ni `DELETE`**. Ningún vendedor ni administrador puede modificar o borrar tickets o movimientos ya emitidos, protegiendo la inmutabilidad de los registros contables y de auditoría.
+> **Modelo de Apéndice Inmutable (*Append-Only* y Anulación Segura):**  
+> Para `detalle_ventas`, `pagos` y `movimientos_stock` **NO existen políticas de `UPDATE` ni `DELETE`**. Ningún usuario puede alterar o borrar registros contables emitidos. Para `ventas`, únicamente se autoriza la transición controlada a `estado = 'cancelada'`, la cual dispara el reintegro de existencias físicas mediante trigger.
 
 ---
 
@@ -270,3 +305,9 @@ Todas las recomendaciones de diseño y rendimiento fueron aplicadas directamente
 | **RLS Performance** | `USING ((SELECT public.is_admin()))` | Evaluación escalar única por query (5x-100x más rápida). |
 | **Seguridad PL/pgSQL** | `SET search_path = public` en triggers | Blindaje contra ataques de secuestro de esquema. |
 | **POS Automatizado** | Trigger `tr_venta_movimiento_stock` | Descuento automático de stock sin depender de código frontend. |
+| **Anulación y Reintegro** | Trigger `tr_cancelar_venta_reintegrar_stock` | Reintegro automático de stock y registro de devolución al cancelar una venta. |
+| **RLS Anulación** | Política `Staff anula ventas activas` FOR UPDATE | Permite al personal autenticado cambiar el estado de ventas a 'cancelada'. |
+| **Parámetros Negocio** | Tabla `public.configuracion_negocio` con RLS | Persistencia multi-dispositivo de parámetros fiscales, ticket y POS. |
+| **Usuarios Extendido** | Columnas `telefono text` y `activo boolean DEFAULT true` | Control de estado de cuenta y contacto en `public.usuario`. |
+| **RPCs de Colaboradores** | `crear_colaborador_admin` y `actualizar_password_colaborador_admin` | Creación y cambio de contraseñas de personal sin cuentas huérfanas locales. |
+| **Script de Migración** | [`patch_integridad_y_anulacion.sql`](file:///b:/Programas/Github/m.i-stock/mistock/supabase/migrations/patch_integridad_y_anulacion.sql) | Parche idempotente para aplicar estas mejoras en bases de datos activas. |

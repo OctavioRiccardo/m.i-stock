@@ -1,162 +1,114 @@
-# 🗺️ Mapa de Rutas del Sistema - miStock
+# 🗺️ Mapa de Rutas y Ensamblado MVC: M.I Stock
 
-#routes #nextjs #architecture #mistock #app-router #supabase
-
----
-
-## 📌 Resumen de Rutas Activas
-
-Este documento contiene la especificación completa y actualizada de las rutas configuradas en **miStock** (`Next.js 16` con App Router y Turbopack), detallando su propósito, layout asignado, vista, controlador asociado bajo la arquitectura **MVC**, enlaces de navegación y el middleware de sesión.
+**Proyecto:** M.I Stock — Sistema de Gestión de Inventario, Punto de Venta (POS) y Catálogo Comercial  
+**Framework:** Next.js 16.3.4 (App Router con Turbopack)  
+**Ubicación en Código:** `src/app/`  
+**Tags:** #rutas #nextjs #app-router #mvc #rbac #endpoints #api #mercadopago #mistock
 
 ---
 
-## 📋 Cuadro General de Rutas
+## 📌 1. Rol del App Router en el Patrón MVC (Ensamblador de Dependencias)
 
-| Ruta (URL) | Rol / Acceso | Layout Asignado | Vista (`View`) | Controlador (`Controller`) |
-| :--- | :--- | :--- | :--- | :--- |
-| **`/`** | Público / Todos | `RootLayout` | `LoginFormView.tsx` | `useLoginController` (`authController.ts`) |
-| **`/login`** | Público / Todos | `AuthLayout` (`Footer`, sin Sidebar) | `LoginFormView.tsx` | `useLoginController` (`authController.ts`) |
-| **`/logout`** | Autenticado | `AuthLayout` (`Footer`, sin Sidebar) | `LogoutView.tsx` | `useLogoutController` (`authController.ts`) |
-| **`/dashboard`** | Empleado / Usuario | `UserLayout` (`UserSidebar` + `Footer`) | `UserDashboardView.tsx` | `useUserDashboardController.ts` |
-| **`/admin`** | Administrador / Dueño | `AdminLayout` (`AdminSidebar` + `Footer`) | `AdminDashboardView.tsx` | `useAdminDashboardController.ts` |
+En **M.I Stock**, los archivos `page.tsx` dentro de `src/app/` cumplen el rol de **Ensambladores MVC (Dependency Injectors)**:
+1. No contienen lógica de negocio ni maquetado complejo de UI.
+2. Instancian el **Controlador** correspondiente (`const controller = use...Controller()`).
+3. Renderizan la **Vista** pasándole el controlador por prop (`return <...View controller={controller} />`).
 
----
+Además, el sistema organiza las rutas mediante **Route Groups** de Next.js:
+- `(auth)`: Rutas de autenticación (`/login`, `/logout`) centradas y con pie de página institucional (`Footer.tsx`).
+- `(user)`: Entorno de terminal de Punto de Venta (`/dashboard`) protegido por `UserLayout` (`UserSidebar.tsx` + `usePermisosController`).
+- `(admin)`: Consola ejecutiva de administración (`/admin`, `/admingestioninven`, `/admininventarioglobal`, `/adminusuarios`, `/adminconfiguracion`) protegida por `AdminLayout` (`AdminSidebar.tsx` + `usePermisosController`).
+- `api/`: **Route Handlers** de servidor para la integración con hardware **Mercado Pago Point Smart** y webhooks.
 
-## 🔍 Detalle por Ruta
-
-### 1. Ruta Raíz: `/`
-- **URL Local**: [http://localhost:3000/](http://localhost:3000/)
-- **Archivo de Ruta**: `src/app/page.tsx`
-- **Propósito**: Pantalla inicial del sistema. Actúa como punto de entrada mostrando el formulario de login.
-- **Componentes**: Renderiza directamente `LoginFormView` con estilos base.
-
----
-
-### 2. Ruta de Autenticación: `/login`
-- **URL Local**: [http://localhost:3000/login](http://localhost:3000/login)
-- **Archivo de Ruta**: `src/app/(auth)/login/page.tsx`
-- **Layout**: `src/app/(auth)/layout.tsx` (Contenido centrado verticalmente, sin Sidebar, con `Footer`).
-- **Vista**: `src/views/auth/LoginFormView.tsx`
-- **Controlador**: `useLoginController` en `src/controllers/authController.ts`.
-- **Funcionalidad**: Valida usuario y contraseña contra Supabase Auth (`signInWithPassword`), maneja recordatorio de sesión y redirige al dashboard.
-
----
-
-### 3. Ruta de Cierre de Sesión: `/logout`
-- **URL Local**: [http://localhost:3000/logout](http://localhost:3000/logout)
-- **Archivo de Ruta**: `src/app/(auth)/logout/page.tsx`
-- **Layout**: `src/app/(auth)/layout.tsx`
-- **Vista**: `src/views/auth/LogoutView.tsx`
-- **Controlador**: `useLogoutController` en `src/controllers/authController.ts`.
-- **Funcionalidad**: Ejecuta `supabase.auth.signOut()`, invalida cookies de sesión de Supabase SSR y redirige al login tras completar la salida.
-
----
-
-### 4. Panel de Operación de Usuario: `/dashboard`
-- **URL Local**: [http://localhost:3000/dashboard](http://localhost:3000/dashboard)
-- **Archivo de Ruta**: `src/app/(user)/dashboard/page.tsx`
-- **Layout**: `src/app/(user)/layout.tsx` (Sidebar lateral `UserSidebar` con insignia *Panel Empleado* y pie de página `Footer`).
-- **Vista**: `src/views/user/UserDashboardView.tsx`
-- **Controlador**: `useUserDashboardController` en `src/controllers/userDashboardController.ts`.
-- **Navegación del Sidebar (`UserSidebar.tsx`)**:
-  - `Ventas y Operación` ➔ `/dashboard`
-  - `Catálogo de Productos` ➔ `/dashboard#productos`
-  - `Historial del Día` ➔ `/dashboard#historial`
-  - `Resumen de Stock` ➔ `/dashboard#resumen`
-  - `Cambiar de Rol` ➔ `/login`
-  - `Cerrar Sesión` ➔ `/logout`
-- **Funcionalidades**:
-  - Buscador predictivo de productos por nombre o código de barra.
-  - Carrito rápido / venta en 1-clic con decremento de stock.
-  - Tabla de últimos movimientos del turno.
-
----
-
-### 5. Panel Ejecutivo de Administrador: `/admin`
-- **URL Local**: [http://localhost:3000/admin](http://localhost:3000/admin)
-- **Archivo de Ruta**: `src/app/(admin)/admin/page.tsx`
-- **Layout**: `src/app/(admin)/layout.tsx` (Sidebar lateral `AdminSidebar` con insignia *Panel Administrador* y pie de página `Footer`).
-- **Vista**: `src/views/admin/AdminDashboardView.tsx`
-- **Controlador**: `useAdminDashboardController` en `src/controllers/adminDashboardController.ts`.
-- **Navegación del Sidebar (`AdminSidebar.tsx`)**:
-  - `Métricas & KPIs` ➔ `/admin`
-  - `Alertas de Stock Crítico` ➔ `/admin#alertas`
-  - `Gestión de Usuarios` ➔ `/admin#usuarios`
-  - `Inventario Global` ➔ `/admin#inventario`
-  - `Configuración` ➔ `/admin#ajustes`
-  - `Cambiar de Rol` ➔ `/login`
-  - `Cerrar Sesión` ➔ `/logout`
-- **Funcionalidades**:
-  - Tarjetas de KPIs (Ingresos del mes, rotación de stock, artículos críticos).
-  - Alertas prioritarias con reposición rápida de inventario.
-  - Tabla de auditoría y gestión de usuarios.
-
----
-
-## 🛡️ Interceptor y Middleware de Sesión
-
-Next.js 16 intercepta las solicitudes a través de:
-1. **`src/proxy.ts`**: Define la función `proxy(request: NextRequest)` y el `matcher` que excluye recursos estáticos (`_next`, imágenes, favicons).
-2. **`src/lib/supabase/middleware.ts`**: Contiene la función `updateSession(request)`, la cual refresca tokens de autenticación mediante `@supabase/ssr` (`createServerClient`) y sincroniza las cookies entre Next.js y Supabase.
-
-> [!IMPORTANT]
-> **Variables de Entorno Requeridas (.env.local):**
-> Para que el middleware y los controladores puedan autenticar contra Supabase, deben estar definidas:
-> - `NEXT_PUBLIC_SUPABASE_URL`
-> - `NEXT_PUBLIC_SUPABASE_ANON_KEY` (o `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`)
-> 
-> Consulta `.env.example` en la raíz del proyecto para más detalles.
-
----
-
-## 📂 Organización de Carpetas en `src/` (Route Groups y MVC)
-
-```text
-src/
-├── app/
-│   ├── layout.tsx             # RootLayout con MantineProvider y theme
-│   ├── globals.css            # Reglas CSS globales y variables
-│   ├── page.tsx               # Ruta raíz / (Punto de acceso)
-│   ├── (auth)/                # Route Group: Autenticación
-│   │   ├── layout.tsx         # Layout centrado con Footer (sin Sidebar)
-│   │   ├── login/page.tsx     # Ruta /login
-│   │   └── logout/page.tsx    # Ruta /logout
-│   ├── (user)/                # Route Group: Panel de Empleado
-│   │   ├── layout.tsx         # UserSidebar + Content + Footer
-│   │   └── dashboard/page.tsx # Ruta /dashboard
-│   └── (admin)/               # Route Group: Panel de Dueño/Admin
-│       ├── layout.tsx         # AdminSidebar + Content + Footer
-│       └── admin/page.tsx     # Ruta /admin
-│
-├── controllers/               # Controladores MVC (Custom Hooks)
-│   ├── authController.ts      # useLoginController & useLogoutController
-│   ├── userDashboardController.ts
-│   └── adminDashboardController.ts
-│
-├── models/                    # Definición de tipos, modelos y esquemas
-│   ├── authModel.ts           # Interfaces de credenciales y usuario
-│   └── dashboardModel.ts      # Interfaces de productos, stock y KPIs
-│
-├── views/                     # Componentes visuales puros y estilos
-│   ├── admin/
-│   │   ├── AdminDashboardView.tsx & AdminDashboardView.module.css
-│   │   ├── AdminSidebar.tsx & AdminSidebar.module.css
-│   │   └── AdminNavbar.tsx & AdminNavbar.module.css
-│   ├── auth/
-│   │   ├── LoginFormView.tsx & LoginFormView.module.css
-│   │   └── LogoutView.tsx & LogoutView.module.css
-│   ├── user/
-│   │   ├── UserDashboardView.tsx & UserDashboardView.module.css
-│   │   ├── UserSidebar.tsx & UserSidebar.module.css
-│   │   └── UserNavbar.tsx & UserNavbar.module.css
-│   └── common/
-│       └── Footer.tsx & Footer.module.css
-│
-├── lib/                       # Utilidades e integraciones de infraestructura
-│   └── supabase/
-│       ├── client.ts          # createBrowserClient para Vistas/Controladores
-│       ├── server.ts          # createServerClient para Server Actions
-│       └── middleware.ts      # updateSession para el proxy de Next.js
-│
-└── proxy.ts                   # Entry point para middleware/proxy en Next.js 16
+```mermaid
+flowchart TD
+    ROOT["src/app/"]
+    
+    ROOT --> AUTH["(auth)/"]
+    AUTH --> L1["/login (LoginFormView + useLoginController)"]
+    AUTH --> L2["/logout (LogoutView + useLogoutController)"]
+    
+    ROOT --> USER["(user)/ — Protegido por usePermisosController"]
+    USER --> U1["/dashboard (UserDashboardView + useUserDashboardController)"]
+    
+    ROOT --> ADMIN["(admin)/ — Protegido por usePermisosController (Solo Admin)"]
+    ADMIN --> A1["/admin (AdminDashboardView + useAdminDashboardController)"]
+    ADMIN --> A2["/admingestioninven (AdminGestionInventario + useAdminInventarioController)"]
+    ADMIN --> A3["/admininventarioglobal (AdminInventarioGlobalView + useAdminInventarioGlobalController)"]
+    ADMIN --> A4["/adminstockcritico (Redirección a /admininventarioglobal)"]
+    ADMIN --> A5["/adminusuarios (AdminUsuariosView + useAdminUsuariosController)"]
+    ADMIN --> A6["/adminconfiguracion (AdminConfiguracionView + useAdminConfiguracionController)"]
+    ADMIN --> A7["/adminmetricas (Redirección a /admin)"]
+    
+    ROOT --> API["api/mercadopago/"]
+    API --> MP1["GET /point/devices (Listar terminales Point Smart)"]
+    API --> MP2["POST /point/intent (Enviar cobro al posnet)"]
+    API --> MP3["GET & DELETE /point/intent/[id] (Consultar o cancelar cobro)"]
+    API --> MPW["POST /webhook (Notificaciones asíncronas con firma HMAC)"]
 ```
+
+---
+
+## 📋 2. Cuadro General de Rutas y Conexión MVC
+
+| Ruta (URL) | Archivo en `src/app/` | Rol Requerido | Layout y Guardia RBAC | Vista (`src/views/`) | Controlador (`src/controllers/`) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`/`** | `src/app/page.tsx` | Entrada Pública | Redirección Canónica | Redirige a `/login` | N/A |
+| **`/login`** | `src/app/(auth)/login/page.tsx` | Público | `AuthLayout` | `auth/LoginFormView.tsx` | `useLoginController` (`authController.ts`) |
+| **`/logout`** | `src/app/(auth)/logout/page.tsx` | Autenticado | `AuthLayout` | `auth/LogoutView.tsx` | `useLogoutController` (`authController.ts`) |
+| **`/dashboard`** | `src/app/(user)/dashboard/page.tsx` | `vendedor` o `admin` | `UserLayout` (`UserSidebar` + `usePermisosController`) | `user/UserDashboardView.tsx` | `useUserDashboardController` (`userDashboardController.ts`) |
+| **`/admin`** | `src/app/(admin)/admin/page.tsx` | `admin` | `AdminLayout` (`AdminSidebar` + `usePermisosController`) | `admin/AdminDashboardView.tsx` | `useAdminDashboardController` (`dashboardController.ts`) |
+| **`/admingestioninven`** | `src/app/(admin)/admingestioninven/page.tsx` | `admin` | `AdminLayout` (`AdminSidebar` + `usePermisosController`) | `admin/AdminGestionInventario.tsx` | `useAdminInventarioController` (`inventarioController.ts`) |
+| **`/admininventarioglobal`** | `src/app/(admin)/admininventarioglobal/page.tsx` | `admin` | `AdminLayout` (`AdminSidebar` + `usePermisosController`) | `admin/AdminInventarioGlobalView.tsx` | `useAdminInventarioGlobalController` (`inventarioGlobalController.ts`) |
+| **`/adminstockcritico`** | `src/app/(admin)/adminstockcritico/page.tsx` | `admin` | Redirección Canónica | Redirige a `/admininventarioglobal` | N/A |
+| **`/adminusuarios`** | `src/app/(admin)/adminusuarios/page.tsx` | `admin` | `AdminLayout` (`AdminSidebar` + `usePermisosController`) | `admin/AdminUsuariosView.tsx` | `useAdminUsuariosController` (`usuariosController.ts`) |
+| **`/adminconfiguracion`** | `src/app/(admin)/adminconfiguracion/page.tsx` | `admin` | `AdminLayout` (`AdminSidebar` + `usePermisosController`) | `admin/AdminConfiguracionView.tsx` | `useAdminConfiguracionController` (`configuracionController.ts`) |
+| **`/adminmetricas`** | `src/app/(admin)/adminmetricas/page.tsx` | `admin` | Redirección Canónica | Redirige a `/admin` | N/A |
+
+---
+
+## 🔌 3. Endpoints de Servidor (Route Handlers) para Mercado Pago Point Smart
+
+Para proteger el `MERCADOPAGO_ACCESS_TOKEN` privado del comercio y evitar errores de CORS, las vistas del navegador (`ModalCobroTicket.tsx`) se comunican con los Route Handlers internos de Next.js, los cuales delegan la lógica al servicio `src/services/mercadopago/pointService.ts`:
+
+### 3.1. `GET /api/mercadopago/point/devices`
+- **Archivo:** `src/app/api/mercadopago/point/devices/route.ts`
+- **Función en `pointService.ts`:** `listPointDevices()`
+- **Propósito:** Consulta las terminales físicas Point Smart vinculadas a la cuenta de Mercado Pago del comercio y devuelve también el `defaultDeviceId` configurado en `.env.local`.
+
+### 3.2. `POST /api/mercadopago/point/intent`
+- **Archivo:** `src/app/api/mercadopago/point/intent/route.ts`
+- **Función en `pointService.ts`:** `createPaymentIntent(deviceId, payload)`
+- **Propósito:** Crea una intención de cobro con cabecera `X-Idempotency-Key` (UUID v4) hacia el posnet físico seleccionado, enviando el monto del carrito y el identificador externo del ticket.
+
+### 3.3. `GET /api/mercadopago/point/intent/[id]` y `DELETE /api/mercadopago/point/intent/[id]`
+- **Archivo:** `src/app/api/mercadopago/point/intent/[id]/route.ts`
+- **Funciones en `pointService.ts`:** `getPaymentIntentStatus(intentId)` y `cancelPaymentIntent(deviceId, intentId)`
+- **Propósito:**
+  - `GET`: Permite hacer *polling* cada 3 segundos desde `ModalCobroTicket.tsx` para conocer el estado del cobro en la terminal (`OPEN`, `ON_TERMINAL`, `PROCESSING`, `PROCESSED`, `ABANDONED`, `CANCELLED`, `ERROR`).
+  - `DELETE`: Cancela en caliente una orden de cobro enviada al posnet si el cliente desiste o cambia de medio de pago.
+
+### 3.4. `POST /api/mercadopago/webhook`
+- **Archivo:** `src/app/api/mercadopago/webhook/route.ts`
+- **Función en `pointService.ts`:** `verifyWebhookSignature(xSignature, xRequestId, dataId)`
+- **Propósito:** Recibe notificaciones asíncronas de Mercado Pago verificando la autenticidad criptográfica mediante **HMAC-SHA256** (`MERCADOPAGO_WEBHOOK_SECRET`).
+
+---
+
+## 🛡️ 4. Doble Anillo de Seguridad (Middleware SSR + Guardia RBAC en Layouts)
+
+1. **Anillo 1 — Middleware de Sesión SSR (`src/proxy.ts` + `src/lib/supabase/middleware.ts`):**
+   - Intercepta cada petición HTTP y refresca el token JWT de las cookies `HttpOnly` mediante `@supabase/ssr`.
+   - Si un visitante sin sesión activa intenta entrar a `/admin/*` o `/dashboard`, lo redirige automáticamente a `/login`.
+2. **Anillo 2 — Control de Permisos y Roles de Acceso (`src/controllers/permisosController.ts`):**
+   - Tanto `src/app/(admin)/layout.tsx` como `src/app/(user)/layout.tsx` ejecutan el hook `usePermisosController()`.
+   - Si un usuario autenticado con rol `vendedor` intenta acceder a cualquier ruta de `(admin)`, `AdminLayout` bloquea el contenido y renderiza `ModalAccesoRestringido` (`tipo="vendedor_en_admin"`).
+   - Si un usuario con rol `no_rol` intenta operar en `(admin)` o `(user)`, el layout correspondiente muestra `ModalAccesoRestringido` (`tipo="sin_rol"`).
+
+---
+
+## 🔗 Enlaces Relacionados
+- [[Modelos]] — Entidades de dominio, DTOs y funciones puras.
+- [[Controladores]] — Hooks controladores MVC y servicios reactivos.
+- [[Vistas]] — Componentes visuales renderizados en cada ruta.
+- [[Stack de Tecnologias]] — Arquitectura de Next.js y Supabase SSR.
