@@ -8,8 +8,7 @@
  * Propósito:
  * Administrar la parametrización del negocio, datos de facturación para el POS,
  * métodos de cobro habilitados, umbrales de stock, métricas en vivo de base de datos
- * y exportación de respaldos CSV.
- * Conectado reactivamente con `configuracionService` como Single Source of Truth.
+ * y exportación de respaldos CSV sincronizados con Supabase PostgreSQL.
  */
 
 import { useState, useMemo, useEffect } from 'react';
@@ -22,7 +21,12 @@ import {
 } from '@/models/modelos_vista/configuracionModel';
 import { configuracionService, useConfiguracionData } from '@/services/configuracionService';
 import { inventarioService, useInventarioData } from '@/services/inventarioService';
-import { inicializarVentasCliente } from '@/controllers/userControllers/userDashboardController';
+import { supabaseService } from '@/services/supabaseService';
+import {
+  VENTAS_STORAGE_KEY,
+  inicializarVentasCliente,
+  recalcularVentasStore,
+} from '@/controllers/userControllers/userDashboardController';
 
 export type PestañaConfiguracion = 'negocio' | 'pos' | 'inventario' | 'metricas' | 'respaldos';
 
@@ -51,6 +55,10 @@ export function useAdminConfiguracionController() {
   });
 
   useEffect(() => {
+    let mounted = true;
+    void inventarioService.sincronizarConSupabase();
+    void configuracionService.sincronizarConSupabase();
+
     const sincronizarConteoVentas = () => {
       setTotalVentas((inicializarVentasCliente().ventasRecientes || []).length);
     };
@@ -60,7 +68,22 @@ export function useAdminConfiguracionController() {
       window.addEventListener('mistock_ventas_updated', sincronizarConteoVentas);
     }
 
+    supabaseService
+      .fetchVentasWithStatus()
+      .then((res) => {
+        if (!mounted || !res.ok) return;
+        const actualizado = recalcularVentasStore(res.items);
+        setTotalVentas(res.items.length);
+        if (typeof window !== 'undefined') {
+          try {
+            window.localStorage.setItem(VENTAS_STORAGE_KEY, JSON.stringify(actualizado));
+          } catch {}
+        }
+      })
+      .catch(() => {});
+
     return () => {
+      mounted = false;
       if (typeof window !== 'undefined') {
         window.removeEventListener('storage', sincronizarConteoVentas);
         window.removeEventListener('mistock_ventas_updated', sincronizarConteoVentas);
@@ -82,7 +105,7 @@ export function useAdminConfiguracionController() {
     }
   };
 
-  // Estadísticas reales de registros almacenados en el sistema
+  // Estadísticas reales de registros almacenados en Supabase
   const estadisticasSistema = useMemo(
     () => ({
       totalProductos: productos.length,
@@ -99,23 +122,14 @@ export function useAdminConfiguracionController() {
     setMensajeError(null);
   };
 
-  /**
-   * Actualiza los datos comerciales de la empresa y del ticket (persistencia automática).
-   */
   const actualizarNegocio = (datos: Partial<ConfiguracionNegocio>) => {
     configuracionService.actualizarNegocio(datos);
   };
 
-  /**
-   * Actualiza los parámetros de operación de caja y hardware (persistencia automática).
-   */
   const actualizarPOS = (datos: Partial<ConfiguracionPOS>) => {
     configuracionService.actualizarPOS(datos);
   };
 
-  /**
-   * Alterna un método de pago habilitado (ej: débito, crédito, QR, mercado pago).
-   */
   const toggleMetodoPago = (metodo: keyof MetodosPagoConfig) => {
     const res = configuracionService.toggleMetodoPago(metodo);
     if (!res.exito && res.mensaje) {
@@ -124,23 +138,14 @@ export function useAdminConfiguracionController() {
     }
   };
 
-  /**
-   * Actualiza las directivas y umbrales de inventario (persistencia automática).
-   */
   const actualizarInventario = (datos: Partial<ConfiguracionInventario>) => {
     configuracionService.actualizarInventario(datos);
   };
 
-  /**
-   * Actualiza los criterios y períodos base de métricas y KPIs (persistencia automática).
-   */
   const actualizarMetricas = (datos: Partial<ConfiguracionMetricas>) => {
     configuracionService.actualizarMetricas(datos);
   };
 
-  /**
-   * Fuerza una confirmación manual del estado actual (mantenido por retrocompatibilidad).
-   */
   const guardarCambios = () => {
     setGuardando(true);
     setMensajeError(null);
@@ -148,26 +153,20 @@ export function useAdminConfiguracionController() {
     try {
       configuracionService.guardarConfiguracion(config);
       setGuardando(false);
-      setMensajeExito('Configuración sincronizada en tiempo real con el mostrador.');
+      setMensajeExito('Configuración sincronizada con la base de datos y el mostrador.');
       setTimeout(() => setMensajeExito(null), 3500);
     } catch {
       setGuardando(false);
-      setMensajeError('Error al guardar la configuración en el almacenamiento local.');
+      setMensajeError('Error al guardar la configuración.');
     }
   };
 
-  /**
-   * Restablece todos los parámetros a los valores por defecto de fábrica.
-   */
   const restablecerPorDefecto = () => {
     configuracionService.restablecerPorDefecto();
     setMensajeExito('Se restablecieron los valores predeterminados de fábrica.');
     setTimeout(() => setMensajeExito(null), 3500);
   };
 
-  /**
-   * Descarga el catálogo completo de productos en formato CSV estándar.
-   */
   const exportarCatalogoCSV = () => {
     try {
       const headers = ['SKU', 'Producto', 'Categoría', 'Precio Costo', 'Precio Venta', 'Stock Actual', 'Stock Mínimo', 'Unidad Medida', 'Estado'];
@@ -202,9 +201,6 @@ export function useAdminConfiguracionController() {
     }
   };
 
-  /**
-   * Descarga el resumen contable de ventas reales registradas en el sistema en formato CSV.
-   */
   const exportarVentasCSV = () => {
     try {
       const headers = ['Comprobante', 'Fecha y Hora', 'Vendedor', 'Método Pago', 'Cantidad Ítems', 'Total Facturado', 'Estado'];

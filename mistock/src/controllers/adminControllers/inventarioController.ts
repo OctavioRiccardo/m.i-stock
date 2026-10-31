@@ -52,8 +52,10 @@ export function useAdminInventarioController() {
   const [paginaInventario, setPaginaInventario] = useState<number>(1);
   const itemsPorPaginaInventario = 8;
 
-  // Soporte de navegación directa desde Inventario Global (/admingestioninven?q=SKU)
+  // Sincronizar con Supabase PostgreSQL al montar y soportar navegación directa (?q=SKU)
   useEffect(() => {
+    void inventarioService.sincronizarConSupabase();
+
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     const query = params.get('q');
@@ -154,13 +156,23 @@ export function useAdminInventarioController() {
   });
 
   /**
-   * Registra una nueva categoría en el sistema a través del servicio central.
+   * Registra una nueva categoría validando longitud y unicidad de nombre.
    */
-  const agregarCategoria = (nombre: string, descripcion?: string): Categoria => {
-    const nuevaCat = inventarioService.agregarCategoria(nombre, descripcion);
-    setMensajeExito(`Categoría "${nuevaCat.nombre}" creada con éxito.`);
+  const agregarCategoria = (
+    nombre: string,
+    descripcion?: string
+  ): { exito: boolean; mensaje: string; categoria?: Categoria } => {
+    setMensajeError(null);
+    const resultado = inventarioService.agregarCategoria(nombre, descripcion);
+
+    if (!resultado.exito) {
+      setMensajeError(resultado.mensaje);
+      return resultado;
+    }
+
+    setMensajeExito(resultado.mensaje);
     setTimeout(() => setMensajeExito(null), 3500);
-    return nuevaCat;
+    return resultado;
   };
 
   /**

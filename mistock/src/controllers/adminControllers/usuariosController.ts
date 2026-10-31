@@ -6,13 +6,14 @@
  * ====================================================================
  * 
  * Propósito:
- * Administrar las cuentas de colaboradores, asignación de roles de acceso
- * y habilitación operativa (`activo` / `inactivo`) en el sistema.
+ * Administrar las cuentas reales de colaboradores en Supabase Auth + `public.usuario`,
+ * asignación de roles de acceso y habilitación operativa (`activo` / `inactivo`),
+ * sin almacenar usuarios ficticios ni contraseñas en texto plano en `localStorage`.
  * 
  * Sincronizado con Supabase:
  * - Tabla: `public.usuario`
  * - Roles: `admin`, `vendedor`, `no_rol` (enum `public.user_rol`)
- * - Políticas RLS: Solo `admin` puede insertar, modificar o eliminar usuarios.
+ * - Políticas RLS & RPCs: Solo `admin` activo puede crear, modificar o eliminar usuarios.
  */
 
 import { useState, useMemo, useEffect } from 'react';
@@ -23,6 +24,13 @@ import {
   CrearUsuarioDTO,
 } from '@/models/modelos_dominio/userModel';
 import { initialUsuarios } from '@/models/mock_data/usuariosMock';
+import {
+  LIMITES_TEXTO,
+  esEmailValido,
+  esTelefonoValido,
+  normalizarTexto,
+  sanitizarTelefonoInput,
+} from '@/lib/validaciones';
 import { supabaseService } from '@/services/supabaseService';
 
 export type FiltroRol = 'todos' | RolUsuarioDB;
@@ -32,41 +40,44 @@ const USUARIOS_STORAGE_KEY = 'mistock_usuarios_data_test_v1';
 const LEGACY_MOCK_EMAILS = new Set(['admin@mistock.com', 'admin@test.com']);
 
 function normalizarEstadoUsuario(estado?: EstadoUsuario): 'activo' | 'inactivo' {
-  return estado === 'activo' ? 'activo' : 'inactivo';
+  return estado === 'inactivo' || estado === 'suspendido' ? 'inactivo' : 'activo';
+}
+
+function sanitizarParaCache(lista: Usuario[]): Usuario[] {
+  return lista.map((u) => {
+    const copia: Usuario = {
+      ...u,
+      estado: normalizarEstadoUsuario(u.estado),
+    };
+    delete copia.password;
+    return copia;
+  });
 }
 
 export function useAdminUsuariosController() {
   const [usuarios, setUsuarios] = useState<Usuario[]>(() => {
     if (typeof window === 'undefined') {
-      return initialUsuarios.map((u) => ({
-        ...u,
-        estado: normalizarEstadoUsuario(u.estado),
-      }));
+      return sanitizarParaCache(initialUsuarios);
     }
     try {
       const stored = window.localStorage.getItem(USUARIOS_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
-          // Filtrar cuentas ficticias heredadas y normalizar estado operativo (activo / inactivo)
-          return parsed
-            .filter((u: Usuario) => !LEGACY_MOCK_EMAILS.has((u.email || '').toLowerCase()))
-            .map((u: Usuario) => ({
-              ...u,
-              estado: normalizarEstadoUsuario(u.estado),
-            }));
+          return sanitizarParaCache(
+            parsed.filter((u: Usuario) => !LEGACY_MOCK_EMAILS.has((u.email || '').toLowerCase()))
+          );
         }
       }
     } catch {}
-    return initialUsuarios.map((u) => ({
-      ...u,
-      estado: normalizarEstadoUsuario(u.estado),
-    }));
+    return sanitizarParaCache(initialUsuarios);
   });
+
+  const [guardandoUsuario, setGuardandoUsuario] = useState<boolean>(false);
 
   const guardarUsuarios = (updater: (prev: Usuario[]) => Usuario[]) => {
     setUsuarios((prev) => {
-      const actualizados = updater(prev);
+      const actualizados = sanitizarParaCache(updater(prev));
       if (typeof window !== 'undefined') {
         try {
           window.localStorage.setItem(USUARIOS_STORAGE_KEY, JSON.stringify(actualizados));
@@ -76,43 +87,19 @@ export function useAdminUsuariosController() {
     });
   };
 
-  // Sincronizar colaboradores remotos desde Supabase public.usuario
+  // Sincronizar nómina autoritativa desde Supabase public.usuario (reemplazando residuos locales)
   useEffect(() => {
+    let mounted = true;
     supabaseService
-      .fetchUsuarios()
-      .then((usuariosRemotos) => {
-        if (usuariosRemotos && usuariosRemotos.length > 0) {
-          guardarUsuarios((prev) => {
-            const limpios = prev.filter(
-              (u) => !LEGACY_MOCK_EMAILS.has((u.email || '').toLowerCase())
-            );
-            const mapaPorEmail = new Map<string, Usuario>();
-            for (const u of limpios) {
-              mapaPorEmail.set(u.email.toLowerCase(), {
-                ...u,
-                estado: normalizarEstadoUsuario(u.estado),
-              });
-            }
-            for (const remoto of usuariosRemotos) {
-              const existente = mapaPorEmail.get(remoto.email.toLowerCase());
-              if (existente) {
-                mapaPorEmail.set(remoto.email.toLowerCase(), {
-                  ...existente,
-                  ...remoto,
-                  estado: normalizarEstadoUsuario(existente.estado ?? 'activo'),
-                });
-              } else {
-                mapaPorEmail.set(remoto.email.toLowerCase(), {
-                  ...remoto,
-                  estado: normalizarEstadoUsuario(remoto.estado ?? 'activo'),
-                });
-              }
-            }
-            return Array.from(mapaPorEmail.values());
-          });
-        }
+      .fetchUsuariosWithStatus()
+      .then((res) => {
+        if (!mounted || !res.ok) return;
+        guardarUsuarios(() => res.items);
       })
       .catch(() => {});
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const [busqueda, setBusquedaState] = useState<string>('');
@@ -178,12 +165,10 @@ export function useAdminUsuariosController() {
   // Lista filtrada reactivamente
   const usuariosFiltrados = useMemo(() => {
     return usuarios.filter((u) => {
-      // Filtro de rol
       if (filtroRol !== 'todos' && u.rol !== filtroRol) {
         return false;
       }
 
-      // Filtro de estado unificado ('activo' vs 'inactivo')
       const esActivo = u.estado === 'activo';
       if (filtroEstado === 'activo' && !esActivo) {
         return false;
@@ -192,7 +177,6 @@ export function useAdminUsuariosController() {
         return false;
       }
 
-      // Búsqueda por texto (nombre, email o teléfono)
       if (busqueda.trim()) {
         const query = busqueda.trim().toLowerCase();
         const coincideNombre = u.nombre.toLowerCase().includes(query);
@@ -216,56 +200,96 @@ export function useAdminUsuariosController() {
   );
 
   /**
-   * Crea un nuevo usuario o registra una invitación en el sistema.
+   * Crea un colaborador real en Supabase Auth + `public.usuario`.
    */
-  const crearUsuario = (dto: CrearUsuarioDTO): boolean => {
+  const crearUsuario = async (dto: CrearUsuarioDTO): Promise<boolean> => {
     setMensajeError(null);
 
-    if (!dto.nombre.trim()) {
-      setMensajeError('El nombre del colaborador es obligatorio.');
+    const nombreLimpio = normalizarTexto(dto.nombre || '');
+    if (
+      nombreLimpio.length < LIMITES_TEXTO.NOMBRE_USUARIO_MIN ||
+      nombreLimpio.length > LIMITES_TEXTO.NOMBRE_USUARIO_MAX
+    ) {
+      setMensajeError(
+        `El nombre del colaborador debe tener entre ${LIMITES_TEXTO.NOMBRE_USUARIO_MIN} y ${LIMITES_TEXTO.NOMBRE_USUARIO_MAX} caracteres.`
+      );
       return false;
     }
 
-    if (!dto.email.trim() || !dto.email.includes('@')) {
-      setMensajeError('Debes ingresar un correo electrónico válido.');
+    const emailLimpio = (dto.email || '').trim().toLowerCase();
+    if (!esEmailValido(emailLimpio)) {
+      setMensajeError('Debes ingresar un correo electrónico con formato válido (ej. usuario@dominio.com).');
       return false;
     }
 
-    const emailExiste = usuarios.some(
-      (u) => u.email.toLowerCase() === dto.email.trim().toLowerCase()
-    );
+    if (!esTelefonoValido(dto.telefono)) {
+      setMensajeError('El teléfono ingresado no es válido (debe contener entre 6 y 15 dígitos numéricos).');
+      return false;
+    }
+
+    const passwordRaw = dto.password || '';
+    if (
+      passwordRaw.length < LIMITES_TEXTO.PASSWORD_MIN ||
+      passwordRaw.length > LIMITES_TEXTO.PASSWORD_MAX
+    ) {
+      setMensajeError(
+        `Debes asignar una contraseña de entre ${LIMITES_TEXTO.PASSWORD_MIN} y ${LIMITES_TEXTO.PASSWORD_MAX} caracteres.`
+      );
+      return false;
+    }
+
+    const emailExiste = usuarios.some((u) => u.email.toLowerCase() === emailLimpio);
     if (emailExiste) {
-      setMensajeError(`Ya existe un usuario registrado con el correo "${dto.email}".`);
+      setMensajeError(`Ya existe un usuario registrado con el correo "${emailLimpio}".`);
       return false;
     }
 
-    const idGenerado =
-      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-        ? crypto.randomUUID()
-        : `usr-${Date.now().toString().slice(-4)}`;
+    const telefonoLimpio = dto.telefono ? sanitizarTelefonoInput(dto.telefono).trim() : undefined;
 
-    const nuevoUsuario: Usuario = {
-      id: idGenerado,
-      email: dto.email.trim().toLowerCase(),
-      nombre: dto.nombre.trim(),
-      nombreCompleto: dto.nombre.trim(),
-      rol: dto.rol,
-      telefono: dto.telefono?.trim() || undefined,
-      password: dto.password?.trim() || undefined,
-      estado: 'activo',
-      fechaCreacion: new Date(),
-      ultimoAcceso: new Date(),
-    };
+    setGuardandoUsuario(true);
+    try {
+      const res = await supabaseService.crearColaboradorRemoto({
+        email: emailLimpio,
+        password: passwordRaw,
+        nombre: nombreLimpio,
+        rol: dto.rol,
+        telefono: telefonoLimpio || undefined,
+      });
 
-    guardarUsuarios((prev) => [nuevoUsuario, ...prev]);
-    setModalCrearAbierto(false);
-    setMensajeExito(`Usuario "${nuevoUsuario.nombre}" incorporado exitosamente.`);
-    setTimeout(() => setMensajeExito(null), 4000);
-    return true;
+      if (!res.ok) {
+        setMensajeError(res.error || 'No se pudo registrar el colaborador en la base de datos.');
+        return false;
+      }
+
+      // Refrescar lista autoritativa desde Supabase
+      const refresh = await supabaseService.fetchUsuariosWithStatus();
+      if (refresh.ok) {
+        guardarUsuarios(() => refresh.items);
+      } else if (res.id) {
+        const nuevoUsuario: Usuario = {
+          id: res.id,
+          email: emailLimpio,
+          nombre: nombreLimpio,
+          nombreCompleto: nombreLimpio,
+          rol: dto.rol,
+          telefono: telefonoLimpio || undefined,
+          estado: 'activo',
+          fechaCreacion: new Date(),
+        };
+        guardarUsuarios((prev) => [nuevoUsuario, ...prev]);
+      }
+
+      setModalCrearAbierto(false);
+      setMensajeExito(`Colaborador "${nombreLimpio}" registrado en la base de datos exitosamente.`);
+      setTimeout(() => setMensajeExito(null), 4000);
+      return true;
+    } finally {
+      setGuardandoUsuario(false);
+    }
   };
 
   /**
-   * Modifica los datos o rol de un usuario existente y sincroniza con Supabase.
+   * Modifica los datos, rol, estado o contraseña de un usuario existente y sincroniza con Supabase.
    */
   const actualizarUsuario = (id: string, datos: Partial<Usuario>): boolean => {
     setMensajeError(null);
@@ -276,28 +300,70 @@ export function useAdminUsuariosController() {
       return false;
     }
 
-    // Regla de seguridad: no dejar el sistema sin administradores
-    if (usuario.rol === 'admin' && datos.rol && datos.rol !== 'admin') {
-      const cantidadAdmins = usuarios.filter((u) => u.rol === 'admin').length;
-      if (cantidadAdmins <= 1) {
-        setMensajeError('No es posible revocar el rol al único administrador del sistema.');
+    const nombreFinal =
+      datos.nombre !== undefined ? normalizarTexto(datos.nombre) : usuario.nombre;
+
+    if (
+      nombreFinal.length < LIMITES_TEXTO.NOMBRE_USUARIO_MIN ||
+      nombreFinal.length > LIMITES_TEXTO.NOMBRE_USUARIO_MAX
+    ) {
+      setMensajeError(
+        `El nombre del colaborador debe tener entre ${LIMITES_TEXTO.NOMBRE_USUARIO_MIN} y ${LIMITES_TEXTO.NOMBRE_USUARIO_MAX} caracteres.`
+      );
+      return false;
+    }
+
+    if (datos.telefono !== undefined && !esTelefonoValido(datos.telefono)) {
+      setMensajeError('El teléfono ingresado no es válido (debe contener entre 6 y 15 dígitos numéricos).');
+      return false;
+    }
+
+    const nuevaPassword = datos.password?.trim() || '';
+    if (
+      nuevaPassword !== '' &&
+      (nuevaPassword.length < LIMITES_TEXTO.PASSWORD_MIN ||
+        nuevaPassword.length > LIMITES_TEXTO.PASSWORD_MAX)
+    ) {
+      setMensajeError(
+        `La nueva contraseña debe tener entre ${LIMITES_TEXTO.PASSWORD_MIN} y ${LIMITES_TEXTO.PASSWORD_MAX} caracteres.`
+      );
+      return false;
+    }
+
+    const rolFinal = datos.rol ?? usuario.rol;
+    const estadoFinal =
+      datos.estado !== undefined
+        ? normalizarEstadoUsuario(datos.estado)
+        : normalizarEstadoUsuario(usuario.estado);
+
+    // Regla de seguridad: no dejar el sistema sin al menos un administrador activo
+    if (usuario.rol === 'admin' && (rolFinal !== 'admin' || estadoFinal !== 'activo')) {
+      const otrosAdminsActivos = usuarios.filter(
+        (u) => u.id !== id && u.rol === 'admin' && u.estado === 'activo'
+      ).length;
+      if (otrosAdminsActivos === 0) {
+        setMensajeError('No es posible revocar ni desactivar al único administrador activo del sistema.');
         return false;
       }
     }
+
+    const telefonoFinal =
+      datos.telefono !== undefined
+        ? sanitizarTelefonoInput(datos.telefono).trim()
+        : usuario.telefono || '';
+
+    const snapshotPrevio = usuarios;
 
     guardarUsuarios((prev) =>
       prev.map((u) => {
         if (u.id !== id) return u;
         return {
           ...u,
-          ...datos,
-          estado:
-            datos.estado !== undefined
-              ? normalizarEstadoUsuario(datos.estado)
-              : normalizarEstadoUsuario(u.estado),
-          nombre: datos.nombre ? datos.nombre.trim() : u.nombre,
-          nombreCompleto: datos.nombre ? datos.nombre.trim() : u.nombreCompleto,
-          password: datos.password !== undefined ? (datos.password.trim() || undefined) : u.password,
+          nombre: nombreFinal,
+          nombreCompleto: nombreFinal,
+          rol: rolFinal,
+          estado: estadoFinal,
+          telefono: telefonoFinal || undefined,
           fechaActualizacion: new Date(),
         };
       })
@@ -306,11 +372,34 @@ export function useAdminUsuariosController() {
     // Sincronizar con Supabase public.usuario
     supabaseService
       .updateUsuario(id, {
-        nombre: datos.nombre,
-        rol: datos.rol,
-        telefono: datos.telefono,
+        nombre: nombreFinal,
+        rol: rolFinal,
+        telefono: telefonoFinal,
+        activo: estadoFinal === 'activo',
       })
-      .catch(() => {});
+      .then((ok) => {
+        if (!ok) {
+          guardarUsuarios(() => snapshotPrevio);
+          setMensajeError('No se pudieron guardar los cambios en Supabase. Verifique sus permisos.');
+        }
+      })
+      .catch(() => {
+        guardarUsuarios(() => snapshotPrevio);
+      });
+
+    // Si se solicitó cambio de contraseña, impactar en auth.users
+    if (nuevaPassword !== '') {
+      supabaseService
+        .actualizarPasswordColaborador(id, nuevaPassword)
+        .then((res) => {
+          if (!res.ok) {
+            setMensajeError(
+              res.error || 'Los datos se actualizaron, pero no se pudo cambiar la contraseña en Auth.'
+            );
+          }
+        })
+        .catch(() => {});
+    }
 
     setModalEditarAbierto(false);
     setUsuarioSeleccionado(null);
@@ -352,17 +441,29 @@ export function useAdminUsuariosController() {
     }
 
     if (usuario.rol === 'admin') {
-      const cantidadAdmins = usuarios.filter((u) => u.rol === 'admin').length;
-      if (cantidadAdmins <= 1) {
-        setMensajeError('Operación bloqueada: No puedes eliminar al único administrador.');
+      const otrosAdminsActivos = usuarios.filter(
+        (u) => u.id !== id && u.rol === 'admin' && u.estado === 'activo'
+      ).length;
+      if (otrosAdminsActivos === 0) {
+        setMensajeError('Operación bloqueada: No puedes eliminar al único administrador activo.');
         return false;
       }
     }
 
+    const snapshotPrevio = usuarios;
     guardarUsuarios((prev) => prev.filter((u) => u.id !== id));
 
-    // Sincronizar eliminación en Supabase public.usuario
-    supabaseService.deleteUsuario(id).catch(() => {});
+    supabaseService
+      .deleteUsuario(id)
+      .then((ok) => {
+        if (!ok) {
+          guardarUsuarios(() => snapshotPrevio);
+          setMensajeError('No se pudo eliminar el usuario en la base de datos.');
+        }
+      })
+      .catch(() => {
+        guardarUsuarios(() => snapshotPrevio);
+      });
 
     setModalEliminarAbierto(false);
     setUsuarioSeleccionado(null);
@@ -383,6 +484,7 @@ export function useAdminUsuariosController() {
 
   return {
     usuarios,
+    guardandoUsuario,
     busqueda,
     setBusqueda,
     filtroRol,

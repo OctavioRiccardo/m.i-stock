@@ -9,17 +9,18 @@
  * Gestionar la autorización y jerarquía de permisos del usuario activo:
  * - Admin: Acceso total (Administración + Punto de Venta / Caja).
  * - Vendedor: Acceso exclusivo a la Terminal de Ventas (POS / Caja).
- * - No Rol: Bloqueado a la espera de autorización.
+ * - No Rol / Inactivo: Bloqueado y redirigido a `/login`.
  * 
  * Sincronización:
  * - Consulta el usuario autenticado en Supabase Auth (`auth.users`) y su fila en `public.usuario`.
- * - Redirige a `/login` si no existe ninguna sesión activa válida.
+ * - Redirige a `/login` si no existe sesión autenticada real en Supabase.
  */
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { RolUsuario } from '@/models/modelos_dominio/userModel';
+import { limpiarSesionLocal } from '@/controllers/authController';
 
 const ROL_STORAGE_KEY = 'mistock_rol_activo';
 const USUARIO_STORAGE_KEY = 'mistock_usuario_activo';
@@ -77,16 +78,26 @@ export function usePermisosController() {
           const email = user.email || '';
           setEmailUsuario(email);
 
-          const { data: perfil } = await supabase
+          const { data: perfilData } = await supabase
             .from('usuario')
-            .select('nombre, rol')
+            .select('*')
             .eq('id_usuario', user.id)
             .maybeSingle();
 
           if (!isMounted) return;
 
+          const perfil = perfilData as { nombre?: string; rol?: RolUsuario; activo?: boolean } | null;
+
+          if (perfil?.activo === false) {
+            await supabase.auth.signOut();
+            limpiarSesionLocal();
+            setCargando(true);
+            router.replace('/login');
+            return;
+          }
+
           const rolReal: RolUsuario =
-            (perfil?.rol as RolUsuario) ||
+            perfil?.rol ||
             (email.toLowerCase().startsWith('user@') ? 'vendedor' : 'admin');
           const nombreReal =
             perfil?.nombre ||
@@ -109,17 +120,15 @@ export function usePermisosController() {
               })
             );
           }
-        } else if (typeof window !== 'undefined') {
-          // Verificar si hay sesión local activa de colaborador
-          const localUser = window.localStorage.getItem(USUARIO_STORAGE_KEY);
-          if (!localUser) {
-            setCargando(true);
-            router.replace('/login');
-          }
+        } else {
+          // Sin sesión activa en Supabase Auth: limpiar cualquier residuo local y redirigir
+          limpiarSesionLocal();
+          setCargando(true);
+          router.replace('/login');
         }
       })
       .catch(() => {
-        // Ignorar fallos de red transitorios si hay sesión local
+        // Ignorar fallos de red transitorios
       });
 
     return () => {

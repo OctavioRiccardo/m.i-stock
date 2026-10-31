@@ -244,6 +244,7 @@ export function ModuloCatalogoProductos({ controller }: ModuloCatalogoProductosP
             <div className="relative flex-1">
               <Input
                 placeholder="Buscar artículo por nombre, código o rubro..."
+                maxLength={120}
                 value={busquedaCatalogo}
                 onChange={(e) => setBusquedaCatalogo(e.target.value)}
                 className="pl-9 h-10 text-xs bg-white border-[#E8E6DF] focus-visible:ring-[#2A7A78]"

@@ -8,15 +8,15 @@
  * Propósito:
  * Proporcionar métodos asíncronos tipados para interactuar con las tablas
  * de Supabase PostgreSQL (`categorias`, `productos`, `ventas`, `detalle_ventas`,
- * `pagos`, `usuario`) bajo una arquitectura híbrida y resiliente (Cloud-First
- * con fallback local).
+ * `pagos`, `usuario`, `configuracion_negocio`) con Supabase como fuente de verdad.
  * 
  * Sincronización RLS y Transacciones:
  * - Mapea entidades de dominio TypeScript <-> Fila PostgreSQL (Snake_case).
- * - Diseñado para no bloquear la ejecución local si el entorno se encuentra
- *   offline o si las credenciales de prueba no poseen sesión remota.
+ * - Distingue entre respuestas vacías legítimas de la BD (`ok: true, items: []`)
+ *   y fallos de red/sesión (`ok: false`) para evitar conservar datos fantasma.
  */
 
+import { createClient as createSupabaseJsClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
 import {
   Categoria,
@@ -35,30 +35,57 @@ import {
   RolUsuarioDB,
 } from '@/models/modelos_dominio/userModel';
 import { DetalleVenta, MetodoPago, EstadoVenta } from '@/models/modelos_dominio/ventaModel';
+import { ConfiguracionCompleta } from '@/models/modelos_vista/configuracionModel';
 
 const isUUID = (str: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
 
+export interface FetchResult<T> {
+  ok: boolean;
+  items: T[];
+  error?: string;
+}
+
 export const supabaseService = {
   /**
-   * Obtiene la lista de categorías registradas en Supabase PostgreSQL.
+   * Obtiene categorías con bandera explícita de conexión exitosa y sesión autenticada.
    */
-  async fetchCategorias(): Promise<Categoria[]> {
+  async fetchCategoriasWithStatus(): Promise<FetchResult<Categoria>> {
     try {
       const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        return { ok: false, items: [] };
+      }
+
       const { data, error } = await supabase
         .from('categorias')
         .select('*')
         .order('nombre', { ascending: true });
 
       if (error || !data) {
-        return [];
+        return { ok: false, items: [], error: error?.message };
       }
 
-      return data.map((row: CategoriaRow) => toCategoria(row));
-    } catch {
-      return [];
+      return {
+        ok: true,
+        items: data.map((row: CategoriaRow) => toCategoria(row)),
+      };
+    } catch (err) {
+      return {
+        ok: false,
+        items: [],
+        error: err instanceof Error ? err.message : 'Error de red',
+      };
     }
+  },
+
+  /**
+   * Obtiene la lista de categorías registradas en Supabase PostgreSQL.
+   */
+  async fetchCategorias(): Promise<Categoria[]> {
+    const res = await this.fetchCategoriasWithStatus();
+    return res.items;
   },
 
   /**
@@ -93,28 +120,47 @@ export const supabaseService = {
   },
 
   /**
-   * Obtiene el catálogo completo de productos con sus categorías asociadas (JOIN).
+   * Obtiene productos con bandera explícita de conexión exitosa y sesión autenticada.
    */
-  async fetchProductos(): Promise<Producto[]> {
+  async fetchProductosWithStatus(): Promise<FetchResult<Producto>> {
     try {
       const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        return { ok: false, items: [] };
+      }
+
       const { data, error } = await supabase
         .from('productos')
         .select('*, categorias (*)')
         .order('nombre', { ascending: true });
 
       if (error || !data) {
-        return [];
+        return { ok: false, items: [], error: error?.message };
       }
 
-      return data.map((row: Record<string, unknown>) => {
+      const items = data.map((row: Record<string, unknown>) => {
         const catRow = row.categorias as CategoriaRow | undefined;
         const cat = catRow ? toCategoria(catRow) : undefined;
         return toProducto(row as unknown as ProductoRow, cat);
       });
-    } catch {
-      return [];
+
+      return { ok: true, items };
+    } catch (err) {
+      return {
+        ok: false,
+        items: [],
+        error: err instanceof Error ? err.message : 'Error de red',
+      };
     }
+  },
+
+  /**
+   * Obtiene el catálogo completo de productos con sus categorías asociadas (JOIN).
+   */
+  async fetchProductos(): Promise<Producto[]> {
+    const res = await this.fetchProductosWithStatus();
+    return res.items;
   },
 
   /**
@@ -203,23 +249,29 @@ export const supabaseService = {
       if (datos.activo !== undefined) payload.activo = datos.activo;
       payload.actualizado_el = new Date().toISOString();
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('productos')
         .update(payload)
-        .eq('id_producto', productoId);
+        .eq('id_producto', productoId)
+        .select('id_producto');
 
-      return !error;
+      return !error && Array.isArray(data) && data.length > 0;
     } catch {
       return false;
     }
   },
 
   /**
-   * Obtiene el historial de ventas desde Supabase PostgreSQL con sus detalles y pagos.
+   * Obtiene el historial de ventas desde Supabase PostgreSQL con bandera de conexión.
    */
-  async fetchVentas(): Promise<VentaRecientePOS[]> {
+  async fetchVentasWithStatus(): Promise<FetchResult<VentaRecientePOS>> {
     try {
       const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        return { ok: false, items: [] };
+      }
+
       const { data, error } = await supabase
         .from('ventas')
         .select('*, detalle_ventas (*, productos (nombre, sku)), pagos (*), usuario (nombre)')
@@ -227,10 +279,10 @@ export const supabaseService = {
         .limit(200);
 
       if (error || !data) {
-        return [];
+        return { ok: false, items: [], error: error?.message };
       }
 
-      return data.map((row: Record<string, unknown>) => {
+      const items = data.map((row: Record<string, unknown>) => {
         const idVenta = String(row.id_venta || '');
         const creadoEl = row.creado_el ? new Date(String(row.creado_el)) : new Date();
         const timestamp = creadoEl.getTime();
@@ -238,7 +290,7 @@ export const supabaseService = {
         const hora = creadoEl.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
 
         const rawDetalles = Array.isArray(row.detalle_ventas) ? row.detalle_ventas : [];
-        const items: DetalleVenta[] = rawDetalles.map((det: Record<string, unknown>, idx: number) => {
+        const itemsVenta: DetalleVenta[] = rawDetalles.map((det: Record<string, unknown>, idx: number) => {
           const prodRel = det.productos as { nombre?: string; sku?: string } | null;
           const cant = Number(det.cantidad) || 1;
           const precio = Number(det.precio_unitario) || 0;
@@ -261,7 +313,7 @@ export const supabaseService = {
             : 'efectivo';
 
         const usuarioRel = row.usuario as { nombre?: string } | null;
-        const cantidadItems = items.reduce((acc, item) => acc + item.cantidad, 0) || 1;
+        const cantidadItems = itemsVenta.reduce((acc, item) => acc + item.cantidad, 0) || 1;
 
         return {
           id: idVenta,
@@ -273,7 +325,7 @@ export const supabaseService = {
           cantidadItems,
           metodoPago: metodoPrincipal,
           vendedor: usuarioRel?.nombre || 'Cajero',
-          items,
+          items: itemsVenta,
           pagos: rawPagos.map((p: Record<string, unknown>) => ({
             id: String(p.id_pago || ''),
             ventaId: idVenta,
@@ -283,15 +335,29 @@ export const supabaseService = {
           estado: (String(row.estado || 'completada') as EstadoVenta),
         };
       });
-    } catch {
-      return [];
+
+      return { ok: true, items };
+    } catch (err) {
+      return {
+        ok: false,
+        items: [],
+        error: err instanceof Error ? err.message : 'Error de red',
+      };
     }
+  },
+
+  /**
+   * Obtiene el historial de ventas desde Supabase PostgreSQL con sus detalles y pagos.
+   */
+  async fetchVentas(): Promise<VentaRecientePOS[]> {
+    const res = await this.fetchVentasWithStatus();
+    return res.items;
   },
 
   /**
    * Registra una venta completa con sus renglones y pago en Supabase.
    * Dispara el trigger automático PostgreSQL `tr_venta_movimiento_stock`
-   * para auditar el movimiento y descontar existencias.
+   * para auditar el movimiento y descontar existencias una única vez.
    */
   async registrarVenta(venta: VentaRecientePOS): Promise<string | null> {
     try {
@@ -320,7 +386,7 @@ export const supabaseService = {
 
       const idVentaGenerado = String(ventaData.id_venta);
 
-      // 2. Renglones de detalle de venta
+      // 2. Renglones de detalle de venta (dispara tr_venta_movimiento_stock -> tr_actualizar_stock)
       if (venta.items && venta.items.length > 0) {
         const renglonesPayload = venta.items
           .filter((item) => isUUID(item.productoId))
@@ -332,7 +398,10 @@ export const supabaseService = {
           }));
 
         if (renglonesPayload.length > 0) {
-          await supabase.from('detalle_ventas').insert(renglonesPayload);
+          const { error: detError } = await supabase.from('detalle_ventas').insert(renglonesPayload);
+          if (detError) {
+            return null;
+          }
         }
       }
 
@@ -350,21 +419,55 @@ export const supabaseService = {
   },
 
   /**
-   * Marca una venta como cancelada en Supabase PostgreSQL.
+   * Marca una venta como cancelada en Supabase PostgreSQL verificando que la fila haya sido actualizada.
    */
   async cancelarVenta(idVenta: string): Promise<boolean> {
     try {
       if (!isUUID(idVenta)) return false;
 
       const supabase = createClient();
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('ventas')
         .update({ estado: 'cancelada' })
-        .eq('id_venta', idVenta);
+        .eq('id_venta', idVenta)
+        .select('id_venta');
 
-      return !error;
+      return !error && Array.isArray(data) && data.length > 0;
     } catch {
       return false;
+    }
+  },
+
+  /**
+   * Obtiene la nómina de colaboradores desde `public.usuario` con bandera de conexión.
+   */
+  async fetchUsuariosWithStatus(): Promise<FetchResult<Usuario>> {
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        return { ok: false, items: [] };
+      }
+
+      const { data, error } = await supabase
+        .from('usuario')
+        .select('*')
+        .order('creado_el', { ascending: false });
+
+      if (error || !data) {
+        return { ok: false, items: [], error: error?.message };
+      }
+
+      return {
+        ok: true,
+        items: data.map((row: UsuarioRow) => toUsuario(row)),
+      };
+    } catch (err) {
+      return {
+        ok: false,
+        items: [],
+        error: err instanceof Error ? err.message : 'Error de red',
+      };
     }
   },
 
@@ -372,49 +475,196 @@ export const supabaseService = {
    * Obtiene la nómina de colaboradores desde `public.usuario`.
    */
   async fetchUsuarios(): Promise<Usuario[]> {
+    const res = await this.fetchUsuariosWithStatus();
+    return res.items;
+  },
+
+  /**
+   * Crea un colaborador real en Supabase Auth + `public.usuario` sin cerrar la sesión del Admin.
+   */
+  async crearColaboradorRemoto(datos: {
+    email: string;
+    password: string;
+    nombre: string;
+    rol: RolUsuarioDB;
+    telefono?: string;
+  }): Promise<{ ok: boolean; id?: string; error?: string }> {
     try {
       const supabase = createClient();
-      const { data, error } = await supabase
-        .from('usuario')
-        .select('*')
-        .order('creado_el', { ascending: false });
+      const emailLimpio = datos.email.trim().toLowerCase();
+      const nombreLimpio = datos.nombre.trim();
+      const telLimpio = datos.telefono?.trim() || null;
 
-      if (error || !data) {
-        return [];
+      // 1. Vía preferida: RPC transaccional `crear_colaborador_admin` (soporta TLDs personalizados y auto-confirma)
+      const { data: rpcId, error: rpcError } = await supabase.rpc('crear_colaborador_admin', {
+        p_email: emailLimpio,
+        p_password: datos.password,
+        p_nombre: nombreLimpio,
+        p_rol: datos.rol,
+        p_telefono: telLimpio,
+      });
+
+      if (!rpcError && rpcId) {
+        return { ok: true, id: String(rpcId) };
       }
 
-      return data.map((row: UsuarioRow) => toUsuario(row));
-    } catch {
-      return [];
+      // Si el RPC existe pero rechazó la operación (ej. email duplicado o permisos), devolver su mensaje
+      const rpcMissing =
+        rpcError &&
+        (rpcError.code === 'PGRST202' ||
+          rpcError.code === '42883' ||
+          rpcError.message.toLowerCase().includes('could not find the function'));
+
+      if (rpcError && !rpcMissing) {
+        return { ok: false, error: rpcError.message };
+      }
+
+      // 2. Fallback si el parche SQL aún no fue ejecutado: cliente efímero sin persistir cookies
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const key =
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+      if (!url || !key) {
+        return { ok: false, error: 'Variables de conexión de Supabase no configuradas.' };
+      }
+
+      const ephemeralClient = createSupabaseJsClient(url, key, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false,
+        },
+      });
+
+      const { data: signUpData, error: signUpError } = await ephemeralClient.auth.signUp({
+        email: emailLimpio,
+        password: datos.password,
+        options: {
+          data: { full_name: nombreLimpio },
+        },
+      });
+
+      if (signUpError || !signUpData.user) {
+        return {
+          ok: false,
+          error:
+            signUpError?.message ||
+            'No se pudo registrar el colaborador en Supabase Auth (ejecuta patch_integridad_y_anulacion.sql para habilitar dominios personalizados).',
+        };
+      }
+
+      const newUserId = signUpData.user.id;
+      await this.updateUsuario(newUserId, {
+        nombre: nombreLimpio,
+        rol: datos.rol,
+        telefono: telLimpio || undefined,
+        activo: true,
+      });
+
+      return { ok: true, id: newUserId };
+    } catch (err) {
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : 'Error inesperado al registrar colaborador.',
+      };
     }
   },
 
   /**
-   * Actualiza datos o rol de un usuario en `public.usuario`.
+   * Actualiza datos, rol o estado activo de un usuario en `public.usuario`.
+   * Incluye fallback resiliente si las columnas `telefono` o `activo` aún no existen en una BD previa.
    */
   async updateUsuario(
     idUsuario: string,
-    datos: { nombre?: string; rol?: RolUsuarioDB; telefono?: string }
+    datos: { nombre?: string; rol?: RolUsuarioDB; telefono?: string; activo?: boolean }
   ): Promise<boolean> {
     try {
       if (!isUUID(idUsuario)) return false;
 
       const supabase = createClient();
-      const payload: Record<string, unknown> = {
+      const basePayload: Record<string, unknown> = {
         actualizado_el: new Date().toISOString(),
       };
-      if (datos.nombre !== undefined) payload.nombre = datos.nombre.trim();
-      if (datos.rol !== undefined) payload.rol = datos.rol;
-      if (datos.telefono !== undefined) payload.telefono = datos.telefono.trim() || null;
+      if (datos.nombre !== undefined) basePayload.nombre = datos.nombre.trim();
+      if (datos.rol !== undefined) basePayload.rol = datos.rol;
 
-      const { error } = await supabase
+      const extendedPayload: Record<string, unknown> = { ...basePayload };
+      if (datos.telefono !== undefined) extendedPayload.telefono = datos.telefono.trim() || null;
+      if (datos.activo !== undefined) extendedPayload.activo = datos.activo;
+
+      const { data, error } = await supabase
         .from('usuario')
-        .update(payload)
-        .eq('id_usuario', idUsuario);
+        .update(extendedPayload)
+        .eq('id_usuario', idUsuario)
+        .select('id_usuario');
 
-      return !error;
+      if (!error && Array.isArray(data) && data.length > 0) {
+        return true;
+      }
+
+      // Fallback sin columnas extendidas si la base todavía tiene el esquema inicial sin el parche
+      if (error && (datos.telefono !== undefined || datos.activo !== undefined)) {
+        const { data: retryData, error: retryError } = await supabase
+          .from('usuario')
+          .update(basePayload)
+          .eq('id_usuario', idUsuario)
+          .select('id_usuario');
+
+        return !retryError && Array.isArray(retryData) && retryData.length > 0;
+      }
+
+      return false;
     } catch {
       return false;
+    }
+  },
+
+  /**
+   * Actualiza la contraseña de un colaborador en Supabase Auth mediante RPC administrativo.
+   */
+  async actualizarPasswordColaborador(
+    idUsuario: string,
+    nuevaPassword: string
+  ): Promise<{ ok: boolean; error?: string }> {
+    try {
+      if (!isUUID(idUsuario)) {
+        return { ok: false, error: 'Identificador de usuario no válido.' };
+      }
+
+      const supabase = createClient();
+      const { data: rpcOk, error: rpcError } = await supabase.rpc(
+        'actualizar_password_colaborador_admin',
+        {
+          p_id_usuario: idUsuario,
+          p_nueva_password: nuevaPassword,
+        }
+      );
+
+      if (!rpcError && rpcOk) {
+        return { ok: true };
+      }
+
+      // Fallback si el usuario editado es el propio administrador autenticado y el RPC aún no fue aplicado
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && user.id === idUsuario) {
+        const { error: selfErr } = await supabase.auth.updateUser({ password: nuevaPassword });
+        if (!selfErr) {
+          return { ok: true };
+        }
+      }
+
+      return {
+        ok: false,
+        error:
+          rpcError?.message ||
+          'No se pudo actualizar la contraseña en Supabase Auth (ejecuta patch_integridad_y_anulacion.sql).',
+      };
+    } catch (err) {
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : 'Error al actualizar la contraseña.',
+      };
     }
   },
 
@@ -430,6 +680,57 @@ export const supabaseService = {
         .from('usuario')
         .delete()
         .eq('id_usuario', idUsuario);
+
+      return !error;
+    } catch {
+      return false;
+    }
+  },
+
+  /**
+   * Obtiene la configuración remota del comercio desde `public.configuracion_negocio` (si existe).
+   */
+  async fetchConfiguracionNegocio(): Promise<Partial<ConfiguracionCompleta> | null> {
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return null;
+
+      const { data, error } = await supabase
+        .from('configuracion_negocio')
+        .select('datos')
+        .eq('id', 1)
+        .maybeSingle();
+
+      if (error || !data || !data.datos || typeof data.datos !== 'object') {
+        return null;
+      }
+
+      return data.datos as Partial<ConfiguracionCompleta>;
+    } catch {
+      return null;
+    }
+  },
+
+  /**
+   * Persiste la configuración del comercio en `public.configuracion_negocio` (fila única `id = 1`).
+   */
+  async saveConfiguracionNegocio(config: ConfiguracionCompleta): Promise<boolean> {
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return false;
+
+      const { error } = await supabase
+        .from('configuracion_negocio')
+        .upsert(
+          {
+            id: 1,
+            datos: config,
+            actualizado_el: new Date().toISOString(),
+          },
+          { onConflict: 'id' }
+        );
 
       return !error;
     } catch {

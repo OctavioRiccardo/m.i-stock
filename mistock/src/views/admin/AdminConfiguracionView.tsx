@@ -57,6 +57,7 @@ import {
   InicioSemana,
 } from '@/models/modelos_vista/configuracionModel';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { LIMITES_TEXTO, esCuitValido, esEmailValido, esTelefonoValido } from '@/lib/validaciones';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -285,6 +286,12 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                         Nombre de Fantasía / Comercial *
                       </label>
                       <Input
+                        maxLength={LIMITES_TEXTO.NOMBRE_COMERCIAL_MAX}
+                        onBlur={() => {
+                          if (!config.negocio.nombreComercial.trim()) {
+                            actualizarNegocio({ nombreComercial: 'M.I Stock' });
+                          }
+                        }}
                         value={config.negocio.nombreComercial}
                         onChange={(e) => actualizarNegocio({ nombreComercial: e.target.value })}
                         placeholder="Ej: M.I Stock"
@@ -296,6 +303,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                         Razón Social / Titular *
                       </label>
                       <Input
+                        maxLength={LIMITES_TEXTO.RAZON_SOCIAL_MAX}
                         value={config.negocio.razonSocial}
                         onChange={(e) => actualizarNegocio({ razonSocial: e.target.value })}
                         placeholder="Ej: M.I Stock Almacén Comercial"
@@ -310,6 +318,14 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                         CUIT / Identificación Fiscal
                       </label>
                       <Input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={LIMITES_TEXTO.CUIT_MAX}
+                        error={
+                          config.negocio.cuit && !esCuitValido(config.negocio.cuit)
+                            ? 'Debe tener 11 dígitos (XX-XXXXXXXX-X)'
+                            : undefined
+                        }
                         value={config.negocio.cuit}
                         onChange={(e) => actualizarNegocio({ cuit: e.target.value })}
                         placeholder="30-71829340-9"
@@ -335,6 +351,12 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                         Símbolo Moneda
                       </label>
                       <Input
+                        maxLength={4}
+                        onBlur={() => {
+                          if (!config.negocio.monedaSimbolo.trim()) {
+                            actualizarNegocio({ monedaSimbolo: '$' });
+                          }
+                        }}
                         value={config.negocio.monedaSimbolo}
                         onChange={(e) => actualizarNegocio({ monedaSimbolo: e.target.value })}
                         placeholder="$"
@@ -346,6 +368,12 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                         Código ISO
                       </label>
                       <Input
+                        maxLength={3}
+                        onBlur={() => {
+                          if (config.negocio.monedaCodigo.trim().length < 3) {
+                            actualizarNegocio({ monedaCodigo: 'ARS' });
+                          }
+                        }}
                         value={config.negocio.monedaCodigo}
                         onChange={(e) => actualizarNegocio({ monedaCodigo: e.target.value })}
                         placeholder="ARS"
@@ -375,6 +403,8 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                       Dirección Comercial Completa
                     </label>
                     <Input
+                      autoComplete="street-address"
+                      maxLength={LIMITES_TEXTO.DIRECCION_MAX}
                       value={config.negocio.direccion}
                       onChange={(e) => actualizarNegocio({ direccion: e.target.value })}
                       placeholder="Av. Corrientes 3450, CABA"
@@ -388,6 +418,14 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                         Teléfono / WhatsApp
                       </label>
                       <Input
+                        type="tel"
+                        autoComplete="tel"
+                        maxLength={LIMITES_TEXTO.TELEFONO_MAX}
+                        error={
+                          config.negocio.telefono && !esTelefonoValido(config.negocio.telefono)
+                            ? 'Ingrese entre 6 y 15 dígitos válidos'
+                            : undefined
+                        }
                         value={config.negocio.telefono}
                         onChange={(e) => actualizarNegocio({ telefono: e.target.value })}
                         placeholder="+54 9 11 4521-8890"
@@ -400,6 +438,13 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                       </label>
                       <Input
                         type="email"
+                        autoComplete="email"
+                        maxLength={LIMITES_TEXTO.EMAIL_MAX}
+                        error={
+                          config.negocio.emailContacto && !esEmailValido(config.negocio.emailContacto)
+                            ? 'Formato de correo inválido'
+                            : undefined
+                        }
                         value={config.negocio.emailContacto}
                         onChange={(e) => actualizarNegocio({ emailContacto: e.target.value })}
                         placeholder="contacto@mistock.com"
@@ -512,6 +557,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                             Texto de la Aclaración Legal
                           </label>
                           <Input
+                            maxLength={LIMITES_TEXTO.MENSAJE_TICKET_MAX}
                             value={config.negocio.textoAclaracionLegal}
                             onChange={(e) => actualizarNegocio({ textoAclaracionLegal: e.target.value })}
                             placeholder="DOCUMENTO NO VÁLIDO COMO FACTURA"
@@ -573,6 +619,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                       Encabezado del Ticket
                     </label>
                     <Input
+                      maxLength={LIMITES_TEXTO.MENSAJE_TICKET_MAX}
                       value={config.negocio.mensajeEncabezadoTicket}
                       onChange={(e) => actualizarNegocio({ mensajeEncabezadoTicket: e.target.value })}
                       placeholder="Comprobante de Venta - Línea de Cajas"
@@ -589,6 +636,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                     </label>
                     <Textarea
                       rows={2}
+                      maxLength={LIMITES_TEXTO.DESCRIPCION_MAX}
                       value={config.negocio.mensajePieTicket}
                       onChange={(e) => actualizarNegocio({ mensajePieTicket: e.target.value })}
                       placeholder="¡Muchas gracias por su compra! Conserve su ticket para cambios."
@@ -700,7 +748,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                       </div>
                       <div className="flex justify-between">
                         <span>CAJERO:</span>
-                        <span>Lucas Benítez</span>
+                        <span>Cajero de Turno</span>
                       </div>
                       <div className="flex justify-between">
                         <span>FORMA DE PAGO:</span>

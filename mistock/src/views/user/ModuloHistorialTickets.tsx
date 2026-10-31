@@ -288,6 +288,7 @@ export function ModuloHistorialTickets({
           <div className="relative">
             <Input
               placeholder="Buscar por N° comprobante (ej: VNT-101), vendedor o producto..."
+              maxLength={120}
               value={busquedaHistorial}
               onChange={(e) => setBusquedaHistorial(e.target.value)}
               className="pl-9 h-10 text-xs bg-white border-[#E8E6DF] focus-visible:ring-[#2A7A78]"

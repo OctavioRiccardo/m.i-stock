@@ -393,6 +393,7 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
                   <MagnifyingGlass className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-[#657373]" />
                   <Input
                     placeholder="Buscar por SKU o nombre..."
+                    maxLength={120}
                     value={busqueda}
                     onChange={(e) => setBusqueda(e.target.value)}
                     className="h-9 pl-8 text-xs"

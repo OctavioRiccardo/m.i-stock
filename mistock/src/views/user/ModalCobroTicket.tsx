@@ -45,6 +45,7 @@ import { ItemCarritoPOS, VentaRecientePOS } from '@/models/modelos_vista/dashboa
 import { MetodoPago } from '@/models/modelos_dominio/ventaModel';
 import { useConfiguracionData } from '@/services/configuracionService';
 import { motion, AnimatePresence } from 'motion/react';
+import { MAX_PRECIO_DB } from '@/lib/validaciones';
 
 export interface ModalCobroTicketProps {
   isOpen: boolean;
@@ -251,7 +252,7 @@ export function ModalCobroTicket({
   const esMontoSuficiente =
     metodoSeleccionado === 'mercado_pago'
       ? estadoPoint === 'aprobado'
-      : metodoSeleccionado !== 'efectivo' || montoRecibidoNum >= total;
+      : metodoSeleccionado !== 'efectivo' || (montoRecibidoNum >= total && montoRecibidoNum <= MAX_PRECIO_DB);
 
   // Atajos de billetes sugeridos
   const sugerenciasBilletes = [
@@ -435,7 +436,8 @@ export function ModalCobroTicket({
                 <Input
                   type="number"
                   step="any"
-                  min="0"
+                  min={0}
+                  max={MAX_PRECIO_DB}
                   placeholder="0.00"
                   value={montoRecibido}
                   onChange={(e) => setMontoRecibido(e.target.value)}

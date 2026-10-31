@@ -7,11 +7,8 @@
  * 
  * Propósito:
  * Permitir al cajero/vendedor iniciar formalmente la sesión de caja antes
- * de procesar ventas o cobrar tickets en mostrador:
- * 1. Establecer el fondo de gaveta inicial para dar cambio ($ efectivo físico).
- * 2. Asignar el cajero responsable y la terminal de punto de venta.
- * 3. Registrar opcionalmente observaciones del turno.
- * 4. Habilitar el circuito comercial de ventas y cobros en el sistema.
+ * de procesar ventas o cobrar tickets en mostrador con validaciones estrictas
+ * de importes y longitud de observaciones.
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -33,6 +30,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { LIMITES_TEXTO, MAX_PRECIO_DB } from '@/lib/validaciones';
 import { useUserDashboardController } from '@/controllers/userControllers/userDashboardController';
 
 interface ModalAperturaCajaProps {
@@ -58,7 +56,6 @@ export function ModalAperturaCaja({
   const [observacionesInput, setObservacionesInput] = useState<string>('');
   const [errorInput, setErrorInput] = useState<string | null>(null);
 
-  // Asegurar que el cajero refleje siempre el usuario actualmente autenticado
   const nombreCajero = useMemo(() => {
     if (cajeroApertura && cajeroApertura !== 'Lucas Benítez' && cajeroApertura !== 'Lucas Gutiérrez') {
       return cajeroApertura;
@@ -75,7 +72,6 @@ export function ModalAperturaCaja({
     return cajeroApertura || 'Administrador';
   }, [cajeroApertura]);
 
-  // Atajos rápidos para montos habituales de fondo de caja
   const sugerenciasFondo = [0, 5000, 10000, 20000, 50000];
 
   useEffect(() => {
@@ -89,8 +85,12 @@ export function ModalAperturaCaja({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const parsed = parseFloat(montoInput);
-    if (isNaN(parsed) || parsed < 0) {
+    if (!Number.isFinite(parsed) || parsed < 0) {
       setErrorInput('El fondo inicial debe ser un importe numérico mayor o igual a 0.');
+      return;
+    }
+    if (parsed > MAX_PRECIO_DB) {
+      setErrorInput(`El fondo inicial no puede superar ${monedaSimbolo} ${MAX_PRECIO_DB.toLocaleString('es-AR')}.`);
       return;
     }
 
@@ -107,7 +107,6 @@ export function ModalAperturaCaja({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-md p-5 border-[#E8E6DF] shadow-2xl">
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Encabezado Conciso */}
           <DialogHeader className="pb-3 border-b border-[#E8E6DF]">
             <div className="flex items-center gap-2.5">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-xs">
@@ -124,7 +123,6 @@ export function ModalAperturaCaja({
             </div>
           </DialogHeader>
 
-          {/* Ficha Resumen de la Sesión */}
           <div className="grid grid-cols-2 gap-2 p-2.5 rounded-xl bg-[#F8F7F2]/80 border border-[#E8E6DF] text-xs">
             <div className="flex items-center gap-2">
               <User className="h-4 w-4 text-[#2A7A78] shrink-0" weight="duotone" />
@@ -145,7 +143,6 @@ export function ModalAperturaCaja({
             </div>
           </div>
 
-          {/* Bloque Central: Monto de Fondo Inicial */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-[#1C2424] flex items-center gap-1.5">
@@ -161,8 +158,9 @@ export function ModalAperturaCaja({
               </span>
               <Input
                 type="number"
-                step="any"
-                min="0"
+                step="0.01"
+                min={0}
+                max={MAX_PRECIO_DB}
                 placeholder="0"
                 value={montoInput}
                 onChange={(e) => {
@@ -179,7 +177,6 @@ export function ModalAperturaCaja({
               <p className="text-xs text-red-600 font-semibold">{errorInput}</p>
             )}
 
-            {/* Atajos Rápidos de Fondo */}
             <div className="flex flex-wrap items-center gap-1.5 pt-1">
               <span className="text-[10px] font-semibold text-[#657373] uppercase mr-1">Atajos:</span>
               {sugerenciasFondo.map((valor) => (
@@ -199,13 +196,13 @@ export function ModalAperturaCaja({
             </div>
           </div>
 
-          {/* Campo de Observaciones Opcionales */}
           <div className="space-y-1">
             <label className="text-[11px] font-semibold text-[#657373]">
               Observaciones de Apertura (opcional):
             </label>
             <Input
               type="text"
+              maxLength={LIMITES_TEXTO.OBSERVACIONES_MAX}
               placeholder="Ej: Cambio en billetes de $1.000 y $2.000..."
               value={observacionesInput}
               onChange={(e) => setObservacionesInput(e.target.value)}
@@ -213,7 +210,6 @@ export function ModalAperturaCaja({
             />
           </div>
 
-          {/* Pie con Acciones */}
           <DialogFooter className="pt-2 border-t border-[#E8E6DF] flex flex-col sm:flex-row gap-2">
             <Button
               type="button"

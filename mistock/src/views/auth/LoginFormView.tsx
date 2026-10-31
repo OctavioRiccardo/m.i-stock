@@ -7,7 +7,7 @@
  * 
  * Propósito:
  * Presentar la interfaz de acceso con la estética y componentes de Dub.co:
- * - Campos de correo y contraseña con iconos contextuales.
+ * - Campos de correo y contraseña con iconos contextuales y restricciones nativas.
  * - Conmutador visual para mostrar/ocultar contraseña (estado efímero local).
  * - Notificaciones de error de autenticación mediante el componente `Alert`.
  * - Desacople total: la vista delega la lógica de negocio a `loginController`.
@@ -24,6 +24,7 @@ import {
   WarningCircle,
 } from '@phosphor-icons/react';
 import { useLoginController } from '@/controllers/authController';
+import { LIMITES_TEXTO } from '@/lib/validaciones';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -36,7 +37,6 @@ interface LoginFormViewProps {
 
 export function LoginFormView({ loginController }: LoginFormViewProps) {
   const { values, fieldErrors, setFieldValue, loading, error, handleSubmit } = loginController;
-  // Estado local puramente visual para alternar la visibilidad de la contraseña
   const [showPassword, setShowPassword] = useState(false);
 
   return (
@@ -82,6 +82,8 @@ export function LoginFormView({ loginController }: LoginFormViewProps) {
               <div className="relative">
                 <Input
                   type="email"
+                  autoComplete="email"
+                  maxLength={LIMITES_TEXTO.EMAIL_MAX}
                   placeholder="usuario@ejemplo.com"
                   value={values.email}
                   onChange={(e) => setFieldValue('email', e.target.value)}
@@ -101,6 +103,9 @@ export function LoginFormView({ loginController }: LoginFormViewProps) {
               <div className="relative">
                 <Input
                   type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  minLength={LIMITES_TEXTO.PASSWORD_MIN}
+                  maxLength={LIMITES_TEXTO.PASSWORD_MAX}
                   placeholder="••••••••"
                   value={values.password}
                   onChange={(e) => setFieldValue('password', e.target.value)}

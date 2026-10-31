@@ -146,6 +146,7 @@ export function ModuloTerminalCobro({
                       : "Caja cerrada • Abra la caja desde la barra superior para operar"
                   }
                   value={searchQuery}
+                  maxLength={120}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={handleSearchKeyDown}
                   className="pl-9 h-10 text-xs bg-white border-[#E8E6DF] focus-visible:ring-[#2A7A78] disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"

@@ -126,6 +126,7 @@ export function ModuloConsultorPrecios({ controller }: ModuloConsultorPreciosPro
               <Input
                 ref={inputRef}
                 placeholder="Escanee código de barras o escriba el nombre del artículo (Enter para buscar)..."
+                maxLength={120}
                 value={busquedaPrecios}
                 onChange={(e) => {
                   setBusquedaPrecios(e.target.value);

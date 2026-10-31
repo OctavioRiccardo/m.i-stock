@@ -6,8 +6,9 @@
  * ====================================================================
  * 
  * Propósito:
- * Interfaz limpia, ágil y visualmente despejada para el arqueo de efectivo
- * en gaveta y la emisión inmediata del Comprobante de Cierre (Reporte Z).
+ * Interfaz limpia, ágil y validada para el arqueo de efectivo en gaveta
+ * (bloqueando montos negativos o fuera de rango) y la emisión inmediata
+ * del Comprobante de Cierre (Reporte Z).
  */
 
 import React, { useState, useEffect } from 'react';
@@ -27,6 +28,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { LIMITES_TEXTO, MAX_PRECIO_DB } from '@/lib/validaciones';
 import { useUserDashboardController } from '@/controllers/userControllers/userDashboardController';
 
 interface ModalArqueoCajaProps {
@@ -66,13 +68,23 @@ export function ModalArqueoCaja({
     }
   }, [isOpen, fondoInicial]);
 
-  const numEfectivoContado = parseFloat(efectivoContado) || 0;
+  const parsedContado = parseFloat(efectivoContado);
+  const tieneTextoConteo = efectivoContado.trim().length > 0;
+  const esConteoNegativo = tieneTextoConteo && Number.isFinite(parsedContado) && parsedContado < 0;
+  const esConteoExcesivo =
+    tieneTextoConteo && Number.isFinite(parsedContado) && parsedContado > MAX_PRECIO_DB;
+  const hayEntradaValida =
+    tieneTextoConteo &&
+    Number.isFinite(parsedContado) &&
+    parsedContado >= 0 &&
+    parsedContado <= MAX_PRECIO_DB;
+
+  const numEfectivoContado = hayEntradaValida ? parsedContado : 0;
   const diferencia = numEfectivoContado - efectivoEsperado;
-  const hayEntradaValida = efectivoContado.trim().length > 0;
 
   const handleGuardarFondo = () => {
     const val = parseFloat(fondoInput);
-    if (!isNaN(val) && val >= 0) {
+    if (Number.isFinite(val) && val >= 0 && val <= MAX_PRECIO_DB) {
       setFondoInicial(val);
       setEditandoFondo(false);
     }
@@ -86,7 +98,6 @@ export function ModalArqueoCaja({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-lg p-5 border-[#E8E6DF] shadow-2xl">
-        {/* Encabezado Conciso */}
         <DialogHeader className="pb-3 border-b border-[#E8E6DF]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
@@ -115,7 +126,6 @@ export function ModalArqueoCaja({
         </DialogHeader>
 
         <div className="space-y-3.5 py-1">
-          {/* Desglose Rápido por Medio de Pago */}
           <div className="grid grid-cols-4 gap-2 text-center">
             <div className="p-2 rounded-lg bg-[#F8F7F2] border border-[#E8E6DF]">
               <span className="text-[10px] text-[#657373] uppercase font-semibold block truncate">
@@ -157,7 +167,6 @@ export function ModalArqueoCaja({
             </div>
           </div>
 
-          {/* Fila Compacta: Fondo Inicial & Efectivo Esperado */}
           <div className="flex items-center justify-between text-xs px-3 py-2 rounded-lg bg-[#F8F7F2] border border-[#E8E6DF]">
             <div className="flex items-center gap-1.5">
               <span className="text-[#657373]">Fondo inicial:</span>
@@ -165,12 +174,16 @@ export function ModalArqueoCaja({
                 <div className="flex items-center gap-1">
                   <Input
                     type="number"
+                    min={0}
+                    max={MAX_PRECIO_DB}
+                    step="0.01"
                     value={fondoInput}
                     onChange={(e) => setFondoInput(e.target.value)}
-                    className="w-20 h-6 text-xs font-bold px-1.5 py-0 bg-white"
+                    className="w-24 h-6 text-xs font-bold px-1.5 py-0 bg-white"
                     autoFocus
                   />
                   <Button
+                    type="button"
                     size="sm"
                     onClick={handleGuardarFondo}
                     className="h-6 px-2 text-[10px] bg-[#2A7A78] hover:bg-[#205E5C] text-white"
@@ -199,7 +212,6 @@ export function ModalArqueoCaja({
             </div>
           </div>
 
-          {/* Bloque Central de Conteo Físico */}
           <div className="p-3.5 rounded-xl border border-[#2A7A78]/30 bg-[#E2F1F0]/15 space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-[#1C2424]">
@@ -213,15 +225,15 @@ export function ModalArqueoCaja({
                     diferencia === 0
                       ? 'border-emerald-300 text-emerald-700 bg-emerald-50'
                       : diferencia > 0
-                      ? 'border-sky-300 text-sky-700 bg-sky-50'
-                      : 'border-rose-300 text-rose-700 bg-rose-50'
+                        ? 'border-sky-300 text-sky-700 bg-sky-50'
+                        : 'border-rose-300 text-rose-700 bg-rose-50'
                   }`}
                 >
                   {diferencia === 0
                     ? 'Caja exacta ($0)'
                     : diferencia > 0
-                    ? `+ ${monedaSimbolo} ${diferencia.toLocaleString('es-AR')} (Sobrante)`
-                    : `- ${monedaSimbolo} ${Math.abs(diferencia).toLocaleString('es-AR')} (Faltante)`}
+                      ? `+ ${monedaSimbolo} ${diferencia.toLocaleString('es-AR')} (Sobrante)`
+                      : `- ${monedaSimbolo} ${Math.abs(diferencia).toLocaleString('es-AR')} (Faltante)`}
                 </Badge>
               )}
             </div>
@@ -232,6 +244,9 @@ export function ModalArqueoCaja({
               </span>
               <Input
                 type="number"
+                min={0}
+                max={MAX_PRECIO_DB}
+                step="0.01"
                 placeholder="0"
                 value={efectivoContado}
                 onChange={(e) => setEfectivoContado(e.target.value)}
@@ -239,11 +254,22 @@ export function ModalArqueoCaja({
                 autoFocus
               />
             </div>
+
+            {esConteoNegativo && (
+              <p className="text-xs text-red-600 font-semibold">
+                El efectivo contado en gaveta no puede ser negativo.
+              </p>
+            )}
+            {esConteoExcesivo && (
+              <p className="text-xs text-red-600 font-semibold">
+                El importe supera el límite operativo ({monedaSimbolo} {MAX_PRECIO_DB.toLocaleString('es-AR')}).
+              </p>
+            )}
           </div>
 
-          {/* Observaciones (Opcional) */}
           <Input
             type="text"
+            maxLength={LIMITES_TEXTO.OBSERVACIONES_MAX}
             placeholder="Observaciones o notas de turno (opcional)..."
             value={observaciones}
             onChange={(e) => setObservaciones(e.target.value)}
@@ -251,7 +277,6 @@ export function ModalArqueoCaja({
           />
         </div>
 
-        {/* Acciones */}
         <DialogFooter className="pt-2 border-t border-[#E8E6DF] flex flex-row items-center justify-end gap-2">
           <Button
             type="button"

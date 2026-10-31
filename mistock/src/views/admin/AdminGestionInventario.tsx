@@ -47,6 +47,7 @@ import {
   valoresInicialesCargaProducto,
 } from '@/models/modelos_vista/cargaProductoModel';
 import { Producto, UnidadMedida } from '@/models/modelos_dominio/productoModel';
+import { LIMITES_TEXTO, MAX_PRECIO_DB, MAX_STOCK_DB, esSkuValido } from '@/lib/validaciones';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -232,7 +233,12 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
       return;
     }
 
-    const nueva = agregarCategoria(nuevaCatNombre, nuevaCatDesc);
+    const res = agregarCategoria(nuevaCatNombre, nuevaCatDesc);
+    if (!res.exito || !res.categoria) {
+      setErrorCat(res.mensaje);
+      return;
+    }
+    const nueva = res.categoria;
     if (seccionActiva === 'alta') {
       setFieldValue('categoriaId', nueva.id);
     }
@@ -244,7 +250,12 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
 
   const handleGenerarSku = () => {
     const prefijo = categoriaSeleccionada
-      ? categoriaSeleccionada.nombre.slice(0, 3).toUpperCase()
+      ? categoriaSeleccionada.nombre
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^A-Za-z0-9]/g, '')
+          .slice(0, 3)
+          .toUpperCase() || 'SKU'
       : 'SKU';
     const num = Math.floor(1000 + Math.random() * 9000);
     setFieldValue('codigo', `${prefijo}-${num}`);
@@ -268,6 +279,22 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
     }
     if (formData.stockInicial < 0) {
       errors.stockInicial = 'El stock inicial no puede ser negativo.';
+    }
+
+    if (formData.codigo.trim() && !esSkuValido(formData.codigo)) {
+      errors.codigo = `El SKU debe tener entre ${LIMITES_TEXTO.SKU_MIN} y ${LIMITES_TEXTO.SKU_MAX} caracteres (sin espacios).`;
+    }
+    if (formData.precioCosto < 0 || formData.precioCosto > MAX_PRECIO_DB) {
+      errors.precioCosto = `El costo debe estar entre $0 y $${MAX_PRECIO_DB.toLocaleString('es-AR')}.`;
+    }
+    if (formData.precioVenta > MAX_PRECIO_DB) {
+      errors.precioVenta = `El precio no puede superar $${MAX_PRECIO_DB.toLocaleString('es-AR')}.`;
+    }
+    if (formData.stockInicial > MAX_STOCK_DB) {
+      errors.stockInicial = `El stock no puede superar ${MAX_STOCK_DB.toLocaleString('es-AR')} unidades.`;
+    }
+    if (formData.stockMinimo < 0 || formData.stockMinimo > MAX_STOCK_DB) {
+      errors.stockMinimo = `El stock mínimo debe estar entre 0 y ${MAX_STOCK_DB.toLocaleString('es-AR')}.`;
     }
 
     if (Object.keys(errors).length > 0) {
@@ -624,6 +651,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                       <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-[#657373]" />
                       <Input
                         placeholder="Buscar SKU o producto..."
+                        maxLength={LIMITES_TEXTO.NOMBRE_PRODUCTO_MAX}
                         value={busquedaHub}
                         onChange={(e) => setBusquedaHub(e.target.value)}
                         className="h-9 pl-8 pr-7 text-xs"
@@ -1069,6 +1097,8 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                       <div className="relative">
                         <Input
                           placeholder="Ej: 779001 o SKU-101"
+                          minLength={LIMITES_TEXTO.SKU_MIN}
+                          maxLength={LIMITES_TEXTO.SKU_MAX}
                           value={formData.codigo}
                           onChange={(e) => setFieldValue('codigo', e.target.value)}
                           error={fieldErrors.codigo}
@@ -1085,6 +1115,8 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                       </label>
                       <Input
                         placeholder="Ej: Aceite de Girasol 1.5L"
+                        minLength={LIMITES_TEXTO.NOMBRE_PRODUCTO_MIN}
+                        maxLength={LIMITES_TEXTO.NOMBRE_PRODUCTO_MAX}
                         value={formData.nombre}
                         onChange={(e) => setFieldValue('nombre', e.target.value)}
                         error={fieldErrors.nombre}
@@ -1116,6 +1148,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                       </label>
                       <Textarea
                         placeholder="Detalles sobre presentación, marca, contenido neto..."
+                        maxLength={LIMITES_TEXTO.DESCRIPCION_MAX}
                         value={formData.descripcion}
                         onChange={(e) => setFieldValue('descripcion', e.target.value)}
                         rows={2}
@@ -1139,6 +1172,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                             min="0"
                             step="any"
                             placeholder="0"
+                            max={MAX_PRECIO_DB}
                             value={formData.precioCosto || ''}
                             onChange={(e) => setFieldValue('precioCosto', parseFloat(e.target.value) || 0)}
                           />
@@ -1151,6 +1185,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                             min="0"
                             step="any"
                             placeholder="0"
+                            max={MAX_PRECIO_DB}
                             value={formData.precioVenta || ''}
                             onChange={(e) => setFieldValue('precioVenta', parseFloat(e.target.value) || 0)}
                             error={fieldErrors.precioVenta}
@@ -1195,6 +1230,8 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                               type="number"
                               min="0"
                               placeholder="1"
+                              max={MAX_STOCK_DB}
+                              step={1}
                               value={formData.stockInicial}
                               onChange={(e) => setFieldValue('stockInicial', parseInt(e.target.value) || 0)}
                               error={fieldErrors.stockInicial}
@@ -1207,6 +1244,8 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                               type="number"
                               min="0"
                               placeholder="5"
+                              max={MAX_STOCK_DB}
+                              step={1}
                               value={formData.stockMinimo}
                               onChange={(e) => setFieldValue('stockMinimo', parseInt(e.target.value) || 0)}
                             />
@@ -1275,6 +1314,8 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                 </label>
                 <Input
                   placeholder="Ej: Ferretería, Congelados, Perfumería"
+                  minLength={LIMITES_TEXTO.NOMBRE_CATEGORIA_MIN}
+                  maxLength={LIMITES_TEXTO.NOMBRE_CATEGORIA_MAX}
                   value={nuevaCatNombre}
                   onChange={(e) => setNuevaCatNombre(e.target.value)}
                   autoFocus
@@ -1287,6 +1328,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                 </label>
                 <Textarea
                   placeholder="Breve descripción de los productos que engloba"
+                  maxLength={LIMITES_TEXTO.DESCRIPCION_MAX}
                   value={nuevaCatDesc}
                   onChange={(e) => setNuevaCatDesc(e.target.value)}
                   rows={2}
@@ -1346,6 +1388,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                   </label>
                   <Input
                     placeholder="Ej: Mercadería discontinuada por proveedor, rotura"
+                    maxLength={LIMITES_TEXTO.OBSERVACIONES_MAX}
                     value={motivoBaja}
                     onChange={(e) => setMotivoBaja(e.target.value)}
                   />
@@ -1385,6 +1428,8 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                       Nombre del Producto *
                     </label>
                     <Input
+                      minLength={LIMITES_TEXTO.NOMBRE_PRODUCTO_MIN}
+                      maxLength={LIMITES_TEXTO.NOMBRE_PRODUCTO_MAX}
                       value={formEdicion.nombre}
                       onChange={(e) => setFormEdicion((prev) => ({ ...prev, nombre: e.target.value }))}
                       required
@@ -1396,6 +1441,8 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                       Código / SKU *
                     </label>
                     <Input
+                      minLength={LIMITES_TEXTO.SKU_MIN}
+                      maxLength={LIMITES_TEXTO.SKU_MAX}
                       value={formEdicion.codigo}
                       onChange={(e) => setFormEdicion((prev) => ({ ...prev, codigo: e.target.value }))}
                       required
@@ -1427,6 +1474,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                       type="number"
                       min="0"
                       step="any"
+                      max={MAX_PRECIO_DB}
                       value={formEdicion.precioCosto}
                       onChange={(e) =>
                         setFormEdicion((prev) => ({ ...prev, precioCosto: parseFloat(e.target.value) || 0 }))
@@ -1442,6 +1490,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                       type="number"
                       min="1"
                       step="any"
+                      max={MAX_PRECIO_DB}
                       value={formEdicion.precioVenta}
                       onChange={(e) =>
                         setFormEdicion((prev) => ({ ...prev, precioVenta: parseFloat(e.target.value) || 0 }))
@@ -1476,6 +1525,8 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                     <Input
                       type="number"
                       min="0"
+                      max={MAX_STOCK_DB}
+                      step={1}
                       value={formEdicion.stockActual}
                       onChange={(e) =>
                         setFormEdicion((prev) => ({ ...prev, stockActual: parseInt(e.target.value) || 0 }))
@@ -1491,6 +1542,8 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                     <Input
                       type="number"
                       min="0"
+                      max={MAX_STOCK_DB}
+                      step={1}
                       value={formEdicion.stockMinimo}
                       onChange={(e) =>
                         setFormEdicion((prev) => ({ ...prev, stockMinimo: parseInt(e.target.value) || 0 }))
@@ -1522,6 +1575,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                       Descripción
                     </label>
                     <Textarea
+                      maxLength={LIMITES_TEXTO.DESCRIPCION_MAX}
                       value={formEdicion.descripcion}
                       onChange={(e) => setFormEdicion((prev) => ({ ...prev, descripcion: e.target.value }))}
                       rows={2}

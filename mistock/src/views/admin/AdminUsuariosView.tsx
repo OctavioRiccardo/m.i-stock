@@ -52,6 +52,7 @@ import {
   EstadoUsuario,
 } from '@/models/modelos_dominio/userModel';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { LIMITES_TEXTO, sanitizarTelefonoInput } from '@/lib/validaciones';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -109,6 +110,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
     usuarioSeleccionado,
     mensajeExito,
     mensajeError,
+    guardandoUsuario,
     crearUsuario,
     actualizarUsuario,
     cambiarRolRapido,
@@ -159,9 +161,10 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
     abrirModalEditar(usuario);
   };
 
-  const handleCrearSubmit = (e: React.FormEvent) => {
+  const handleCrearSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const exito = crearUsuario({
+    if (guardandoUsuario) return;
+    const exito = await crearUsuario({
       nombre: nuevoNombre,
       email: nuevoEmail,
       rol: nuevoRol,
@@ -368,6 +371,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                   <MagnifyingGlass className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-[#657373]" />
                   <Input
                     placeholder="Buscar por nombre o correo..."
+                    maxLength={LIMITES_TEXTO.EMAIL_MAX}
                     value={busqueda}
                     onChange={(e) => setBusqueda(e.target.value)}
                     className="h-9 pl-8 text-xs"
@@ -698,6 +702,9 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                 <Input
                   required
                   placeholder="Ej: Marcos Gómez"
+                  autoComplete="name"
+                  minLength={LIMITES_TEXTO.NOMBRE_USUARIO_MIN}
+                  maxLength={LIMITES_TEXTO.NOMBRE_USUARIO_MAX}
                   value={nuevoNombre}
                   onChange={(e) => setNuevoNombre(e.target.value)}
                 />
@@ -711,6 +718,8 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                   required
                   type="email"
                   placeholder="marcos.gomez@empresa.com"
+                  autoComplete="email"
+                  maxLength={LIMITES_TEXTO.EMAIL_MAX}
                   value={nuevoEmail}
                   onChange={(e) => setNuevoEmail(e.target.value)}
                 />
@@ -738,9 +747,12 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                     Teléfono (Opcional)
                   </label>
                   <Input
+                    type="tel"
+                    autoComplete="tel"
+                    maxLength={LIMITES_TEXTO.TELEFONO_MAX}
                     placeholder="+54 9 11 ..."
                     value={nuevoTelefono}
-                    onChange={(e) => setNuevoTelefono(e.target.value)}
+                    onChange={(e) => setNuevoTelefono(sanitizarTelefonoInput(e.target.value))}
                   />
                 </div>
               </div>
@@ -749,11 +761,15 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-[#1C2424] flex items-center gap-1.5">
                   <Key className="h-3.5 w-3.5 text-[#2A7A78]" weight="duotone" />
-                  <span>Contraseña de Acceso</span>
+                  <span>Contraseña de Acceso <span className="text-red-500">*</span></span>
                 </label>
                 <div className="relative">
                   <Input
                     type={mostrarNuevoPassword ? 'text' : 'password'}
+                    required
+                    autoComplete="new-password"
+                    minLength={LIMITES_TEXTO.PASSWORD_MIN}
+                    maxLength={LIMITES_TEXTO.PASSWORD_MAX}
                     placeholder="Mínimo 6 caracteres (ej: Pass1234!)"
                     value={nuevoPassword}
                     onChange={(e) => setNuevoPassword(e.target.value)}
@@ -814,7 +830,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                   className="bg-[#2A7A78] hover:bg-[#205E5C] text-white gap-1.5"
                 >
                   <Check className="h-4 w-4" />
-                  <span>Guardar Colaborador</span>
+                  <span>{guardandoUsuario ? 'Registrando...' : 'Guardar Colaborador'}</span>
                 </Button>
               </DialogFooter>
             </form>
@@ -848,6 +864,9 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                   </label>
                   <Input
                     required
+                    autoComplete="name"
+                    minLength={LIMITES_TEXTO.NOMBRE_USUARIO_MIN}
+                    maxLength={LIMITES_TEXTO.NOMBRE_USUARIO_MAX}
                     value={editNombre}
                     onChange={(e) => setEditNombre(e.target.value)}
                   />
@@ -905,8 +924,11 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                     Teléfono de Contacto
                   </label>
                   <Input
+                    type="tel"
+                    autoComplete="tel"
+                    maxLength={LIMITES_TEXTO.TELEFONO_MAX}
                     value={editTelefono}
-                    onChange={(e) => setEditTelefono(e.target.value)}
+                    onChange={(e) => setEditTelefono(sanitizarTelefonoInput(e.target.value))}
                   />
                 </div>
 
@@ -919,6 +941,9 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                   <div className="relative">
                     <Input
                       type={mostrarEditPassword ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      minLength={LIMITES_TEXTO.PASSWORD_MIN}
+                      maxLength={LIMITES_TEXTO.PASSWORD_MAX}
                       placeholder="Dejar en blanco para conservar la actual"
                       value={editPassword}
                       onChange={(e) => setEditPassword(e.target.value)}

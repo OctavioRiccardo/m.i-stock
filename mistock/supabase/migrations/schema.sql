@@ -9,7 +9,8 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 -- ----------------------------------------------------------------------------
 -- 2. LIMPIEZA DE TABLAS PREVIAS (Por si necesitas reiniciar desde cero)
 -- ----------------------------------------------------------------------------
-/* DROP TABLE IF EXISTS public.pagos CASCADE;
+/* DROP TABLE IF EXISTS public.configuracion_negocio CASCADE;
+DROP TABLE IF EXISTS public.pagos CASCADE;
 DROP TABLE IF EXISTS public.detalle_ventas CASCADE;
 DROP TABLE IF EXISTS public.ventas CASCADE;
 DROP TABLE IF EXISTS public.movimientos_stock CASCADE;
@@ -42,6 +43,8 @@ CREATE TABLE public.usuario (
   nombre text,
   email text NOT NULL,
   rol public.user_rol NOT NULL DEFAULT 'no_rol'::public.user_rol,
+  telefono text,
+  activo boolean NOT NULL DEFAULT true,
   creado_el timestamptz NOT NULL DEFAULT now(),
   actualizado_el timestamptz NOT NULL DEFAULT now()
 );
@@ -91,7 +94,7 @@ CREATE TABLE public.ventas (
   id_venta uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   id_usuario uuid REFERENCES public.usuario(id_usuario) ON DELETE SET NULL, -- Empleado que cobra
   total numeric(10,2) NOT NULL DEFAULT 0.00 CHECK (total >= 0),
-  estado text NOT NULL DEFAULT 'completada', -- 'pendiente', 'completada', 'cancelada'
+  estado text NOT NULL DEFAULT 'completada' CHECK (estado IN ('pendiente', 'completada', 'cancelada')),
   creado_el timestamptz NOT NULL DEFAULT now()
 );
 
@@ -111,6 +114,13 @@ CREATE TABLE public.pagos (
   metodo character varying(50) NOT NULL, -- 'efectivo', 'tarjeta_debito', 'tarjeta_credito', 'transferencia', etc.
   total numeric(10,2) NOT NULL CHECK (total > 0),
   creado_el timestamptz NOT NULL DEFAULT now()
+);
+
+-- 4.8. CONFIGURACIÓN DEL NEGOCIO (Fila única sincronizada entre terminales)
+CREATE TABLE IF NOT EXISTS public.configuracion_negocio (
+  id integer PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  datos jsonb NOT NULL DEFAULT '{}'::jsonb,
+  actualizado_el timestamptz NOT NULL DEFAULT now()
 );
 
 -- ----------------------------------------------------------------------------
@@ -142,7 +152,8 @@ BEGIN
     NEW.id,
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', '')
-  );
+  )
+  ON CONFLICT (id_usuario) DO NOTHING;
   RETURN NEW;
 END;
 $$;
@@ -161,7 +172,7 @@ SET search_path = public
 AS $$
 BEGIN
   UPDATE public.productos
-  SET stock_actual = stock_actual + NEW.cantidad,
+  SET stock_actual = GREATEST(0, stock_actual + NEW.cantidad),
       actualizado_el = now()
   WHERE id_producto = NEW.id_producto;
   RETURN NEW;
@@ -204,7 +215,35 @@ CREATE TRIGGER tr_venta_movimiento_stock
   AFTER INSERT ON public.detalle_ventas
   FOR EACH ROW EXECUTE FUNCTION public.registrar_movimiento_por_venta();
 
--- 6.4. Verificar si el usuario autenticado tiene rol de admin sin disparar recursión en RLS
+-- 6.4. Reintegro automático de stock al anular una venta activa (estado -> 'cancelada')
+CREATE OR REPLACE FUNCTION public.reintegrar_stock_por_cancelacion()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF OLD.estado <> 'cancelada' AND NEW.estado = 'cancelada' THEN
+    INSERT INTO public.movimientos_stock (id_producto, id_usuario, cantidad, tipo, motivo)
+    SELECT
+      dv.id_producto,
+      COALESCE(auth.uid(), NEW.id_usuario),
+      dv.cantidad,
+      'devolucion'::public.tipo_movimiento,
+      'Reintegro por anulación de ticket ' || NEW.id_venta::text
+    FROM public.detalle_ventas dv
+    WHERE dv.id_venta = NEW.id_venta;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS tr_cancelar_venta_reintegrar_stock ON public.ventas;
+CREATE TRIGGER tr_cancelar_venta_reintegrar_stock
+  AFTER UPDATE OF estado ON public.ventas
+  FOR EACH ROW EXECUTE FUNCTION public.reintegrar_stock_por_cancelacion();
+
+-- 6.5. Verificar si el usuario autenticado tiene rol de admin activo sin disparar recursión en RLS
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS boolean
 LANGUAGE sql
@@ -214,9 +253,135 @@ SET search_path = public
 AS $$
   SELECT EXISTS (
     SELECT 1 FROM public.usuario
-    WHERE id_usuario = auth.uid() AND rol = 'admin'
+    WHERE id_usuario = auth.uid()
+      AND rol = 'admin'
+      AND COALESCE(activo, true) = true
   );
 $$;
+
+-- 6.6. Alta administrativa segura de colaboradores en Supabase Auth + public.usuario
+CREATE OR REPLACE FUNCTION public.crear_colaborador_admin(
+  p_email text,
+  p_password text,
+  p_nombre text,
+  p_rol public.user_rol DEFAULT 'vendedor',
+  p_telefono text DEFAULT NULL
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth, extensions
+AS $$
+DECLARE
+  v_email text := lower(trim(p_email));
+  v_nombre text := trim(p_nombre);
+  v_id uuid;
+BEGIN
+  IF (SELECT auth.uid()) IS NULL OR NOT (SELECT public.is_admin()) THEN
+    RAISE EXCEPTION 'Acceso denegado: solo un administrador activo puede registrar colaboradores.';
+  END IF;
+
+  IF v_email = '' OR position('@' IN v_email) < 2 THEN
+    RAISE EXCEPTION 'El correo electrónico ingresado no es válido.';
+  END IF;
+
+  IF length(COALESCE(p_password, '')) < 6 THEN
+    RAISE EXCEPTION 'La contraseña debe tener al menos 6 caracteres.';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM auth.users WHERE lower(email) = v_email) THEN
+    RAISE EXCEPTION 'Ya existe un usuario registrado con ese correo electrónico.';
+  END IF;
+
+  v_id := gen_random_uuid();
+
+  INSERT INTO auth.users (
+    instance_id, id, aud, role, email, encrypted_password,
+    email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
+    created_at, updated_at,
+    confirmation_token, email_change, email_change_token_new,
+    email_change_token_current, recovery_token, reauthentication_token,
+    phone_change, phone_change_token
+  ) VALUES (
+    '00000000-0000-0000-0000-000000000000',
+    v_id,
+    'authenticated',
+    'authenticated',
+    v_email,
+    crypt(p_password, gen_salt('bf')),
+    now(),
+    '{"provider":"email","providers":["email"]}'::jsonb,
+    jsonb_build_object('full_name', v_nombre),
+    now(),
+    now(),
+    '', '', '', '', '', '', '', ''
+  );
+
+  INSERT INTO auth.identities (
+    id, user_id, provider_id, identity_data, provider,
+    last_sign_in_at, created_at, updated_at
+  ) VALUES (
+    gen_random_uuid(),
+    v_id,
+    v_id::text,
+    jsonb_build_object(
+      'sub', v_id::text,
+      'email', v_email,
+      'email_verified', true,
+      'phone_verified', false
+    ),
+    'email',
+    now(),
+    now(),
+    now()
+  );
+
+  INSERT INTO public.usuario (id_usuario, email, nombre, rol, telefono, activo)
+  VALUES (v_id, v_email, v_nombre, p_rol, NULLIF(trim(COALESCE(p_telefono, '')), ''), true)
+  ON CONFLICT (id_usuario) DO UPDATE
+    SET nombre = EXCLUDED.nombre,
+        rol = EXCLUDED.rol,
+        telefono = EXCLUDED.telefono,
+        activo = true,
+        actualizado_el = now();
+
+  RETURN v_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.crear_colaborador_admin(text, text, text, public.user_rol, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.crear_colaborador_admin(text, text, text, public.user_rol, text) TO authenticated;
+
+-- 6.7. Actualización administrativa segura de contraseña en Supabase Auth
+CREATE OR REPLACE FUNCTION public.actualizar_password_colaborador_admin(
+  p_id_usuario uuid,
+  p_nueva_password text
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth, extensions
+AS $$
+BEGIN
+  IF (SELECT auth.uid()) IS NULL OR NOT (SELECT public.is_admin()) THEN
+    RAISE EXCEPTION 'Acceso denegado: solo un administrador activo puede modificar contraseñas.';
+  END IF;
+
+  IF length(COALESCE(p_nueva_password, '')) < 6 OR length(p_nueva_password) > 72 THEN
+    RAISE EXCEPTION 'La contraseña debe tener entre 6 y 72 caracteres.';
+  END IF;
+
+  UPDATE auth.users
+  SET encrypted_password = crypt(p_nueva_password, gen_salt('bf')),
+      updated_at = now()
+  WHERE id = p_id_usuario;
+
+  RETURN FOUND;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.actualizar_password_colaborador_admin(uuid, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.actualizar_password_colaborador_admin(uuid, text) TO authenticated;
 
 -- ----------------------------------------------------------------------------
 -- 7. ACTIVACIÓN DE ROW LEVEL SECURITY (RLS)
@@ -228,6 +393,7 @@ ALTER TABLE public.movimientos_stock ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ventas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.detalle_ventas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pagos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.configuracion_negocio ENABLE ROW LEVEL SECURITY;
 
 -- ----------------------------------------------------------------------------
 -- 8. POLÍTICAS DE SEGURIDAD (USO INTERNO / LOCAL - OPTIMIZADAS CON SUBQUERY)
@@ -267,28 +433,42 @@ CREATE POLICY "Solo admin elimina usuarios" ON public.usuario
   FOR DELETE TO authenticated 
   USING ((SELECT public.is_admin()));
 
--- 8.3. Ventas, Detalles y Pagos (Modelo Append-Only para integridad contable)
+-- 8.3. Ventas, Detalles y Pagos (Trazabilidad contable con anulación controlada)
 CREATE POLICY "Staff ve ventas" ON public.ventas 
   FOR SELECT TO authenticated USING (true);
 
 CREATE POLICY "Staff registra ventas" ON public.ventas 
-  FOR INSERT TO authenticated WITH CHECK (true);
+  FOR INSERT TO authenticated WITH CHECK ((SELECT auth.uid()) IS NOT NULL);
+
+CREATE POLICY "Staff anula ventas activas" ON public.ventas
+  FOR UPDATE TO authenticated
+  USING ((SELECT auth.uid()) IS NOT NULL AND estado <> 'cancelada')
+  WITH CHECK ((SELECT auth.uid()) IS NOT NULL AND estado = 'cancelada');
 
 CREATE POLICY "Staff ve detalles" ON public.detalle_ventas 
   FOR SELECT TO authenticated USING (true);
 
 CREATE POLICY "Staff registra detalles" ON public.detalle_ventas 
-  FOR INSERT TO authenticated WITH CHECK (true);
+  FOR INSERT TO authenticated WITH CHECK ((SELECT auth.uid()) IS NOT NULL);
 
 CREATE POLICY "Staff ve pagos" ON public.pagos 
   FOR SELECT TO authenticated USING (true);
 
 CREATE POLICY "Staff registra pagos" ON public.pagos 
-  FOR INSERT TO authenticated WITH CHECK (true);
+  FOR INSERT TO authenticated WITH CHECK ((SELECT auth.uid()) IS NOT NULL);
 
 -- 8.4. Movimientos de stock (Historial inmutable / Ledger)
 CREATE POLICY "Staff ve movimientos stock" ON public.movimientos_stock 
   FOR SELECT TO authenticated USING (true);
 
 CREATE POLICY "Staff registra movimientos stock" ON public.movimientos_stock 
-  FOR INSERT TO authenticated WITH CHECK (true);
+  FOR INSERT TO authenticated WITH CHECK ((SELECT auth.uid()) IS NOT NULL);
+
+-- 8.5. Configuración del negocio
+CREATE POLICY "Staff lee configuración" ON public.configuracion_negocio
+  FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Solo admin modifica configuración" ON public.configuracion_negocio
+  FOR ALL TO authenticated
+  USING ((SELECT public.is_admin()))
+  WITH CHECK ((SELECT public.is_admin()));

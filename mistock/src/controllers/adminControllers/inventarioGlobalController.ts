@@ -16,8 +16,8 @@
  * - Desacoplado de la persistencia directa; orquesta las entidades de `Producto` y `Categoria`.
  */
 
-import { useState, useMemo } from 'react';
-import { useInventarioData } from '@/services/inventarioService';
+import { useState, useMemo, useEffect } from 'react';
+import { inventarioService, useInventarioData } from '@/services/inventarioService';
 
 export type FiltroEstadoStock = 'todos' | 'optimo' | 'bajo' | 'critico' | 'sin_stock';
 export type CriterioOrdenInventario =
@@ -30,6 +30,10 @@ export type CriterioOrdenInventario =
 
 export function useAdminInventarioGlobalController() {
   const { categorias, productos } = useInventarioData();
+
+  useEffect(() => {
+    void inventarioService.sincronizarConSupabase();
+  }, []);
 
   // Estados reactivos de filtrado y navegación
   const [categoriaSeleccionada, setCategoriaSeleccionadaState] = useState<string>('todas');

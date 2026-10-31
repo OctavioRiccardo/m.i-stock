@@ -10,17 +10,32 @@
  * - Búsqueda rápida en el catálogo maestro unificado.
  * - Registro ágil de ventas con selección de medio de cobro habilitado.
  * - Respeto a las directivas de configuración global (moneda, venta sin stock, sonido).
- * - Descuento automático de stock y seguimiento de métricas diarias de caja.
+ * - Sincronización exacta con los triggers PostgreSQL de Supabase sin doble descuento.
  */
 
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { UserDashboardData, ProductoRapidoPOS, VentaRecientePOS, ItemCarritoPOS, PestanaOperativaPOS, calcularTotalesCarrito } from '@/models/modelos_vista/dashboardModel';
+import {
+  UserDashboardData,
+  ProductoRapidoPOS,
+  VentaRecientePOS,
+  ItemCarritoPOS,
+  PestanaOperativaPOS,
+  calcularTotalesCarrito,
+} from '@/models/modelos_vista/dashboardModel';
 import { useInventarioData, inventarioService } from '@/services/inventarioService';
 import { supabaseService } from '@/services/supabaseService';
 import { MetodoPago, DetalleVenta } from '@/models/modelos_dominio/ventaModel';
 import { useConfiguracionData } from '@/services/configuracionService';
-import { ArqueoCajaDTO, ResumenMediosPagoCierre, EstadoBalanceCaja, calcularEfectivoEsperado, calcularDiferenciaCaja, determinarEstadoBalance } from '@/models/modelos_vista/cierreCajaModel';
+import {
+  ArqueoCajaDTO,
+  ResumenMediosPagoCierre,
+  EstadoBalanceCaja,
+  calcularEfectivoEsperado,
+  calcularDiferenciaCaja,
+  determinarEstadoBalance,
+} from '@/models/modelos_vista/cierreCajaModel';
+import { LIMITES_TEXTO, MAX_PRECIO_DB } from '@/lib/validaciones';
 
 export const VENTAS_STORAGE_KEY = 'mistock_ventas_historial_test_v1';
 
@@ -28,6 +43,27 @@ export interface VentasHistorialStore {
   ventasDelDia: number;
   recaudacionDelDia: number;
   ventasRecientes: VentaRecientePOS[];
+}
+
+export function recalcularVentasStore(ventas: VentaRecientePOS[]): VentasHistorialStore {
+  const hoyStr = new Date().toLocaleDateString('es-AR');
+  const hoyInicioTs = new Date().setHours(0, 0, 0, 0);
+
+  const ventasDeHoy = ventas.filter((v: VentaRecientePOS) => {
+    if (v.estado === 'cancelada') return false;
+    if (v.fecha && v.fecha === hoyStr) return true;
+    if (v.timestamp && v.timestamp >= hoyInicioTs) return true;
+    return false;
+  });
+
+  return {
+    ventasDelDia: ventasDeHoy.length,
+    recaudacionDelDia: ventasDeHoy.reduce(
+      (acc: number, v: VentaRecientePOS) => acc + (v.montoTotal || 0),
+      0
+    ),
+    ventasRecientes: ventas,
+  };
 }
 
 export function inicializarVentasCliente(): VentasHistorialStore {
@@ -39,24 +75,7 @@ export function inicializarVentasCliente(): VentasHistorialStore {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed.ventasRecientes)) {
-        const hoyStr = new Date().toLocaleDateString('es-AR');
-        const hoyInicioTs = new Date().setHours(0, 0, 0, 0);
-
-        const ventasDeHoy = parsed.ventasRecientes.filter((v: VentaRecientePOS) => {
-          if (v.estado === 'cancelada') return false;
-          if (v.fecha && v.fecha === hoyStr) return true;
-          if (v.timestamp && v.timestamp >= hoyInicioTs) return true;
-          return false;
-        });
-
-        return {
-          ventasDelDia: ventasDeHoy.length,
-          recaudacionDelDia: ventasDeHoy.reduce(
-            (acc: number, v: VentaRecientePOS) => acc + (v.montoTotal || 0),
-            0
-          ),
-          ventasRecientes: parsed.ventasRecientes,
-        };
+        return recalcularVentasStore(parsed.ventasRecientes);
       }
     }
   } catch {}
@@ -108,42 +127,29 @@ export function useUserDashboardController() {
 
   const [ventasState, setVentasState] = useState<VentasHistorialStore>(inicializarVentasCliente);
 
-  // Hidratar ventas remotas desde Supabase al montar y sincronizar cambios locales
+  // Hidratar ventas autoritativas desde Supabase al montar (reemplazando cualquier residuo local)
   useEffect(() => {
     let mounted = true;
+    void inventarioService.sincronizarConSupabase();
+
     supabaseService
-      .fetchVentas()
-      .then((remotas) => {
-        if (!mounted || !remotas || remotas.length === 0) return;
+      .fetchVentasWithStatus()
+      .then((res) => {
+        if (!mounted || !res.ok) return;
         setVentasState((prev) => {
-          const mapa = new Map<string, VentaRecientePOS>();
-          for (const v of remotas) {
-            mapa.set(v.id, v);
-          }
-          for (const local of prev.ventasRecientes) {
-            if (!mapa.has(local.id)) {
-              mapa.set(local.id, local);
-            }
-          }
-          const combinadas = Array.from(mapa.values()).sort(
-            (a, b) => (b.timestamp || 0) - (a.timestamp || 0)
-          );
-          const hoyStr = new Date().toLocaleDateString('es-AR');
-          const hoyInicioTs = new Date().setHours(0, 0, 0, 0);
-          const ventasDeHoy = combinadas.filter((v) => {
-            if (v.estado === 'cancelada') return false;
-            if (v.fecha && v.fecha === hoyStr) return true;
-            if (v.timestamp && v.timestamp >= hoyInicioTs) return true;
-            return false;
-          });
-          const updated: VentasHistorialStore = {
-            ventasDelDia: ventasDeHoy.length,
-            recaudacionDelDia: ventasDeHoy.reduce((acc, v) => acc + (v.montoTotal || 0), 0),
-            ventasRecientes: combinadas,
-          };
+          const prevById = new Map(prev.ventasRecientes.map((v) => [v.id, v]));
+          const autoritativas = res.items
+            .map((v) => ({
+              ...v,
+              idTurno: prevById.get(v.id)?.idTurno,
+            }))
+            .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+          const updated = recalcularVentasStore(autoritativas);
           if (typeof window !== 'undefined') {
             try {
               window.localStorage.setItem(VENTAS_STORAGE_KEY, JSON.stringify(updated));
+              window.dispatchEvent(new Event('mistock_ventas_updated'));
             } catch {}
           }
           return updated;
@@ -155,13 +161,17 @@ export function useUserDashboardController() {
     };
   }, []);
 
-  const data: UserDashboardData = useMemo(() => ({
-    ventasDelDia: ventasState.ventasDelDia,
-    recaudacionDelDia: ventasState.recaudacionDelDia,
-    totalProductosEnStock: productosPopulares.reduce((acc, p) => acc + p.stock, 0),
-    ventasRecientes: ventasState.ventasRecientes,
-    productosPopulares,
-  }), [ventasState, productosPopulares]);
+  const data: UserDashboardData = useMemo(
+    () => ({
+      ventasDelDia: ventasState.ventasDelDia,
+      recaudacionDelDia: ventasState.recaudacionDelDia,
+      totalProductosEnStock: productosPopulares.reduce((acc, p) => acc + p.stock, 0),
+      ventasRecientes: ventasState.ventasRecientes,
+      productosPopulares,
+    }),
+    [ventasState, productosPopulares]
+  );
+
   const [loading, setLoading] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [saleSuccessMessage, setSaleSuccessMessage] = useState<string | null>(null);
@@ -212,8 +222,7 @@ export function useUserDashboardController() {
         product.categoria.toLowerCase().includes(query);
 
       const coincideCategoria =
-        filtroCat === 'todas' ||
-        product.categoria.toLowerCase() === filtroCat;
+        filtroCat === 'todas' || product.categoria.toLowerCase() === filtroCat;
 
       return coincideTexto && coincideCategoria;
     });
@@ -280,10 +289,9 @@ export function useUserDashboardController() {
   // OPERATIVA DE SESIÓN DE CAJA: APERTURA Y CIERRE (MONO-CAJA)
   // ====================================================================
   const [cajaAbierta, setCajaAbierta] = useState<boolean>(false);
-  const [fondoInicial, setFondoInicial] = useState<number>(10000); // Fondo de gaveta inicial para dar cambio
+  const [fondoInicial, setFondoInicial] = useState<number>(10000);
   const [fechaApertura, setFechaApertura] = useState<string | null>(null);
 
-  // Helper para sincronizar siempre el cajero responsable con el usuario que tiene sesión iniciada
   const getNombreUsuarioActivo = (): string => {
     if (typeof window !== 'undefined') {
       try {
@@ -297,9 +305,7 @@ export function useUserDashboardController() {
     return 'Administrador';
   };
 
-  const [cajeroApertura, setCajeroApertura] = useState<string>(() => {
-    return getNombreUsuarioActivo();
-  });
+  const [cajeroApertura, setCajeroApertura] = useState<string>(() => getNombreUsuarioActivo());
   const [observacionesApertura, setObservacionesApertura] = useState<string>('');
   const [idTurnoActivo, setIdTurnoActivo] = useState<string | null>(null);
   const [timestampApertura, setTimestampApertura] = useState<number | null>(null);
@@ -324,7 +330,6 @@ export function useUserDashboardController() {
         if (sesion && typeof sesion.cajaAbierta === 'boolean') {
           setCajaAbierta(sesion.cajaAbierta);
           if (sesion.cajaAbierta) {
-            // Turno activo en curso: conservar los datos de la sesión actual abierta
             if (sesion.idTurno) setIdTurnoActivo(sesion.idTurno);
             if (sesion.timestampApertura) setTimestampApertura(sesion.timestampApertura);
             if (sesion.fondoInicial !== undefined) setFondoInicial(sesion.fondoInicial);
@@ -332,14 +337,12 @@ export function useUserDashboardController() {
             if (sesion.cajeroApertura) setCajeroApertura(sesion.cajeroApertura);
             if (sesion.observacionesApertura) setObservacionesApertura(sesion.observacionesApertura);
           } else {
-            // Si la caja está CERRADA, el cajero para la próxima apertura SIEMPRE es el usuario con sesión activa
             setCajeroApertura(getNombreUsuarioActivo());
           }
           if (sesion.ultimoCierre) setUltimoCierre(sesion.ultimoCierre);
           return;
         }
       }
-      // Por defecto la caja inicia cerrada requiriendo apertura explícita
       setCajaAbierta(false);
       setCajeroApertura(getNombreUsuarioActivo());
     } catch {
@@ -349,9 +352,15 @@ export function useUserDashboardController() {
   }, []);
 
   /**
-   * Ejecuta la Apertura de Caja para habilitar la operativa de ventas en el turno.
+   * Ejecuta la Apertura de Caja validando rangos numéricos y longitud de observaciones.
    */
   const abrirCaja = (montoInicial: number, observaciones?: string) => {
+    const montoSeguro =
+      Number.isFinite(montoInicial) && montoInicial >= 0
+        ? Math.min(MAX_PRECIO_DB, Number(montoInicial.toFixed(2)))
+        : 0;
+    const obsSegura = (observaciones || '').trim().slice(0, LIMITES_TEXTO.OBSERVACIONES_MAX);
+
     const ahora = new Date();
     const fechaFormateada = ahora.toLocaleDateString('es-AR');
     const horaFormateada = ahora.toLocaleTimeString('es-AR', {
@@ -366,10 +375,10 @@ export function useUserDashboardController() {
     setIdTurnoActivo(nuevoIdTurno);
     setTimestampApertura(nuevoTimestamp);
     setCajaAbierta(true);
-    setFondoInicial(montoInicial);
+    setFondoInicial(montoSeguro);
     setFechaApertura(strFechaApertura);
     setCajeroApertura(cajeroActual);
-    setObservacionesApertura(observaciones || '');
+    setObservacionesApertura(obsSegura);
     setIsModalAperturaOpen(false);
 
     try {
@@ -379,19 +388,17 @@ export function useUserDashboardController() {
           cajaAbierta: true,
           idTurno: nuevoIdTurno,
           timestampApertura: nuevoTimestamp,
-          fondoInicial: montoInicial,
+          fondoInicial: montoSeguro,
           fechaApertura: strFechaApertura,
           cajeroApertura: cajeroActual,
-          observacionesApertura: observaciones || '',
+          observacionesApertura: obsSegura,
           ultimoCierre,
         })
       );
-    } catch {
-      // Silencioso
-    }
+    } catch {}
 
     setSaleSuccessMessage(
-      `Caja abierta con éxito (Turno ${nuevoIdTurno}). Fondo inicial: ${monedaSimbolo} ${montoInicial.toLocaleString('es-AR')}`
+      `Caja abierta con éxito (Turno ${nuevoIdTurno}). Fondo inicial: ${monedaSimbolo} ${montoSeguro.toLocaleString('es-AR')}`
     );
     setTimeout(() => setSaleSuccessMessage(null), 4000);
   };
@@ -443,17 +450,20 @@ export function useUserDashboardController() {
     resumenMediosTurno.transferencia +
     resumenMediosTurno.otro;
   const granTotalRecaudado = totalVentasEfectivo + totalDigitales;
-  const cantidadTicketsValidos = useMemo(
-    () => ventasTurnoActual.length,
-    [ventasTurnoActual]
-  );
+  const cantidadTicketsValidos = useMemo(() => ventasTurnoActual.length, [ventasTurnoActual]);
   const efectivoEsperado = calcularEfectivoEsperado(fondoInicial, totalVentasEfectivo);
 
   /**
    * Ejecuta la confirmación del Arqueo y emite el comprobante de Cierre de Caja (Z).
    */
   const confirmarCierreCaja = (efectivoReal: number, observaciones?: string): ArqueoCajaDTO => {
-    const diferencia = calcularDiferenciaCaja(efectivoReal, efectivoEsperado);
+    const efectivoSeguro =
+      Number.isFinite(efectivoReal) && efectivoReal >= 0
+        ? Math.min(MAX_PRECIO_DB, Number(efectivoReal.toFixed(2)))
+        : 0;
+    const obsSegura = (observaciones || '').trim().slice(0, LIMITES_TEXTO.OBSERVACIONES_MAX);
+
+    const diferencia = calcularDiferenciaCaja(efectivoSeguro, efectivoEsperado);
     const estadoBalance: EstadoBalanceCaja = determinarEstadoBalance(diferencia);
 
     const fechaHoy = new Date();
@@ -476,11 +486,11 @@ export function useUserDashboardController() {
       granTotalRecaudado,
       cantidadTickets: cantidadTicketsValidos,
       efectivoEsperado,
-      efectivoReal,
+      efectivoReal: efectivoSeguro,
       diferencia,
       estadoBalance,
       desgloseMedios: resumenMediosTurno,
-      observaciones: observaciones?.trim() || undefined,
+      observaciones: obsSegura || undefined,
     };
 
     setCajaAbierta(false);
@@ -504,9 +514,7 @@ export function useUserDashboardController() {
           ultimoCierre: nuevoCierre,
         })
       );
-    } catch {
-      // Silencioso
-    }
+    } catch {}
 
     setSaleSuccessMessage(
       `Cierre de Caja ${nuevoCierre.idCierre} emitido. Diferencia: ${monedaSimbolo} ${diferencia.toLocaleString('es-AR')}`
@@ -522,9 +530,6 @@ export function useUserDashboardController() {
   const [busquedaPrecios, setBusquedaPrecios] = useState<string>('');
   const [productoConsultado, setProductoConsultado] = useState<ProductoRapidoPOS | null>(null);
 
-  /**
-   * Consulta directa de un artículo por código de barras o nombre sin alterar el ticket activo.
-   */
   const consultarProducto = (termino: string) => {
     const q = termino.trim().toLowerCase();
     if (!q) {
@@ -532,23 +537,18 @@ export function useUserDashboardController() {
       return;
     }
 
-    // Coincidencia exacta por código
     const exacto = data.productosPopulares.find((p) => p.codigo.toLowerCase() === q);
     if (exacto) {
       setProductoConsultado(exacto);
       return;
     }
 
-    // Coincidencia parcial por nombre o código
     const match = data.productosPopulares.find(
       (p) => p.nombre.toLowerCase().includes(q) || p.codigo.toLowerCase().includes(q)
     );
     setProductoConsultado(match || null);
   };
 
-  /**
-   * Sugerencias filtradas en tiempo real para el consultor de precios.
-   */
   const productosConsultorFiltrados = useMemo(() => {
     const q = busquedaPrecios.trim().toLowerCase();
     if (!q) return data.productosPopulares.slice(0, 8);
@@ -565,16 +565,16 @@ export function useUserDashboardController() {
   // ====================================================================
   const [busquedaCatalogo, setBusquedaCatalogo] = useState<string>('');
   const [categoriaFiltroCatalogo, setCategoriaFiltroCatalogo] = useState<string>('todas');
-  const [disponibilidadFiltroCatalogo, setDisponibilidadFiltroCatalogo] = useState<'todos' | 'con_stock' | 'agotados'>('todos');
+  const [disponibilidadFiltroCatalogo, setDisponibilidadFiltroCatalogo] = useState<
+    'todos' | 'con_stock' | 'agotados'
+  >('todos');
   const [paginaCatalogo, setPaginaCatalogo] = useState<number>(1);
   const itemsPorPaginaCatalogo = 8;
 
-  // Reset de página al cambiar filtros de catálogo
   useEffect(() => {
     setPaginaCatalogo(1);
   }, [busquedaCatalogo, categoriaFiltroCatalogo, disponibilidadFiltroCatalogo]);
 
-  // Filtrado reactivo del catálogo general con disponibilidad
   const productosCatalogoFiltrados = useMemo(() => {
     const query = busquedaCatalogo.trim().toLowerCase();
     const catFiltro = categoriaFiltroCatalogo.toLowerCase();
@@ -586,8 +586,7 @@ export function useUserDashboardController() {
         p.codigo.toLowerCase().includes(query) ||
         p.categoria.toLowerCase().includes(query);
 
-      const coincideCategoria =
-        catFiltro === 'todas' || p.categoria.toLowerCase() === catFiltro;
+      const coincideCategoria = catFiltro === 'todas' || p.categoria.toLowerCase() === catFiltro;
 
       const coincideDisponibilidad =
         disponibilidadFiltroCatalogo === 'todos' ||
@@ -598,14 +597,16 @@ export function useUserDashboardController() {
     });
   }, [data.productosPopulares, busquedaCatalogo, categoriaFiltroCatalogo, disponibilidadFiltroCatalogo]);
 
-  const totalPaginasCatalogo = Math.max(1, Math.ceil(productosCatalogoFiltrados.length / itemsPorPaginaCatalogo));
+  const totalPaginasCatalogo = Math.max(
+    1,
+    Math.ceil(productosCatalogoFiltrados.length / itemsPorPaginaCatalogo)
+  );
   const inicioPaginacionCatalogo = (paginaCatalogo - 1) * itemsPorPaginaCatalogo;
   const productosCatalogoPaginados = productosCatalogoFiltrados.slice(
     inicioPaginacionCatalogo,
     inicioPaginacionCatalogo + itemsPorPaginaCatalogo
   );
 
-  // Métricas agregadas de catálogo para el vendedor
   const totalUnidadesEnStock = useMemo(() => {
     return data.productosPopulares.reduce((acc, p) => acc + p.stock, 0);
   }, [data.productosPopulares]);
@@ -623,7 +624,6 @@ export function useUserDashboardController() {
   // ====================================================================
   const [carrito, setCarrito] = useState<ItemCarritoPOS[]>([]);
 
-  // Totales calculados en tiempo real
   const totalCarrito = useMemo(() => {
     return calcularTotalesCarrito(carrito).total;
   }, [carrito]);
@@ -632,12 +632,11 @@ export function useUserDashboardController() {
     return calcularTotalesCarrito(carrito).cantidadArticulos;
   }, [carrito]);
 
-  /**
-   * Agrega un producto al carrito de la venta en curso (o incrementa su cantidad).
-   */
   const agregarAlCarrito = (producto: ProductoRapidoPOS, cantidadAAgregar: number = 1): boolean => {
     if (!cajaAbierta) {
-      setSaleErrorMessage('La caja está cerrada. Abra la caja desde el botón superior antes de armar el carrito.');
+      setSaleErrorMessage(
+        'La caja está cerrada. Abra la caja desde el botón superior antes de armar el carrito.'
+      );
       setTimeout(() => setSaleErrorMessage(null), 3000);
       return false;
     }
@@ -691,9 +690,6 @@ export function useUserDashboardController() {
     return true;
   };
 
-  /**
-   * Modifica la cantidad de un ítem en el carrito.
-   */
   const actualizarCantidadItem = (productoId: string, nuevaCantidad: number) => {
     if (!cajaAbierta) return;
 
@@ -727,17 +723,11 @@ export function useUserDashboardController() {
     });
   };
 
-  /**
-   * Quita un renglón del carrito.
-   */
   const removerItemCarrito = (productoId: string) => {
     if (!cajaAbierta) return;
     setCarrito((prev) => prev.filter((item) => item.producto.id !== productoId));
   };
 
-  /**
-   * Vacía todos los ítems del ticket actual.
-   */
   const vaciarCarrito = () => {
     if (!cajaAbierta) return;
     setCarrito([]);
@@ -745,6 +735,7 @@ export function useUserDashboardController() {
 
   /**
    * Procesa y cobra el ticket completo con todos los productos del carrito.
+   * Evita el doble descuento dejando la mutación remota exclusivamente al trigger PostgreSQL.
    */
   const procesarVentaTicket = (
     metodoPago: MetodoPago = 'efectivo',
@@ -762,7 +753,14 @@ export function useUserDashboardController() {
       return null;
     }
 
-    // Validar stock de todos los renglones
+    if (totalCarrito > MAX_PRECIO_DB) {
+      setSaleErrorMessage(
+        `El total del ticket supera el límite operativo de ${monedaSimbolo} ${MAX_PRECIO_DB.toLocaleString('es-AR')}.`
+      );
+      setTimeout(() => setSaleErrorMessage(null), 4000);
+      return null;
+    }
+
     if (!permitirVentaSinStock) {
       for (const item of carrito) {
         const prod = data.productosPopulares.find((p) => p.id === item.producto.id);
@@ -788,7 +786,6 @@ export function useUserDashboardController() {
 
     const ventaId = `VNT-${Date.now().toString().slice(-4)}`;
 
-    // Generar renglones DetalleVenta
     const itemsVenta: DetalleVenta[] = carrito.map((item, idx) => ({
       id: `DET-${Date.now().toString().slice(-4)}-${idx + 1}`,
       ventaId,
@@ -824,15 +821,17 @@ export function useUserDashboardController() {
       estado: 'completada',
     };
 
-    // Descontar existencias en el inventario central para cada renglón
+    // Descuento optimista únicamente en memoria/UI (`sincronizarRemoto = false`):
+    // PostgreSQL descuenta el stock una sola vez mediante `tr_venta_movimiento_stock`.
     for (const item of carrito) {
-      inventarioService.descontarStock(item.producto.id, item.cantidad, permitirVentaSinStock);
+      inventarioService.descontarStock(item.producto.id, item.cantidad, permitirVentaSinStock, false);
     }
 
-    // Reproducir sonido de confirmación si está activo en la configuración del POS
     if (config.pos.sonidoConfirmacionVenta && typeof window !== 'undefined') {
       try {
-        const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        const AudioCtx =
+          window.AudioContext ||
+          (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
         if (AudioCtx) {
           const ctx = new AudioCtx();
           const osc = ctx.createOscillator();
@@ -850,19 +849,33 @@ export function useUserDashboardController() {
       } catch {}
     }
 
-    // Persistencia remota asíncrona en Supabase (dispara triggers de movimientos_stock y stock_actual)
+    // Persistencia remota verificada en Supabase
     supabaseService
       .registrarVenta(newSale)
       .then((remoteId) => {
-        if (!remoteId) return;
+        if (!remoteId) {
+          // Revertir venta local y re-sincronizar stock real desde Supabase
+          setVentasState((prev) => {
+            const filtradas = prev.ventasRecientes.filter((v) => v.id !== ventaId);
+            const updated = recalcularVentasStore(filtradas);
+            if (typeof window !== 'undefined') {
+              try {
+                window.localStorage.setItem(VENTAS_STORAGE_KEY, JSON.stringify(updated));
+                window.dispatchEvent(new Event('mistock_ventas_updated'));
+              } catch {}
+            }
+            return updated;
+          });
+          void inventarioService.sincronizarConSupabase();
+          setSaleErrorMessage('No se pudo registrar la venta en Supabase. Se revirtió la operación.');
+          return;
+        }
+
         setVentasState((prev) => {
           const allSales = prev.ventasRecientes.map((v) =>
             v.id === ventaId ? { ...v, id: remoteId } : v
           );
-          const updated = {
-            ...prev,
-            ventasRecientes: allSales,
-          };
+          const updated = recalcularVentasStore(allSales);
           if (typeof window !== 'undefined') {
             try {
               window.localStorage.setItem(VENTAS_STORAGE_KEY, JSON.stringify(updated));
@@ -871,29 +884,16 @@ export function useUserDashboardController() {
           }
           return updated;
         });
+
+        // Sincronizar existencias con el valor exacto calculado por el trigger PostgreSQL
+        void inventarioService.sincronizarConSupabase();
       })
-      .catch(() => {});
-
-    setVentasState((prev) => {
-      const allSales = [newSale, ...prev.ventasRecientes];
-      const hoyStr = ahora.toLocaleDateString('es-AR');
-      const hoyInicioTs = new Date().setHours(0, 0, 0, 0);
-
-      const ventasDeHoy = allSales.filter((v) => {
-        if (v.estado === 'cancelada') return false;
-        if (v.fecha && v.fecha === hoyStr) return true;
-        if (v.timestamp && v.timestamp >= hoyInicioTs) return true;
-        return false;
+      .catch(() => {
+        void inventarioService.sincronizarConSupabase();
       });
 
-      const updated = {
-        ventasDelDia: ventasDeHoy.length,
-        recaudacionDelDia: ventasDeHoy.reduce(
-          (acc: number, v: VentaRecientePOS) => acc + (v.montoTotal || 0),
-          0
-        ),
-        ventasRecientes: allSales,
-      };
+    setVentasState((prev) => {
+      const updated = recalcularVentasStore([newSale, ...prev.ventasRecientes]);
       if (typeof window !== 'undefined') {
         try {
           window.localStorage.setItem(VENTAS_STORAGE_KEY, JSON.stringify(updated));
@@ -932,8 +932,8 @@ export function useUserDashboardController() {
   };
 
   /**
-   * Cancela una venta registrada, reintegra su stock físico al inventario
-   * y descuenta su monto de las métricas de recaudación del turno y del día.
+   * Cancela una venta registrada en Supabase, reintegra su stock mediante trigger PostgreSQL
+   * y descuenta su monto de las métricas del turno y del día.
    */
   const cancelarVenta = (ventaId: string, motivo?: string): boolean => {
     const venta = data.ventasRecientes.find((v) => v.id === ventaId);
@@ -949,36 +949,26 @@ export function useUserDashboardController() {
       return false;
     }
 
-    // 1. Reintegrar existencias al inventario para cada ítem vendido
-    for (const item of venta.items || []) {
-      inventarioService.reintegrarStock(item.productoId, item.cantidad);
+    if (ventaId.startsWith('VNT-')) {
+      setSaleErrorMessage(
+        'Aguarde un segundo a que el ticket termine de sincronizarse con la base de datos e intente nuevamente.'
+      );
+      setTimeout(() => setSaleErrorMessage(null), 3500);
+      return false;
     }
 
-    // Persistir cancelación remota en Supabase
-    supabaseService.cancelarVenta(ventaId).catch(() => {});
+    // 1. Reintegro optimista en UI (`sincronizarRemoto = false`):
+    // PostgreSQL reintegra el stock mediante `tr_cancelar_venta_reintegrar_stock`.
+    for (const item of venta.items || []) {
+      inventarioService.reintegrarStock(item.productoId, item.cantidad, false);
+    }
 
-    // 2. Actualizar estado de la venta a 'cancelada' y recalcular métricas del día
+    // 2. Actualizar estado local y verificar confirmación en Supabase
     setVentasState((prev) => {
       const allSales = prev.ventasRecientes.map((v) =>
         v.id === ventaId ? { ...v, estado: 'cancelada' as const } : v
       );
-
-      const hoyStr = new Date().toLocaleDateString('es-AR');
-      const hoyInicioTs = new Date().setHours(0, 0, 0, 0);
-
-      const ventasDeHoy = allSales.filter((v) => {
-        if (v.estado === 'cancelada') return false;
-        if (v.fecha && v.fecha === hoyStr) return true;
-        if (v.timestamp && v.timestamp >= hoyInicioTs) return true;
-        return false;
-      });
-
-      const updated = {
-        ventasDelDia: ventasDeHoy.length,
-        recaudacionDelDia: ventasDeHoy.reduce((acc, v) => acc + (v.montoTotal || 0), 0),
-        ventasRecientes: allSales,
-      };
-
+      const updated = recalcularVentasStore(allSales);
       if (typeof window !== 'undefined') {
         try {
           window.localStorage.setItem(VENTAS_STORAGE_KEY, JSON.stringify(updated));
@@ -988,14 +978,46 @@ export function useUserDashboardController() {
       return updated;
     });
 
-    const motivoTexto = motivo ? ` (Motivo: ${motivo.trim()})` : '';
-    setSaleSuccessMessage(`Venta ${ventaId} anulada con éxito y mercadería reingresada al stock.${motivoTexto}`);
+    supabaseService
+      .cancelarVenta(ventaId)
+      .then((ok) => {
+        if (!ok) {
+          // Revertir si la base de datos rechazó la anulación (ej. falta aplicar patch_integridad_y_anulacion.sql)
+          setVentasState((prev) => {
+            const revertidas = prev.ventasRecientes.map((v) =>
+              v.id === ventaId ? { ...v, estado: 'completada' as const } : v
+            );
+            const updated = recalcularVentasStore(revertidas);
+            if (typeof window !== 'undefined') {
+              try {
+                window.localStorage.setItem(VENTAS_STORAGE_KEY, JSON.stringify(updated));
+                window.dispatchEvent(new Event('mistock_ventas_updated'));
+              } catch {}
+            }
+            return updated;
+          });
+          void inventarioService.sincronizarConSupabase();
+          setSaleErrorMessage(
+            'No se pudo anular el ticket en Supabase. Aplique patch_integridad_y_anulacion.sql en el SQL Editor.'
+          );
+          return;
+        }
+        void inventarioService.sincronizarConSupabase();
+      })
+      .catch(() => {
+        void inventarioService.sincronizarConSupabase();
+      });
+
+    const motivoLimpio = (motivo || '').trim().slice(0, LIMITES_TEXTO.OBSERVACIONES_MAX);
+    const motivoTexto = motivoLimpio ? ` (Motivo: ${motivoLimpio})` : '';
+    setSaleSuccessMessage(
+      `Venta ${ventaId} anulada con éxito y mercadería reingresada al stock.${motivoTexto}`
+    );
     setTimeout(() => setSaleSuccessMessage(null), 4000);
     return true;
   };
 
   return {
-    // Navegación de Pestañas Operativas
     pestanaOperativa,
     setPestanaOperativa,
     data,
@@ -1013,7 +1035,6 @@ export function useUserDashboardController() {
     itemsPorPagina,
     filteredProducts,
     productosPaginados,
-    // Historial del Día y Filtros
     paginaVentas,
     setPaginaVentas,
     totalPaginasVentas,
@@ -1033,7 +1054,6 @@ export function useUserDashboardController() {
     setMetodoSeleccionado,
     permitirVentaSinStock,
     config,
-    // Operativa de Carrito / Ticket de Venta
     carrito,
     totalCarrito,
     cantidadArticulosCarrito,
@@ -1042,14 +1062,12 @@ export function useUserDashboardController() {
     removerItemCarrito,
     vaciarCarrito,
     procesarVentaTicket,
-    // Consultor de Precios & Disponibilidad
     busquedaPrecios,
     setBusquedaPrecios,
     productoConsultado,
     setProductoConsultado,
     consultarProducto,
     productosConsultorFiltrados,
-    // Catálogo General con Disponibilidad en Tiempo Real
     busquedaCatalogo,
     setBusquedaCatalogo,
     categoriaFiltroCatalogo,
@@ -1066,7 +1084,6 @@ export function useUserDashboardController() {
     totalUnidadesEnStock,
     productosAgotadosCount,
     productosConStockCount,
-    // Operativa de Sesión de Caja (Apertura, Arqueo y Cierre Mono-caja)
     cajaAbierta,
     setCajaAbierta,
     fechaApertura,

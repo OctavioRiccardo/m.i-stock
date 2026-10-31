@@ -85,11 +85,11 @@ export interface ConfiguracionCompleta {
 export const valoresPorDefectoConfiguracion: ConfiguracionCompleta = {
   negocio: {
     nombreComercial: 'M.I Stock',
-    razonSocial: 'M.I Stock Almacén Comercial',
-    cuit: '30-71829340-9',
-    direccion: 'Av. Corrientes 3450, CABA',
-    telefono: '+54 9 11 4521-8890',
-    emailContacto: 'contacto@mistock.com',
+    razonSocial: '',
+    cuit: '',
+    direccion: '',
+    telefono: '',
+    emailContacto: '',
     monedaSimbolo: '$',
     monedaCodigo: 'ARS',
     condicionIva: 'monotributo',
@@ -131,7 +131,7 @@ export const valoresPorDefectoConfiguracion: ConfiguracionCompleta = {
   sistema: {
     estadoConexionDB: 'conectado',
     versionEsquema: 'PostgreSQL 15 (Supabase)',
-    ultimoRespaldo: '2026-09-25 18:30',
-    filasTotalesDB: 340,
+    ultimoRespaldo: 'Sin respaldos exportados',
+    filasTotalesDB: 0,
   },
 };

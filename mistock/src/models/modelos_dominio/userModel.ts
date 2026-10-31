@@ -39,6 +39,8 @@ export interface UsuarioRow {
   nombre: string | null;
   email: string;
   rol: RolUsuarioDB;
+  telefono?: string | null;
+  activo?: boolean | null;
   creado_el: string;
   actualizado_el: string;
 }
@@ -59,7 +61,7 @@ export interface Usuario {
   ultimoAcceso?: Date | string;   // Timestamp de última sesión
   fechaCreacion?: Date | string;  // Fecha de alta
   fechaActualizacion?: Date | string;
-  password?: string;              // Contraseña de acceso al sistema asignada por el administrador
+  password?: string;              // Contraseña transitoria al crear/editar (nunca se persiste en texto plano)
 }
 
 /**
@@ -72,6 +74,8 @@ export function toUsuario(row: UsuarioRow): Usuario {
     nombre: row.nombre || '',
     nombreCompleto: row.nombre || '',
     rol: row.rol,
+    telefono: row.telefono || undefined,
+    estado: row.activo === false ? 'inactivo' : 'activo',
     fechaCreacion: row.creado_el,
     fechaActualizacion: row.actualizado_el,
   };

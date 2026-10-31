@@ -27,12 +27,13 @@ import {
 import { MetodoPago, EstadoVenta } from '@/models/modelos_dominio/ventaModel';
 import { useConfiguracionData } from '@/services/configuracionService';
 import { PeriodoMetricas } from '@/models/modelos_vista/configuracionModel';
-import { useInventarioData } from '@/services/inventarioService';
+import { useInventarioData, inventarioService } from '@/services/inventarioService';
 import { supabaseService } from '@/services/supabaseService';
 import {
   VENTAS_STORAGE_KEY,
   VentasHistorialStore,
   inicializarVentasCliente,
+  recalcularVentasStore,
 } from '@/controllers/userControllers/userDashboardController';
 
 export type RotacionTab = 'mas_vendidos' | 'menos_vendidos';
@@ -114,11 +115,13 @@ export function useAdminDashboardController() {
   const monedaSimbolo = config.negocio?.monedaSimbolo || '$';
   const { productos } = useInventarioData();
 
-  // Historial de ventas reactivo persistido en el almacenamiento del sistema
+  // Historial de ventas reactivo sincronizado con Supabase PostgreSQL
   const [ventasState, setVentasState] = useState<VentasHistorialStore>(() => inicializarVentasCliente());
 
-  // Sincronización con Supabase PostgreSQL y eventos de pestañas locales
   useEffect(() => {
+    let mounted = true;
+    void inventarioService.sincronizarConSupabase();
+
     const sincronizarVentas = () => {
       setVentasState(inicializarVentasCliente());
     };
@@ -128,37 +131,33 @@ export function useAdminDashboardController() {
       window.addEventListener('mistock_ventas_updated', sincronizarVentas);
     }
 
-    // Hidratar ventas remotas desde Supabase
+    // Hidratar ventas autoritativas desde Supabase (reemplazando cualquier residuo local)
     supabaseService
-      .fetchVentas()
-      .then((ventasRemotas) => {
-        if (ventasRemotas && ventasRemotas.length > 0) {
-          setVentasState((prev) => {
-            const idsLocales = new Set((prev.ventasRecientes || []).map((v) => v.id));
-            const nuevas = ventasRemotas.filter((vr) => !idsLocales.has(vr.id));
-            if (nuevas.length === 0) return prev;
+      .fetchVentasWithStatus()
+      .then((res) => {
+        if (!mounted || !res.ok) return;
+        setVentasState((prev) => {
+          const prevById = new Map((prev.ventasRecientes || []).map((v) => [v.id, v]));
+          const autoritativas = res.items
+            .map((v) => ({
+              ...v,
+              idTurno: prevById.get(v.id)?.idTurno,
+            }))
+            .sort((a, b) => obtenerTimestampVenta(b) - obtenerTimestampVenta(a));
 
-            const combinadas = [...prev.ventasRecientes, ...nuevas].sort(
-              (a, b) => obtenerTimestampVenta(b) - obtenerTimestampVenta(a)
-            );
-            const activas = combinadas.filter((v) => v.estado !== 'cancelada');
-            const actualizado: VentasHistorialStore = {
-              ventasDelDia: activas.length,
-              recaudacionDelDia: activas.reduce((acc, v) => acc + v.montoTotal, 0),
-              ventasRecientes: combinadas,
-            };
-            if (typeof window !== 'undefined') {
-              try {
-                window.localStorage.setItem(VENTAS_STORAGE_KEY, JSON.stringify(actualizado));
-              } catch {}
-            }
-            return actualizado;
-          });
-        }
+          const actualizado = recalcularVentasStore(autoritativas);
+          if (typeof window !== 'undefined') {
+            try {
+              window.localStorage.setItem(VENTAS_STORAGE_KEY, JSON.stringify(actualizado));
+            } catch {}
+          }
+          return actualizado;
+        });
       })
       .catch(() => {});
 
     return () => {
+      mounted = false;
       if (typeof window !== 'undefined') {
         window.removeEventListener('storage', sincronizarVentas);
         window.removeEventListener('mistock_ventas_updated', sincronizarVentas);
@@ -188,14 +187,12 @@ export function useAdminDashboardController() {
     const inicioHoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate()).getTime();
     const inicioAyer = inicioHoy - MS_POR_DIA;
 
-    // Inicio de semana según preferencia ('lunes' vs 'domingo')
-    const diaSemana = ahora.getDay(); // 0 = Dom, 1 = Lun
+    const diaSemana = ahora.getDay();
     const iniciaDomingo = config.metricas?.inicioSemana === 'domingo';
     const diasDesdeInicioSemana = iniciaDomingo ? diaSemana : (diaSemana + 6) % 7;
     const inicioSemanaTs = inicioHoy - diasDesdeInicioSemana * MS_POR_DIA;
     const inicioSemanaAnteriorTs = inicioSemanaTs - 7 * MS_POR_DIA;
 
-    // Inicio de mes contable según diaCorteMensual (1 a 28)
     const diaCorte = Math.max(1, Math.min(28, config.metricas?.diaCorteMensual || 1));
     let inicioMesDate = new Date(ahora.getFullYear(), ahora.getMonth(), diaCorte);
     if (ahora.getDate() < diaCorte) {
@@ -209,7 +206,6 @@ export function useAdminDashboardController() {
     );
     const inicioMesAnteriorTs = inicioMesAnteriorDate.getTime();
 
-    // Últimos 30 días y ventana previa de 30 días
     const inicio30DiasTs = inicioHoy - 29 * MS_POR_DIA;
     const inicio30DiasAnteriorTs = inicio30DiasTs - 30 * MS_POR_DIA;
 
@@ -533,7 +529,6 @@ export function useAdminDashboardController() {
     config.metricas?.compararPeriodoAnterior,
   ]);
 
-  // Objeto general consolidado consumido por AdminDashboardView
   const data = useMemo<AdminDashboardData>(
     () => ({
       kpiMetrics: kpisActivos,
@@ -559,7 +554,6 @@ export function useAdminDashboardController() {
     ]
   );
 
-  // Pestaña activa para la tarjeta de rotación de productos ('mas_vendidos' | 'menos_vendidos')
   const [rotacionTab, setRotacionTab] = useState<RotacionTab>('mas_vendidos');
   const [categoriaRotacion, setCategoriaRotacion] = useState<string>('Todas');
   const [paginaRotacion, setPaginaRotacion] = useState<number>(1);
