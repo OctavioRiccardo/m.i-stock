@@ -178,7 +178,7 @@ Esta tabla resume cómo se conectan las **21 piezas visuales** de `src/views/` c
 
 ### 3.3. Vistas de Autenticación, Seguridad RBAC y Comunes (`src/views/auth/` y `src/views/comunes/`)
 
-1. **`auth/LoginFormView.tsx`:** Formulario de acceso institucional de **M.I Stock** con validación reactiva de correo y contraseña, manejo de estados de carga y alertas de error claras, sin enlaces externos rotos.
+1. **`auth/LoginFormView.tsx`:** Formulario de acceso institucional de **M.I Stock** con isotipo de inventario (`Package`), validación reactiva de correo y contraseña, botón de envío limpio sin flechas adicionales, manejo de estados de carga (`loading`) y alertas claras de error de autenticación.
 2. **`auth/LogoutView.tsx`:** Pantalla de cierre de sesión que invoca `useLogoutController` para limpiar las cookies JWT de Supabase y redirigir a `/login`.
 3. **`comunes/ModalAccesoRestringido.tsx`:** Barrera visual de seguridad por permisos y roles consumida por `(admin)/layout.tsx` y `(user)/layout.tsx` junto con `usePermisosController()`. Bloquea la pantalla con un diálogo no eludible en dos escenarios:
    - `tipo = 'vendedor_en_admin'`: Cuando un usuario con rol `vendedor` intenta ingresar a una ruta administrativa, ofreciéndole un botón directo para regresar a `/dashboard`.

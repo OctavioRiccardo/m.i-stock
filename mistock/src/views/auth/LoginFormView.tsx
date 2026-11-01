@@ -19,8 +19,7 @@ import {
   Lock,
   Eye,
   EyeSlash,
-  ArrowRight,
-  ShieldCheck,
+  Package,
   WarningCircle,
 } from '@phosphor-icons/react';
 import { useLoginController } from '@/controllers/authController';
@@ -47,7 +46,7 @@ export function LoginFormView({ loginController }: LoginFormViewProps) {
           <div className="flex flex-col items-center text-center space-y-2">
             <div className="flex items-center gap-2">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#2A7A78] text-white shadow-md">
-                <ShieldCheck className="h-6 w-6" weight="duotone" />
+                <Package className="h-6 w-6" weight="duotone" />
               </div>
               <h1 className="text-2xl font-bold text-[#1C2424] tracking-tight">
                 M.I Stock
@@ -132,8 +131,7 @@ export function LoginFormView({ loginController }: LoginFormViewProps) {
               size="lg"
               loading={loading}
             >
-              <span>Iniciar Sesión</span>
-              <ArrowRight className="ml-2 h-4 w-4" weight="bold" />
+              Iniciar Sesión
             </Button>
           </form>
         </CardContent>
