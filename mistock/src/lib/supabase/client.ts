@@ -22,9 +22,22 @@ import { createBrowserClient } from '@supabase/ssr';
  * @returns Instancia configurada del cliente Supabase con persistencia en cookies.
  */
 export function createClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const key =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    '';
+
+  if (!url || !key) {
+    if (typeof window !== 'undefined') {
+      console.warn(
+        '⚠️ [Supabase Client] Variables NEXT_PUBLIC_SUPABASE_URL o clave pública no encontradas en el entorno. Revisa la configuración de Vercel (Environment Variables).'
+      );
+    }
+  }
+
   return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)!
+    url || 'https://placeholder.supabase.co',
+    key || 'placeholder-anon-key'
   );
 }
-

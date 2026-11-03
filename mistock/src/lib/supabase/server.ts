@@ -24,10 +24,21 @@ import { cookies } from 'next/headers';
  */
 export async function createClient() {
   const cookieStore = await cookies();
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const key =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    '';
+
+  if (!url || !key) {
+    console.warn(
+      '⚠️ [Supabase Server] Variables NEXT_PUBLIC_SUPABASE_URL o clave pública no encontradas en el entorno.'
+    );
+  }
 
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)!,
+    url || 'https://placeholder.supabase.co',
+    key || 'placeholder-anon-key',
     {
       cookies: {
         getAll() {
@@ -47,4 +58,3 @@ export async function createClient() {
     }
   );
 }
-

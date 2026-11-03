@@ -18,8 +18,15 @@ import { updateSession } from '@/lib/supabase/middleware';
  * Función proxy que ejecuta la actualización de sesión antes de resolver la ruta.
  */
 export async function proxy(request: NextRequest) {
-  return await updateSession(request);
+  try {
+    return await updateSession(request);
+  } catch (err) {
+    console.error('Error no controlado en proxy:', err);
+    return;
+  }
 }
+
+export default proxy;
 
 export const config = {
   matcher: [
@@ -33,4 +40,3 @@ export const config = {
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
-
