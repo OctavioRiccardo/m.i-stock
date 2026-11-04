@@ -10,8 +10,6 @@
  * Sincronización SSR:
  * Utiliza `createBrowserClient` del paquete `@supabase/ssr`, el cual almacena
  * automáticamente los tokens JWT de sesión en las cookies del navegador.
- * Esto asegura que tanto el Middleware de Next.js como los Server Components
- * compartan el mismo estado de autenticación sin discrepancias de hidratación.
  */
 
 import { createBrowserClient } from '@supabase/ssr';
@@ -22,22 +20,17 @@ import { createBrowserClient } from '@supabase/ssr';
  * @returns Instancia configurada del cliente Supabase con persistencia en cookies.
  */
 export function createClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  const key =
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const key = (
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-    '';
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  )?.trim();
 
   if (!url || !key) {
-    if (typeof window !== 'undefined') {
-      console.warn(
-        '⚠️ [Supabase Client] Variables NEXT_PUBLIC_SUPABASE_URL o clave pública no encontradas en el entorno. Revisa la configuración de Vercel (Environment Variables).'
-      );
-    }
+    throw new Error(
+      'Faltan las credenciales de conexión con Supabase (NEXT_PUBLIC_SUPABASE_URL o clave pública). Verifica las Variables de Entorno en el proyecto de Vercel y haz un Redeploy.'
+    );
   }
 
-  return createBrowserClient(
-    url || 'https://placeholder.supabase.co',
-    key || 'placeholder-anon-key'
-  );
+  return createBrowserClient(url, key);
 }
