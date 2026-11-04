@@ -15,12 +15,25 @@
 import { createBrowserClient } from '@supabase/ssr';
 
 /**
+ * Normaliza la URL de Supabase eliminando sufijos accidentales como /rest/v1/ o barras finales.
+ */
+function normalizarSupabaseUrl(rawUrl?: string): string {
+  if (!rawUrl) return '';
+  let url = rawUrl.trim();
+  // Elimina /rest/v1 o /rest/v1/ si fue copiado por accidente desde la pestaña Data API
+  url = url.replace(/\/rest\/v1\/?$/i, '');
+  // Elimina barras finales
+  url = url.replace(/\/+$/, '');
+  return url;
+}
+
+/**
  * Crea o reutiliza una instancia singleton del cliente Supabase en el navegador.
  * 
  * @returns Instancia configurada del cliente Supabase con persistencia en cookies.
  */
 export function createClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const url = normalizarSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
   const key = (
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
