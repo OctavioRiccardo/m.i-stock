@@ -100,6 +100,7 @@ Para proteger el `MERCADOPAGO_ACCESS_TOKEN` privado del comercio y evitar errore
 1. **Anillo 1 — Middleware de Sesión SSR (`src/proxy.ts` + `src/lib/supabase/middleware.ts`):**
    - Intercepta cada petición HTTP y refresca el token JWT de las cookies `HttpOnly` mediante `@supabase/ssr`.
    - Si un visitante sin sesión activa intenta entrar a `/admin/*` o `/dashboard`, lo redirige automáticamente a `/login`.
+   - **Tolerancia a fallos y auto-normalización de URLs:** El middleware y los clientes de Supabase cuentan con blindaje ante excepciones (`try...catch`) para prevenir caídas fatales (HTTP 500) ante microcortes o demoras en Supabase, e implementan sanitización automática de URLs eliminando sufijos accidentales como `/rest/v1/` para garantizar la compatibilidad con entornos Serverless y Edge en Vercel.
 2. **Anillo 2 — Control de Permisos y Roles de Acceso (`src/controllers/permisosController.ts`):**
    - Tanto `src/app/(admin)/layout.tsx` como `src/app/(user)/layout.tsx` ejecutan el hook `usePermisosController()`.
    - Si un usuario autenticado con rol `vendedor` intenta acceder a cualquier ruta de `(admin)`, `AdminLayout` bloquea el contenido y renderiza `ModalAccesoRestringido` (`tipo="vendedor_en_admin"`).
