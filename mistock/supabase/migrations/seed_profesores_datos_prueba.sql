@@ -1,22 +1,15 @@
 -- ============================================================================
 -- SEED DE DATOS DE PRUEBA: RAMA PROFESORES-TEST (M.I STOCK)
 -- ============================================================================
--- Propósito:
--- 1. Crear el usuario operativo "Vendedor 1" (vendedor1@test.mistock / Mistock2026!)
---    vinculado en auth.users y public.usuario con rol 'vendedor'.
--- 2. Insertar categorías comerciales representativas.
--- 3. Insertar productos de catálogo con precios de costo, venta y stock base.
--- 4. Registrar ventas de prueba en distintas fechas asociadas a "Vendedor 1"
---    con su desglose en detalle_ventas y pagos (Efectivo, Débito, Crédito, Mercado Pago, etc.)
---    para activar todos los gráficos analíticos, métricas y KPIs del Dashboard.
--- ============================================================================
 
 BEGIN;
 SET LOCAL search_path TO public, auth, extensions;
 
--- ----------------------------------------------------------------------------
+-- 0. ASEGURAR COLUMNAS DE COMPATIBILIDAD EN USUARIO
+ALTER TABLE public.usuario ADD COLUMN IF NOT EXISTS activo boolean NOT NULL DEFAULT true;
+ALTER TABLE public.usuario ADD COLUMN IF NOT EXISTS telefono text;
+
 -- 1. CREAR O ASEGURAR EL USUARIO "Vendedor 1"
--- ----------------------------------------------------------------------------
 DO $$
 DECLARE
   v_email text := 'vendedor1@test.mistock';
@@ -86,9 +79,7 @@ BEGIN
         actualizado_el = now();
 END $$;
 
--- ----------------------------------------------------------------------------
 -- 2. INSERTAR CATEGORÍAS
--- ----------------------------------------------------------------------------
 INSERT INTO public.categorias (id_categoria, nombre, descripcion, activo)
 VALUES
   ('a0000000-0000-0000-0000-000000000001', 'Bebidas y Gaseosas', 'Gaseosas, aguas saborizadas y cervezas', true),
@@ -100,9 +91,7 @@ ON CONFLICT (nombre) DO UPDATE
   SET descripcion = EXCLUDED.descripcion,
       activo = true;
 
--- ----------------------------------------------------------------------------
--- 3. INSERTAR PRODUCTOS CON STOCK INICIAL SALUDABLE
--- ----------------------------------------------------------------------------
+-- 3. INSERTAR PRODUCTOS
 INSERT INTO public.productos (
   id_producto, id_categoria, nombre, descripcion, sku,
   precio_costo, precio_venta, stock_actual, stock_minimo,
@@ -127,9 +116,7 @@ ON CONFLICT (sku) DO UPDATE
       stock_minimo = EXCLUDED.stock_minimo,
       activo = true;
 
--- ----------------------------------------------------------------------------
 -- 4. INSERTAR VENTAS DE PRUEBA ASOCIADAS A "Vendedor 1"
--- ----------------------------------------------------------------------------
 DO $$
 DECLARE
   v_cajero_id uuid;
@@ -142,133 +129,128 @@ DECLARE
   v_v7 uuid := 'c0000000-0000-0000-0000-000000000007';
   v_v8 uuid := 'c0000000-0000-0000-0000-000000000008';
 BEGIN
-  -- Recuperar el id_usuario de Vendedor 1
   SELECT id_usuario INTO v_cajero_id 
   FROM public.usuario 
   WHERE email = 'vendedor1@test.mistock';
 
-  -- Si por alguna razón no existiera, usar cualquier usuario existente
   IF v_cajero_id IS NULL THEN
     SELECT id_usuario INTO v_cajero_id FROM public.usuario LIMIT 1;
   END IF;
 
-  -- 4.1. Limpiar ventas de prueba previas con estos IDs (idempotencia)
-  DELETE FROM public.ventas WHERE id_venta IN (v_v1, v_v2, v_v3, v_v4, v_v5, v_v6, v_v7, v_v8);
-
-  -- --------------------------------------------------------------------------
   -- VENTA 1: Hoy (Hace 1 hora) -> Total $6.200,00 | Pago: Efectivo
-  -- Artículos: 2x Coca Cola ($2.200) + 1x Alfajor Havanna ($1.800)
-  -- --------------------------------------------------------------------------
   INSERT INTO public.ventas (id_venta, id_usuario, total, estado, creado_el)
-  VALUES (v_v1, v_cajero_id, 6200.00, 'completada', now() - interval '1 hour');
+  VALUES (v_v1, v_cajero_id, 6200.00, 'completada', now() - interval '1 hour')
+  ON CONFLICT (id_venta) DO NOTHING;
 
   INSERT INTO public.detalle_ventas (id_venta, id_producto, cantidad, precio_unitario) VALUES
     (v_v1, 'b0000000-0000-0000-0000-000000000001', 2, 2200.00),
-    (v_v1, 'b0000000-0000-0000-0000-000000000005', 1, 1800.00);
+    (v_v1, 'b0000000-0000-0000-0000-000000000005', 1, 1800.00)
+  ON CONFLICT DO NOTHING;
 
   INSERT INTO public.pagos (id_venta, metodo, total, creado_el)
-  VALUES (v_v1, 'efectivo', 6200.00, now() - interval '1 hour');
+  VALUES (v_v1, 'efectivo', 6200.00, now() - interval '1 hour')
+  ON CONFLICT DO NOTHING;
 
-  -- --------------------------------------------------------------------------
   -- VENTA 2: Hoy (Hace 3 horas) -> Total $5.100,00 | Pago: Mercado Pago
-  -- Artículos: 2x Chocolinas ($1.500) + 1x Papas Lay's ($2.100)
-  -- --------------------------------------------------------------------------
   INSERT INTO public.ventas (id_venta, id_usuario, total, estado, creado_el)
-  VALUES (v_v2, v_cajero_id, 5100.00, 'completada', now() - interval '3 hours');
+  VALUES (v_v2, v_cajero_id, 5100.00, 'completada', now() - interval '3 hours')
+  ON CONFLICT (id_venta) DO NOTHING;
 
   INSERT INTO public.detalle_ventas (id_venta, id_producto, cantidad, precio_unitario) VALUES
     (v_v2, 'b0000000-0000-0000-0000-000000000004', 2, 1500.00),
-    (v_v2, 'b0000000-0000-0000-0000-000000000006', 1, 2100.00);
+    (v_v2, 'b0000000-0000-0000-0000-000000000006', 1, 2100.00)
+  ON CONFLICT DO NOTHING;
 
   INSERT INTO public.pagos (id_venta, metodo, total, creado_el)
-  VALUES (v_v2, 'mercado_pago', 5100.00, now() - interval '3 hours');
+  VALUES (v_v2, 'mercado_pago', 5100.00, now() - interval '3 hours')
+  ON CONFLICT DO NOTHING;
 
-  -- --------------------------------------------------------------------------
-  -- VENTA 3: Ayer -> Total $6.600,00 | Pago: Tarjeta Débito
-  -- Artículos: 1x Aceite Natura ($2.400) + 3x Fideos Matarazzo ($1.400)
-  -- --------------------------------------------------------------------------
+  -- VENTA 3: Ayer -> Total $6.600,00 | Pago: Débito
   INSERT INTO public.ventas (id_venta, id_usuario, total, estado, creado_el)
-  VALUES (v_v3, v_cajero_id, 6600.00, 'completada', now() - interval '1 day' + interval '2 hours');
+  VALUES (v_v3, v_cajero_id, 6600.00, 'completada', now() - interval '1 day' + interval '2 hours')
+  ON CONFLICT (id_venta) DO NOTHING;
 
   INSERT INTO public.detalle_ventas (id_venta, id_producto, cantidad, precio_unitario) VALUES
     (v_v3, 'b0000000-0000-0000-0000-000000000008', 1, 2400.00),
-    (v_v3, 'b0000000-0000-0000-0000-000000000007', 3, 1400.00);
+    (v_v3, 'b0000000-0000-0000-0000-000000000007', 3, 1400.00)
+  ON CONFLICT DO NOTHING;
 
   INSERT INTO public.pagos (id_venta, metodo, total, creado_el)
-  VALUES (v_v3, 'tarjeta_debito', 6600.00, now() - interval '1 day' + interval '2 hours');
+  VALUES (v_v3, 'tarjeta_debito', 6600.00, now() - interval '1 day' + interval '2 hours')
+  ON CONFLICT DO NOTHING;
 
-  -- --------------------------------------------------------------------------
-  -- VENTA 4: Hace 2 días -> Total $14.200,00 | Pago: Tarjeta Crédito
-  -- Artículos: 4x Cerveza Quilmes ($2.500) + 2x Papas Lay's ($2.100)
-  -- --------------------------------------------------------------------------
+  -- VENTA 4: Hace 2 días -> Total $14.200,00 | Pago: Crédito
   INSERT INTO public.ventas (id_venta, id_usuario, total, estado, creado_el)
-  VALUES (v_v4, v_cajero_id, 14200.00, 'completada', now() - interval '2 days' + interval '4 hours');
+  VALUES (v_v4, v_cajero_id, 14200.00, 'completada', now() - interval '2 days' + interval '4 hours')
+  ON CONFLICT (id_venta) DO NOTHING;
 
   INSERT INTO public.detalle_ventas (id_venta, id_producto, cantidad, precio_unitario) VALUES
     (v_v4, 'b0000000-0000-0000-0000-000000000003', 4, 2500.00),
-    (v_v4, 'b0000000-0000-0000-0000-000000000006', 2, 2100.00);
+    (v_v4, 'b0000000-0000-0000-0000-000000000006', 2, 2100.00)
+  ON CONFLICT DO NOTHING;
 
   INSERT INTO public.pagos (id_venta, metodo, total, creado_el)
-  VALUES (v_v4, 'tarjeta_credito', 14200.00, now() - interval '2 days' + interval '4 hours');
+  VALUES (v_v4, 'tarjeta_credito', 14200.00, now() - interval '2 days' + interval '4 hours')
+  ON CONFLICT DO NOTHING;
 
-  -- --------------------------------------------------------------------------
   -- VENTA 5: Hace 4 días -> Total $7.350,00 | Pago: Transferencia
-  -- Artículos: 3x Leche La Serenísima ($1.450) + 2x Chocolinas ($1.500)
-  -- --------------------------------------------------------------------------
   INSERT INTO public.ventas (id_venta, id_usuario, total, estado, creado_el)
-  VALUES (v_v5, v_cajero_id, 7350.00, 'completada', now() - interval '4 days' + interval '1 hour');
+  VALUES (v_v5, v_cajero_id, 7350.00, 'completada', now() - interval '4 days' + interval '1 hour')
+  ON CONFLICT (id_venta) DO NOTHING;
 
   INSERT INTO public.detalle_ventas (id_venta, id_producto, cantidad, precio_unitario) VALUES
     (v_v5, 'b0000000-0000-0000-0000-000000000009', 3, 1450.00),
-    (v_v5, 'b0000000-0000-0000-0000-000000000004', 2, 1500.00);
+    (v_v5, 'b0000000-0000-0000-0000-000000000004', 2, 1500.00)
+  ON CONFLICT DO NOTHING;
 
   INSERT INTO public.pagos (id_venta, metodo, total, creado_el)
-  VALUES (v_v5, 'transferencia', 7350.00, now() - interval '4 days' + interval '1 hour');
+  VALUES (v_v5, 'transferencia', 7350.00, now() - interval '4 days' + interval '1 hour')
+  ON CONFLICT DO NOTHING;
 
-  -- --------------------------------------------------------------------------
-  -- VENTA 6: Hace 6 días -> Total $15.200,00 | Pago Split: $10.000 Efectivo + $5.200 Débito
-  -- Artículos: 3x Coca Cola ($2.200) + 2x Cerveza ($2.500) + 2x Alfajor ($1.800)
-  -- --------------------------------------------------------------------------
+  -- VENTA 6: Hace 6 días -> Total $15.200,00 | Pago Split: Efectivo + Débito
   INSERT INTO public.ventas (id_venta, id_usuario, total, estado, creado_el)
-  VALUES (v_v6, v_cajero_id, 15200.00, 'completada', now() - interval '6 days' + interval '5 hours');
+  VALUES (v_v6, v_cajero_id, 15200.00, 'completada', now() - interval '6 days' + interval '5 hours')
+  ON CONFLICT (id_venta) DO NOTHING;
 
   INSERT INTO public.detalle_ventas (id_venta, id_producto, cantidad, precio_unitario) VALUES
     (v_v6, 'b0000000-0000-0000-0000-000000000001', 3, 2200.00),
     (v_v6, 'b0000000-0000-0000-0000-000000000003', 2, 2500.00),
-    (v_v6, 'b0000000-0000-0000-0000-000000000005', 2, 1800.00);
+    (v_v6, 'b0000000-0000-0000-0000-000000000005', 2, 1800.00)
+  ON CONFLICT DO NOTHING;
 
   INSERT INTO public.pagos (id_venta, metodo, total, creado_el) VALUES
     (v_v6, 'efectivo', 10000.00, now() - interval '6 days' + interval '5 hours'),
-    (v_v6, 'tarjeta_debito', 5200.00, now() - interval '6 days' + interval '5 hours');
+    (v_v6, 'tarjeta_debito', 5200.00, now() - interval '6 days' + interval '5 hours')
+  ON CONFLICT DO NOTHING;
 
-  -- --------------------------------------------------------------------------
   -- VENTA 7: Hace 10 días -> Total $9.500,00 | Pago: Débito
-  -- Artículos: 4x Agua Mineral ($1.100) + 2x Fideos ($1.400) + 1x Detergente ($2.300)
-  -- --------------------------------------------------------------------------
   INSERT INTO public.ventas (id_venta, id_usuario, total, estado, creado_el)
-  VALUES (v_v7, v_cajero_id, 9500.00, 'completada', now() - interval '10 days');
+  VALUES (v_v7, v_cajero_id, 9500.00, 'completada', now() - interval '10 days')
+  ON CONFLICT (id_venta) DO NOTHING;
 
   INSERT INTO public.detalle_ventas (id_venta, id_producto, cantidad, precio_unitario) VALUES
     (v_v7, 'b0000000-0000-0000-0000-000000000002', 4, 1100.00),
     (v_v7, 'b0000000-0000-0000-0000-000000000007', 2, 1400.00),
-    (v_v7, 'b0000000-0000-0000-0000-000000000010', 1, 2300.00);
+    (v_v7, 'b0000000-0000-0000-0000-000000000010', 1, 2300.00)
+  ON CONFLICT DO NOTHING;
 
   INSERT INTO public.pagos (id_venta, metodo, total, creado_el)
-  VALUES (v_v7, 'tarjeta_debito', 9500.00, now() - interval '10 days');
+  VALUES (v_v7, 'tarjeta_debito', 9500.00, now() - interval '10 days')
+  ON CONFLICT DO NOTHING;
 
-  -- --------------------------------------------------------------------------
   -- VENTA 8: Hace 18 días -> Total $15.100,00 | Pago: Efectivo
-  -- Artículos: 4x Coca Cola ($2.200) + 3x Papas Lay's ($2.100)
-  -- --------------------------------------------------------------------------
   INSERT INTO public.ventas (id_venta, id_usuario, total, estado, creado_el)
-  VALUES (v_v8, v_cajero_id, 15100.00, 'completada', now() - interval '18 days');
+  VALUES (v_v8, v_cajero_id, 15100.00, 'completada', now() - interval '18 days')
+  ON CONFLICT (id_venta) DO NOTHING;
 
   INSERT INTO public.detalle_ventas (id_venta, id_producto, cantidad, precio_unitario) VALUES
     (v_v8, 'b0000000-0000-0000-0000-000000000001', 4, 2200.00),
-    (v_v8, 'b0000000-0000-0000-0000-000000000006', 3, 2100.00);
+    (v_v8, 'b0000000-0000-0000-0000-000000000006', 3, 2100.00)
+  ON CONFLICT DO NOTHING;
 
   INSERT INTO public.pagos (id_venta, metodo, total, creado_el)
-  VALUES (v_v8, 'efectivo', 15100.00, now() - interval '18 days');
+  VALUES (v_v8, 'efectivo', 15100.00, now() - interval '18 days')
+  ON CONFLICT DO NOTHING;
 
 END $$;
 
