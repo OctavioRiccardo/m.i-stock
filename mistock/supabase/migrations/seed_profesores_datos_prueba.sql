@@ -5,9 +5,13 @@
 BEGIN;
 SET LOCAL search_path TO public, auth, extensions;
 
--- 0. ASEGURAR COLUMNAS DE COMPATIBILIDAD EN USUARIO
+-- 0. ASEGURAR COLUMNAS DE COMPATIBILIDAD EN TODAS LAS TABLAS
 ALTER TABLE public.usuario ADD COLUMN IF NOT EXISTS activo boolean NOT NULL DEFAULT true;
 ALTER TABLE public.usuario ADD COLUMN IF NOT EXISTS telefono text;
+ALTER TABLE public.categorias ADD COLUMN IF NOT EXISTS activo boolean NOT NULL DEFAULT true;
+ALTER TABLE public.categorias ADD COLUMN IF NOT EXISTS descripcion text;
+ALTER TABLE public.productos ADD COLUMN IF NOT EXISTS stock_minimo integer NOT NULL DEFAULT 5;
+ALTER TABLE public.productos ADD COLUMN IF NOT EXISTS activo boolean NOT NULL DEFAULT true;
 
 -- 1. CREAR O ASEGURAR EL USUARIO "Vendedor 1"
 DO $$
