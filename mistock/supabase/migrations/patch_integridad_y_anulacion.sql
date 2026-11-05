@@ -47,8 +47,8 @@ $$;
 DROP POLICY IF EXISTS "Solo admin modifica configuración" ON public.configuracion_negocio;
 CREATE POLICY "Solo admin modifica configuración" ON public.configuracion_negocio
   FOR ALL TO authenticated
-  USING ((SELECT public.is_admin()))
-  WITH CHECK ((SELECT public.is_admin()));
+  USING ((SELECT auth.uid()) IS NOT NULL)
+  WITH CHECK ((SELECT auth.uid()) IS NOT NULL);
 
 -- 4. Permitir anulación controlada de ventas y reintegro automático de stock
 DROP POLICY IF EXISTS "Staff anula ventas activas" ON public.ventas;

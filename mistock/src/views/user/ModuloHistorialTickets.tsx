@@ -376,7 +376,14 @@ export function ModuloHistorialTickets({
                 >
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xs font-bold text-[#1C2424] font-mono">{sale.id}</span>
+                      <span className="text-xs font-bold text-[#1C2424] font-mono">
+                        {sale.id}
+                        {sale.estado === 'cancelada' ? (
+                          <span className="ml-1.5 px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 text-[9px] font-bold uppercase font-sans">
+                            Anulada
+                          </span>
+                        ) : null}
+                      </span>
                       {renderBadgeMetodo(sale.metodoPago)}
                     </div>
                     <p className="text-[11px] text-[#657373] mt-1 flex items-center gap-1 font-mono">
@@ -389,7 +396,13 @@ export function ModuloHistorialTickets({
                   </div>
                   <div className="flex items-center justify-between pt-2.5 mt-2 border-t border-[#E8E6DF]/60">
                     <span className="text-[11px] text-[#657373] font-medium">Total:</span>
-                    <span className="text-sm font-black text-[#2A7A78]">
+                    <span
+                      className={
+                        sale.estado === 'cancelada'
+                          ? 'text-sm font-black text-rose-700 line-through'
+                          : 'text-sm font-black text-[#2A7A78]'
+                      }
+                    >
                       {monedaSimbolo} {sale.montoTotal.toLocaleString('es-AR')}
                     </span>
                   </div>
@@ -416,6 +429,11 @@ export function ModuloHistorialTickets({
                     <TableRow key={sale.id} className="hover:bg-[#F8F7F2]/50">
                       <TableCell className="py-2.5 font-bold text-xs text-[#1C2424] font-mono">
                         {sale.id}
+                        {sale.estado === 'cancelada' ? (
+                          <span className="ml-1.5 px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 text-[9px] font-bold uppercase font-sans">
+                            Anulada
+                          </span>
+                        ) : null}
                       </TableCell>
                       <TableCell className="py-2.5 text-xs text-[#657373]">
                         {sale.hora} {sale.fecha ? `• ${sale.fecha}` : ''}
@@ -429,7 +447,13 @@ export function ModuloHistorialTickets({
                       <TableCell className="py-2.5 text-xs text-[#657373]">
                         {sale.cantidadItems} {sale.cantidadItems === 1 ? 'ítem' : 'ítems'}
                       </TableCell>
-                      <TableCell className="py-2.5 text-xs font-black text-[#2A7A78] text-right">
+                      <TableCell
+                        className={
+                          sale.estado === 'cancelada'
+                            ? 'py-2.5 text-xs font-black text-rose-700 line-through text-right'
+                            : 'py-2.5 text-xs font-black text-[#2A7A78] text-right'
+                        }
+                      >
                         {monedaSimbolo} {sale.montoTotal.toLocaleString('es-AR')}
                       </TableCell>
                       <TableCell className="py-2.5 text-right">

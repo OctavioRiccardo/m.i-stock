@@ -71,7 +71,7 @@ flowchart TD
 
 | Componente | Rol en el Sistema |
 | :--- | :--- |
-| **Mercado Pago API SDK** | Creación y administración de intenciones de pago (`Payment Intents`) desde el controlador `cobroMercadoPagoController.ts`. |
+| **Suite `src/services/mercadopago/`** | Creación y administración de intenciones de pago (`Payment Intents`) mediante `services/pointService.ts`, configuración de cabeceras idempotentes en `config/mpConfig.ts`, contratos en `types/pointTypes.ts` y procesamiento en `webhooks/webhookHandler.ts`. |
 | **Route Handlers (`/api/mercadopago/point/`)** | Endpoints de backend en Next.js para enviar la orden de cobro a la terminal física, consultar estado y procesar webhooks asíncronos. |
 | **Terminales Smart POS** | Dispositivos físicos de cobro con tarjeta chip/contactless y QR dinámico en el mostrador del comercio. |
 
@@ -83,12 +83,14 @@ flowchart TD
    - **Modelos (`src/models/`):** Separados en *Modelos de Dominio* (entidades de base de datos) y *Modelos de Vista* (formularios y agregaciones de UI).
    - **Vistas (`src/views/`):** Componentes visuales desacoplados que reciben datos únicamente mediante la prop `controller`.
    - **Controladores (`src/controllers/`):** Custom Hooks que centralizan la reactividad, llamadas asíncronas y validaciones de negocio.
+   - **Servicios (`src/services/`):** Almacenes reactivos globales (`useSyncExternalStore`), conector relacional `supabaseService.ts` y suite de integración con hardware `mercadopago/`.
 2. **Defensa en Profundidad (*Defense in Depth*):**
    - Validación triple: 1) En el cliente mediante TypeScript/validadores; 2) En el controlador antes del despacho; 3) En la base de datos con restricciones `CHECK`, `NOT NULL`, `UNIQUE` y políticas RLS.
 
 ---
 
 ##  Enlaces Relacionados
+- [[Servicios]] — Documentación de la capa `src/services/` y la integración Mercado Pago Point.
 - [[Librerias]] — Desglose exhaustivo de las librerías instaladas en `package.json`.
 - [[Controladores]] — Implementación de la lógica en Custom Hooks.
 - [[Vistas]] — Organización visual y componentes de pantalla.

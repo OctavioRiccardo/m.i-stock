@@ -17,7 +17,7 @@ import { createBrowserClient } from '@supabase/ssr';
 /**
  * Normaliza la URL de Supabase eliminando sufijos accidentales como /rest/v1/ o barras finales.
  */
-function normalizarSupabaseUrl(rawUrl?: string): string {
+export function normalizarSupabaseUrl(rawUrl?: string): string {
   if (!rawUrl) return '';
   let url = rawUrl.trim();
   // Elimina /rest/v1 o /rest/v1/ si fue copiado por accidente desde la pestaña Data API

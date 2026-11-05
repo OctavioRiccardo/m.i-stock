@@ -41,8 +41,8 @@ erDiagram
     }
 
     configuracion_negocio {
-        integer id_config PK
-        jsonb config
+        integer id PK
+        jsonb datos
         timestamptz actualizado_el
     }
 
@@ -205,8 +205,8 @@ Gestión de cobros asociados a la venta.
 
 #### Tabla: `public.configuracion_negocio`
 Persistencia de los parámetros comerciales, identidad fiscal y reglas de funcionamiento del sistema.
-* **`id_config` (INTEGER, PK):** Clave única (registro singleton `id = 1`).
-* **`config` (JSONB, NOT NULL):** Estructura consolidada de `ConfiguracionCompleta` (identidad de empresa, moneda, métodos de pago habilitados, venta sin stock, modo de ticket no_fiscal/fiscal y períodos analíticos).
+* **`id` (INTEGER, PK, DEFAULT 1, CHECK (id = 1)):** Clave única que garantiza un registro singleton (`id = 1`).
+* **`datos` (JSONB, NOT NULL, DEFAULT '{}'):** Estructura consolidada que persiste `ConfiguracionCompleta` (identidad de empresa, moneda, métodos de pago habilitados, venta sin stock, modo de ticket y períodos analíticos), el turno de caja activo (`sesionCaja`) y la marca de auditoría de respaldos (`ultimoRespaldoCSV`).
 * **`actualizado_el` (TIMESTAMPTZ):** Marca temporal de la última modificación.
 
 ---
@@ -266,7 +266,7 @@ Todas las tablas tienen RLS habilitado explícitamente (`ENABLE ROW LEVEL SECURI
 | `ventas` | SELECT / INSERT | `authenticated` (Staff) | Todo el staff autenticado puede registrar ventas |
 | `ventas` | UPDATE (Anulación) | `authenticated` (Staff) | Política `"Staff anula ventas activas"` (`WITH CHECK (estado = 'cancelada')`) |
 | `configuracion_negocio` | SELECT | `authenticated` (Staff) | Todo el personal consulta parámetros comerciales |
-| `configuracion_negocio` | INSERT / UPDATE | `authenticated` (Solo Admin) | `USING ((SELECT public.is_admin()))` |
+| `configuracion_negocio` | INSERT / UPDATE | `authenticated` (Staff) | Política `"Staff modifica configuración y sesión de caja"` (`USING (auth.uid() IS NOT NULL)`) para persistir turnos de caja y configuración |
 | `detalle_ventas` | SELECT / INSERT | `authenticated` (Staff) | Todo el staff autenticado puede cargar renglones |
 | `pagos` | SELECT / INSERT | `authenticated` (Staff) | Todo el staff autenticado puede registrar pagos |
 | `movimientos_stock` | SELECT / INSERT | `authenticated` (Staff) | Staff registra ingresos/egresos |

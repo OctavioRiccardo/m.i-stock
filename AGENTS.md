@@ -10,6 +10,7 @@ Cada vez que se complete una característica, refactorización, cambio de modelo
   - `Metricas y Calculo de KPIs.md`: Definiciones, fórmulas y parametrización de períodos en configuración.
   - `Modelos.md`: Modelos de Dominio y Modelos de Vista (interfaces, DTOs y enumerados).
   - `Controladores.md`: Hooks controladores MVC, estados reactivos y lógica de negocio.
+  - `Servicios.md`: Almacenes reactivos (`useSyncExternalStore`), conector `supabaseService` y suite de integración `src/services/mercadopago/`.
   - `Vistas.md`: Pantallas de Administrador y Operador POS, layout, tickets y componentes.
   - `Reglas de Negocio miStock.md`: Validaciones comerciales, inventario y medios de pago.
 

@@ -308,6 +308,7 @@ export function useUserDashboardController() {
   const [cajeroApertura, setCajeroApertura] = useState<string>(() => getNombreUsuarioActivo());
   const [observacionesApertura, setObservacionesApertura] = useState<string>('');
   const [idTurnoActivo, setIdTurnoActivo] = useState<string | null>(null);
+  const [ventasIdsTurno, setVentasIdsTurno] = useState<string[]>([]);
   const [timestampApertura, setTimestampApertura] = useState<number | null>(null);
   const [isModalAperturaOpen, setIsModalAperturaOpen] = useState<boolean>(false);
 
@@ -320,6 +321,58 @@ export function useUserDashboardController() {
   const [isModalArqueoOpen, setIsModalArqueoOpen] = useState<boolean>(false);
   const [isModalTicketCierreOpen, setIsModalTicketCierreOpen] = useState<boolean>(false);
   const [ultimoCierre, setUltimoCierre] = useState<ArqueoCajaDTO | null>(null);
+
+  // Sincronizar sesión de caja y perfil de cajero desde Supabase PostgreSQL
+  useEffect(() => {
+    let mounted = true;
+    const syncPerfil = () => {
+      const actual = getNombreUsuarioActivo();
+      setCajeroApertura((prev) => (prev === 'Administrador' && actual !== 'Administrador' ? actual : prev));
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('mistock_usuario_updated', syncPerfil);
+    }
+
+    void supabaseService.fetchSesionCaja().then((remota) => {
+      if (!mounted || !remota) return;
+      const abiertaRemota =
+        typeof remota.cajaAbierta === 'boolean'
+          ? remota.cajaAbierta
+          : typeof remota.estaAbierta === 'boolean'
+            ? remota.estaAbierta
+            : undefined;
+      if (typeof abiertaRemota !== 'boolean') return;
+
+      setCajaAbierta(abiertaRemota);
+      if (abiertaRemota) {
+        if (remota.idTurno) setIdTurnoActivo(remota.idTurno);
+        if (remota.timestampApertura) setTimestampApertura(remota.timestampApertura);
+        if (remota.fondoInicial !== undefined) setFondoInicial(remota.fondoInicial);
+        if (remota.fechaApertura) setFechaApertura(remota.fechaApertura);
+        if (remota.cajeroApertura) setCajeroApertura(remota.cajeroApertura);
+        if (remota.observacionesApertura !== undefined) setObservacionesApertura(remota.observacionesApertura);
+        if (Array.isArray(remota.ventasIdsTurno)) setVentasIdsTurno(remota.ventasIdsTurno);
+      } else {
+        setIdTurnoActivo(null);
+        setTimestampApertura(null);
+        setVentasIdsTurno([]);
+        setCajeroApertura(getNombreUsuarioActivo());
+      }
+      if (remota.ultimoCierre !== undefined) {
+        setUltimoCierre(remota.ultimoCierre || null);
+      }
+      try {
+        window.localStorage.setItem('mistock_sesion_caja_v1', JSON.stringify(remota));
+      } catch {}
+    });
+
+    return () => {
+      mounted = false;
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('mistock_usuario_updated', syncPerfil);
+      }
+    };
+  }, []);
 
   // Cargar sesión de caja persistida desde localStorage al montar
   useEffect(() => {
@@ -336,6 +389,7 @@ export function useUserDashboardController() {
             if (sesion.fechaApertura) setFechaApertura(sesion.fechaApertura);
             if (sesion.cajeroApertura) setCajeroApertura(sesion.cajeroApertura);
             if (sesion.observacionesApertura) setObservacionesApertura(sesion.observacionesApertura);
+            if (Array.isArray(sesion.ventasIdsTurno)) setVentasIdsTurno(sesion.ventasIdsTurno);
           } else {
             setCajeroApertura(getNombreUsuarioActivo());
           }
@@ -380,6 +434,19 @@ export function useUserDashboardController() {
     setCajeroApertura(cajeroActual);
     setObservacionesApertura(obsSegura);
     setIsModalAperturaOpen(false);
+    setVentasIdsTurno([]);
+    void supabaseService.saveSesionCaja({
+      cajaAbierta: true,
+      estaAbierta: true,
+      idTurno: nuevoIdTurno,
+      timestampApertura: nuevoTimestamp,
+      fondoInicial: montoSeguro,
+      fechaApertura: strFechaApertura,
+      cajeroApertura: cajeroActual,
+      observacionesApertura: obsSegura,
+      ultimoCierre,
+      ventasIdsTurno: [],
+    });
 
     try {
       localStorage.setItem(
@@ -411,12 +478,15 @@ export function useUserDashboardController() {
       if (idTurnoActivo && v.idTurno) {
         return v.idTurno === idTurnoActivo;
       }
+      if (ventasIdsTurno.length > 0 && ventasIdsTurno.includes(v.id)) {
+        return true;
+      }
       if (timestampApertura && v.timestamp) {
-        return v.timestamp >= timestampApertura;
+        return v.timestamp >= timestampApertura - 60000;
       }
       return false;
     });
-  }, [data.ventasRecientes, cajaAbierta, idTurnoActivo, timestampApertura]);
+  }, [data.ventasRecientes, cajaAbierta, idTurnoActivo, timestampApertura, ventasIdsTurno]);
 
   // Desglose de ingresos por medio de cobro acumulado en el turno actual
   const resumenMediosTurno: ResumenMediosPagoCierre = useMemo(() => {
@@ -499,6 +569,19 @@ export function useUserDashboardController() {
     setUltimoCierre(nuevoCierre);
     setIsModalArqueoOpen(false);
     setIsModalTicketCierreOpen(true);
+    setVentasIdsTurno([]);
+    void supabaseService.saveSesionCaja({
+      cajaAbierta: false,
+      estaAbierta: false,
+      idTurno: undefined,
+      timestampApertura: undefined,
+      fondoInicial,
+      fechaApertura: null,
+      cajeroApertura: undefined,
+      observacionesApertura: '',
+      ultimoCierre: nuevoCierre,
+      ventasIdsTurno: [],
+    });
 
     try {
       localStorage.setItem(
@@ -808,7 +891,10 @@ export function useUserDashboardController() {
       montoTotal: totalVenta,
       cantidadItems: cantidadArticulosCarrito,
       metodoPago,
-      vendedor: cajeroApertura || 'Administrador',
+      vendedor:
+        cajeroApertura && cajeroApertura !== 'Administrador'
+          ? cajeroApertura
+          : getNombreUsuarioActivo(),
       items: itemsVenta,
       pagos: [
         {
@@ -883,6 +969,32 @@ export function useUserDashboardController() {
             } catch {}
           }
           return updated;
+        });
+
+        setVentasIdsTurno((prevIds) => {
+          const nextIds = prevIds.includes(remoteId) ? prevIds : [remoteId, ...prevIds];
+          if (cajaAbierta) {
+            const sesionActualizada = {
+              cajaAbierta: true,
+              estaAbierta: true,
+              idTurno: idTurnoActivo || undefined,
+              timestampApertura: timestampApertura || undefined,
+              fondoInicial,
+              fechaApertura,
+              cajeroApertura:
+                cajeroApertura && cajeroApertura !== 'Administrador'
+                  ? cajeroApertura
+                  : getNombreUsuarioActivo(),
+              observacionesApertura,
+              ultimoCierre,
+              ventasIdsTurno: nextIds,
+            };
+            try {
+              window.localStorage.setItem('mistock_sesion_caja_v1', JSON.stringify(sesionActualizada));
+            } catch {}
+            void supabaseService.saveSesionCaja(sesionActualizada);
+          }
+          return nextIds;
         });
 
         // Sincronizar existencias con el valor exacto calculado por el trigger PostgreSQL

@@ -13,6 +13,31 @@ ALTER TABLE public.categorias ADD COLUMN IF NOT EXISTS descripcion text;
 ALTER TABLE public.productos ADD COLUMN IF NOT EXISTS stock_minimo integer NOT NULL DEFAULT 5;
 ALTER TABLE public.productos ADD COLUMN IF NOT EXISTS activo boolean NOT NULL DEFAULT true;
 
+CREATE TABLE IF NOT EXISTS public.configuracion_negocio (
+  id integer PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  datos jsonb NOT NULL DEFAULT '{}'::jsonb,
+  actualizado_el timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.configuracion_negocio ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Staff lee configuración" ON public.configuracion_negocio;
+CREATE POLICY "Staff lee configuración" ON public.configuracion_negocio
+  FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Solo admin modifica configuración" ON public.configuracion_negocio;
+DROP POLICY IF EXISTS "Staff modifica configuración y sesión de caja" ON public.configuracion_negocio;
+CREATE POLICY "Staff modifica configuración y sesión de caja" ON public.configuracion_negocio
+  FOR ALL TO authenticated
+  USING ((SELECT auth.uid()) IS NOT NULL)
+  WITH CHECK ((SELECT auth.uid()) IS NOT NULL);
+
+DROP POLICY IF EXISTS "Staff anula ventas activas" ON public.ventas;
+CREATE POLICY "Staff anula ventas activas" ON public.ventas
+  FOR UPDATE TO authenticated
+  USING ((SELECT auth.uid()) IS NOT NULL AND estado <> 'cancelada')
+  WITH CHECK ((SELECT auth.uid()) IS NOT NULL AND estado = 'cancelada');
+
 -- 1. CREAR O ASEGURAR EL USUARIO "Vendedor 1"
 DO $$
 DECLARE

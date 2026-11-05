@@ -110,7 +110,7 @@ Esta tabla resume cómo se conectan las **21 piezas visuales** de `src/views/` c
      - **Bajas Unidades:** $stockMinimo < stockActual \le stockMinimo \times 1.5$ (*"Próximos al umbral mínimo"*).
      - **Stock Óptimo:** $stockActual > stockMinimo \times 1.5$ (*"Abastecimiento saludable"*).
      *(La suma de los 4 niveles coincide exactamente con el total de artículos activos).*
-  3. **Tabla Unificada de Catálogo y Modal de Edición/Reposición:** Única barra de herramientas (`Buscar SKU o producto...` con soporte de deep-link `?q=SKU`, selector de `Categoría` y selector de `Estado comercial: Activos | Dados de Baja | Todos`). Cada fila permite editar/reponer (con vista previa en vivo de margen y alerta `alertarMargenNegativo`), dar de baja lógica o reactivar.
+  3. **Tabla Unificada de Catálogo y Modal de Edición/Reposición:** Única barra de herramientas (`Buscar SKU o producto...` con soporte de deep-link `?q=SKU`, selector de `Categoría` y selector de `Estado comercial: Activos | Dados de Baja | Todos`). Cada fila permite editar/reponer (con vista previa en vivo de margen y alerta `alertarMargenNegativo`), dar de baja lógica o reactivar. Los inputs de precio (`inputMode="decimal"`) y stock (`inputMode="numeric"`) emplean sanitización en vivo (`sanitizarDecimalInput`, `sanitizarEnteroInput`, `sanitizarSkuInput`) permitiendo usar coma o punto decimal indistintamente y bloqueando signos negativos o símbolos inválidos.
 
 ---
 
@@ -188,6 +188,7 @@ Esta tabla resume cómo se conectan las **21 piezas visuales** de `src/views/` c
 ---
 
 ## 🔗 Enlaces Relacionados en la Bóveda
+- [[Servicios]] — Documentación detallada de la capa `src/services/` (`inventarioService`, `configuracionService`, `supabaseService` y suite `mercadopago/`).
 - [[Modelos]] — Documentación detallada de la capa de Modelos (`modelos_dominio` y `modelos_vista`).
 - [[Controladores]] — Documentación detallada de los 8 Controladores (Hooks) y los 4 Servicios Reactivos.
 - [[Rutas del Sistema]] — Estructura del App Router de Next.js, Layouts y Route Handlers de Mercado Pago Point.

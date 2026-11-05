@@ -17,7 +17,8 @@
  */
 
 import { createClient as createSupabaseJsClient } from '@supabase/supabase-js';
-import { createClient } from '@/lib/supabase/client';
+import { createClient, normalizarSupabaseUrl } from '@/lib/supabase/client';
+import { EstadoSesionCaja } from '@/models/modelos_vista/cierreCajaModel';
 import {
   Categoria,
   CategoriaRow,
@@ -520,7 +521,7 @@ export const supabaseService = {
       }
 
       // 2. Fallback si el parche SQL aún no fue ejecutado: cliente efímero sin persistir cookies
-      const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const url = normalizarSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
       const key =
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
         process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
@@ -715,6 +716,160 @@ export const supabaseService = {
   /**
    * Persiste la configuración del comercio en `public.configuracion_negocio` (fila única `id = 1`).
    */
+  /**
+   * Obtiene el estado de sesión de caja persistido en `public.configuracion_negocio` (`datos.sesionCaja`).
+   */
+  async fetchSesionCaja(): Promise<Partial<EstadoSesionCaja> | null> {
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return null;
+
+      const { data, error } = await supabase
+        .from('configuracion_negocio')
+        .select('datos')
+        .eq('id', 1)
+        .maybeSingle();
+
+      if (error || !data || !data.datos || typeof data.datos !== 'object') {
+        return null;
+      }
+
+      const raw = data.datos as Record<string, unknown>;
+      if (raw.sesionCaja && typeof raw.sesionCaja === 'object') {
+        return raw.sesionCaja as Partial<EstadoSesionCaja>;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  },
+
+  /**
+   * Persiste el estado de sesión de caja (`cajaAbierta`, `idTurno`, `fondoInicial`, `ultimoCierre`, etc.)
+   * en `public.configuracion_negocio` (`id = 1`, propiedad `datos.sesionCaja`) para mantener continuidad
+   * entre recargas, navegadores en modo incógnito o múltiples terminales.
+   */
+  async saveSesionCaja(sesionCaja: Partial<EstadoSesionCaja>): Promise<boolean> {
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return false;
+
+      const { data: existingRow } = await supabase
+        .from('configuracion_negocio')
+        .select('datos')
+        .eq('id', 1)
+        .maybeSingle();
+
+      const prevDatos =
+        existingRow && existingRow.datos && typeof existingRow.datos === 'object'
+          ? (existingRow.datos as Record<string, unknown>)
+          : {};
+
+      const { error } = await supabase
+        .from('configuracion_negocio')
+        .upsert(
+          {
+            id: 1,
+            datos: {
+              ...prevDatos,
+              sesionCaja,
+            },
+            actualizado_el: new Date().toISOString(),
+          },
+          { onConflict: 'id' }
+        );
+
+      return !error;
+    } catch {
+      return false;
+    }
+  },
+
+  /**
+   * Obtiene la marca temporal del último respaldo CSV exportado desde `public.configuracion_negocio`.
+   */
+  async fetchUltimoRespaldoCSV(): Promise<string | null> {
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return null;
+
+      const { data, error } = await supabase
+        .from('configuracion_negocio')
+        .select('datos')
+        .eq('id', 1)
+        .maybeSingle();
+
+      if (error || !data || !data.datos || typeof data.datos !== 'object') {
+        return null;
+      }
+
+      const raw = data.datos as Record<string, unknown>;
+      return typeof raw.ultimoRespaldoCSV === 'string' ? raw.ultimoRespaldoCSV : null;
+    } catch {
+      return null;
+    }
+  },
+
+  /**
+   * Persiste la marca temporal del último respaldo CSV en `public.configuracion_negocio`.
+   */
+  async saveUltimoRespaldoCSV(marca: string): Promise<boolean> {
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return false;
+
+      const { data: existingRow } = await supabase
+        .from('configuracion_negocio')
+        .select('datos')
+        .eq('id', 1)
+        .maybeSingle();
+
+      const prevDatos =
+        existingRow && existingRow.datos && typeof existingRow.datos === 'object'
+          ? (existingRow.datos as Record<string, unknown>)
+          : {};
+
+      const { error } = await supabase
+        .from('configuracion_negocio')
+        .upsert(
+          {
+            id: 1,
+            datos: {
+              ...prevDatos,
+              ultimoRespaldoCSV: marca,
+            },
+            actualizado_el: new Date().toISOString(),
+          },
+          { onConflict: 'id' }
+        );
+
+      return !error;
+    } catch {
+      return false;
+    }
+  },
+
+  async fetchRawDatosConfiguracion(): Promise<Record<string, unknown>> {
+    try {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from('configuracion_negocio')
+        .select('datos')
+        .eq('id', 1)
+        .maybeSingle();
+      if (data && data.datos && typeof data.datos === 'object') {
+        return data.datos as Record<string, unknown>;
+      }
+      return {};
+    } catch {
+      return {};
+    }
+  },
+
   async saveConfiguracionNegocio(config: ConfiguracionCompleta): Promise<boolean> {
     try {
       const supabase = createClient();
@@ -726,7 +881,7 @@ export const supabaseService = {
         .upsert(
           {
             id: 1,
-            datos: config,
+            datos: { ...(await this.fetchRawDatosConfiguracion()), ...config },
             actualizado_el: new Date().toISOString(),
           },
           { onConflict: 'id' }

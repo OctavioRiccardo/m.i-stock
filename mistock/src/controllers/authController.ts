@@ -137,7 +137,7 @@ export function useLoginController() {
         const rolAsignado: RolUsuario =
           perfil?.rol === 'vendedor'
             ? 'vendedor'
-            : emailLower.startsWith('user@')
+            : emailLower.startsWith('user@') || emailLower.startsWith('vendedor')
               ? 'vendedor'
               : 'admin';
 

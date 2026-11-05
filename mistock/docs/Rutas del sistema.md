@@ -44,7 +44,7 @@ flowchart TD
     API --> MP1["GET /point/devices (Listar terminales Point Smart)"]
     API --> MP2["POST /point/intent (Enviar cobro al posnet)"]
     API --> MP3["GET & DELETE /point/intent/[id] (Consultar o cancelar cobro)"]
-    API --> MPW["POST /webhook (Notificaciones asíncronas con firma HMAC)"]
+    API --> MPW["POST /webhooks (Notificaciones asíncronas Point)"]
 ```
 
 ---
@@ -69,29 +69,29 @@ flowchart TD
 
 ## 🔌 3. Endpoints de Servidor (Route Handlers) para Mercado Pago Point Smart
 
-Para proteger el `MERCADOPAGO_ACCESS_TOKEN` privado del comercio y evitar errores de CORS, las vistas del navegador (`ModalCobroTicket.tsx`) se comunican con los Route Handlers internos de Next.js, los cuales delegan la lógica al servicio `src/services/mercadopago/pointService.ts`:
+Para proteger el `MP_ACCESS_TOKEN` privado del comercio y evitar errores de CORS, las vistas del navegador (`ModalCobroTicket.tsx`) se comunican con los Route Handlers internos de Next.js, los cuales delegan la lógica a la suite `src/services/mercadopago/` (`services/pointService.ts`, `config/mpConfig.ts`, `types/pointTypes.ts` y `webhooks/webhookHandler.ts`):
 
 ### 3.1. `GET /api/mercadopago/point/devices`
 - **Archivo:** `src/app/api/mercadopago/point/devices/route.ts`
-- **Función en `pointService.ts`:** `listPointDevices()`
+- **Función en `services/pointService.ts`:** `listarDispositivosPoint()` + `MP_CONFIG.defaultDeviceId` (`config/mpConfig.ts`)
 - **Propósito:** Consulta las terminales físicas Point Smart vinculadas a la cuenta de Mercado Pago del comercio y devuelve también el `defaultDeviceId` configurado en `.env.local`.
 
 ### 3.2. `POST /api/mercadopago/point/intent`
 - **Archivo:** `src/app/api/mercadopago/point/intent/route.ts`
-- **Función en `pointService.ts`:** `createPaymentIntent(deviceId, payload)`
+- **Función en `services/pointService.ts`:** `crearIntencionPagoPoint(deviceId, payload, idempotencyKey?)`
 - **Propósito:** Crea una intención de cobro con cabecera `X-Idempotency-Key` (UUID v4) hacia el posnet físico seleccionado, enviando el monto del carrito y el identificador externo del ticket.
 
 ### 3.3. `GET /api/mercadopago/point/intent/[id]` y `DELETE /api/mercadopago/point/intent/[id]`
 - **Archivo:** `src/app/api/mercadopago/point/intent/[id]/route.ts`
-- **Funciones en `pointService.ts`:** `getPaymentIntentStatus(intentId)` y `cancelPaymentIntent(deviceId, intentId)`
+- **Funciones en `services/pointService.ts`:** `obtenerEstadoIntencionPoint(intentId)` y `cancelarIntencionPagoPoint(deviceId, intentId)`
 - **Propósito:**
-  - `GET`: Permite hacer *polling* cada 3 segundos desde `ModalCobroTicket.tsx` para conocer el estado del cobro en la terminal (`OPEN`, `ON_TERMINAL`, `PROCESSING`, `PROCESSED`, `ABANDONED`, `CANCELLED`, `ERROR`).
+  - `GET`: Permite hacer *polling* cada 3 segundos desde `ModalCobroTicket.tsx` para conocer el estado del cobro en la terminal (`OPEN`, `ON_TERMINAL`, `PROCESSING`, `PROCESSED`, `ABANDONED`, `CANCELED`, `ERROR`).
   - `DELETE`: Cancela en caliente una orden de cobro enviada al posnet si el cliente desiste o cambia de medio de pago.
 
-### 3.4. `POST /api/mercadopago/webhook`
-- **Archivo:** `src/app/api/mercadopago/webhook/route.ts`
-- **Función en `pointService.ts`:** `verifyWebhookSignature(xSignature, xRequestId, dataId)`
-- **Propósito:** Recibe notificaciones asíncronas de Mercado Pago verificando la autenticidad criptográfica mediante **HMAC-SHA256** (`MERCADOPAGO_WEBHOOK_SECRET`).
+### 3.4. `POST /api/mercadopago/webhooks` (y `GET` de verificación)
+- **Archivo:** `src/app/api/mercadopago/webhooks/route.ts`
+- **Funciones en `webhooks/webhookHandler.ts`:** `validarFirmaWebhook(xSignature, xRequestId)` y `procesarWebhookPoint(payload)`
+- **Propósito:** Recibe notificaciones asíncronas de Mercado Pago (`point_integration_wh`), valida las cabeceras de seguridad (`x-signature`, `x-request-id` contra `MP_WEBHOOK_SECRET`) y realiza una doble verificación de estado consultando `obtenerEstadoIntencionPoint(intentId)` antes de confirmar el pago.
 
 ---
 
@@ -109,6 +109,7 @@ Para proteger el `MERCADOPAGO_ACCESS_TOKEN` privado del comercio y evitar errore
 ---
 
 ## 🔗 Enlaces Relacionados
+- [[Servicios]] — Documentación de `pointService.ts`, `mpConfig.ts`, `pointTypes.ts`, `webhookHandler.ts` y los servicios de estado.
 - [[Modelos]] — Entidades de dominio, DTOs y funciones puras.
 - [[Controladores]] — Hooks controladores MVC y servicios reactivos.
 - [[Vistas]] — Componentes visuales renderizados en cada ruta.

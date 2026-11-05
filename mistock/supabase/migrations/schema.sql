@@ -468,6 +468,12 @@ CREATE POLICY "Staff registra movimientos stock" ON public.movimientos_stock
 CREATE POLICY "Staff lee configuración" ON public.configuracion_negocio
   FOR SELECT TO authenticated USING (true);
 
+-- 8.5. Configuración del negocio y sesión de caja sincronizada
+DROP POLICY IF EXISTS "Solo admin modifica configuración" ON public.configuracion_negocio;
+CREATE POLICY "Staff modifica configuración y sesión de caja" ON public.configuracion_negocio
+  FOR ALL TO authenticated
+  USING ((SELECT auth.uid()) IS NOT NULL)
+  WITH CHECK ((SELECT auth.uid()) IS NOT NULL);
 CREATE POLICY "Solo admin modifica configuración" ON public.configuracion_negocio
   FOR ALL TO authenticated
   USING ((SELECT public.is_admin()))

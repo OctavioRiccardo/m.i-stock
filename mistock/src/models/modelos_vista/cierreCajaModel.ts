@@ -78,6 +78,7 @@ export interface EstadoSesionCaja {
   numeroCaja?: number;
   observacionesApertura?: string;
   ultimoCierre: ArqueoCajaDTO | null;
+  ventasIdsTurno?: string[];
 }
 
 // ====================================================================

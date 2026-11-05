@@ -84,7 +84,8 @@ Componentes 100% declarativos. No ejecutan consultas a la base de datos ni calcu
 ### 2.4. Capa de Servicios y Almacenes Reactivos (`src/services/`)
 * **`inventarioService`:** Almacén reactivo de catálogo e inventario gobernado por `useSyncExternalStore` de React 19, sincronizado de forma bidireccional con Supabase PostgreSQL.
 * **`configuracionService`:** Almacén reactivo para datos de empresa, medios de cobro y parámetros operativos.
-* **`supabaseService`:** Adaptador de persistencia remota hacia PostgreSQL mediante el cliente oficial de Supabase.
+* **`supabaseService`:** Adaptador de persistencia remota hacia PostgreSQL mediante el cliente oficial de Supabase (CRUD con contrato `FetchResult<T>`, movimientos de stock, ventas encadenadas, gestión de colaboradores vía RPCs `SECURITY DEFINER`, sesión de caja y respaldos).
+* **Suite `src/services/mercadopago/` (`index.ts`, `config/mpConfig.ts`, `types/pointTypes.ts`, `services/pointService.ts`, `webhooks/webhookHandler.ts`):** Integración Cloud con terminales físicas **Mercado Pago Point Smart** con cabeceras de idempotencia (`X-Idempotency-Key`), estados tipados y doble verificación de Webhooks (ver [[Servicios]]).
 
 ---
 
@@ -103,7 +104,7 @@ La persistencia del sistema está implementada sobre **PostgreSQL 15+** en la nu
 | `public.ventas` | `id_venta (UUID)` | `id_usuario` | Cabecera del comprobante comercial emitido en caja. Contiene el total facturado, estado (`completada`, `cancelada`, `pendiente`) y fecha. |
 | `public.detalle_ventas` | `id_detalle (UUID)` | `id_venta`, `id_producto` | Renglones del ticket vendido. Almacena `cantidad` y `precio_unitario`. Posee regla `ON DELETE RESTRICT` sobre `id_producto` para preservar la historia contable. |
 | `public.pagos` | `id_pago (UUID)` | `id_venta` | Métodos de cobro asociados a la venta (`efectivo`, `tarjeta_debito`, `tarjeta_credito`, `transferencia`, `mercado_pago`). Permite pagos divididos (*split payments*). |
-| `public.configuracion_negocio` | `id_config (INT)` | Ninguna | Almacena los parámetros comerciales, identidad fiscal y configuraciones del POS en formato JSONB con respaldo multi-dispositivo. |
+| `public.configuracion_negocio` | `id (INT)` | Ninguna | Almacena en su columna `datos (JSONB)` los parámetros comerciales (`ConfiguracionCompleta`), el turno de caja activo (`sesionCaja`) y la marca de exportación (`ultimoRespaldoCSV`) con respaldo multi-dispositivo. |
 
 ### 3.2. Automatizaciones y Triggers Transaccionales (Motor SQL)
 

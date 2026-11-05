@@ -83,19 +83,19 @@ El sistema utiliza las primitivas *headless* de **Radix UI** dentro de `src/comp
 
 ##  7. Pasarela de Pagos & Integración Fintech (Mercado Pago Point API)
 
-El sistema integra la **Point Integration API (Cloud)** de Mercado Pago mediante `src/services/mercadopago/pointService.ts` y los Route Handlers en `src/app/api/mercadopago/`:
+El sistema integra la **Point Integration API (Cloud)** de Mercado Pago mediante la suite `src/services/mercadopago/` (`config/mpConfig.ts`, `types/pointTypes.ts`, `services/pointService.ts`, `webhooks/webhookHandler.ts`) y los Route Handlers en `src/app/api/mercadopago/`:
 
 | Módulo / Recurso | Tipo / Endpoint | Rol y Justificación Técnica |
 | :--- | :--- | :--- |
 | **Point Integration API** | `https://api.mercadopago.com/point/integration-api/...` | Comunicación servidor a servidor para listar terminales Point (`/devices`), fijar modo operativo (`PDV`) y crear o cancelar intenciones de cobro (`/payment-intents`). |
-| **Webhooks en Tiempo Real** | `/api/mercadopago/webhook` | Receptor asíncrono de notificaciones push con verificación criptográfica **HMAC-SHA256** (`verifyWebhookSignature`). |
-| **Servicio de Dominio** | `src/services/mercadopago/pointService.ts` | Capa de servicio desacoplada con cabeceras de idempotencia (`X-Idempotency-Key` con `crypto.randomUUID()`) y tipado fuerte de estados (`OPEN`, `ON_TERMINAL`, `PROCESSING`, `PROCESSED`, `ABANDONED`, `CANCELLED`, `ERROR`). |
+| **Webhooks en Tiempo Real** | `/api/mercadopago/webhooks` | Receptor asíncrono de notificaciones push con verificación de cabeceras (`validarFirmaWebhook`) y doble verificación de estado (`procesarWebhookPoint`) en `src/services/mercadopago/webhooks/webhookHandler.ts`. |
+| **Servicio de Dominio** | `src/services/mercadopago/services/pointService.ts` | Capa de servicio desacoplada con cabeceras de idempotencia (`X-Idempotency-Key` con `crypto.randomUUID()` en `mpConfig.ts`) y tipado fuerte de estados (`OPEN`, `ON_TERMINAL`, `PROCESSING`, `PROCESSED`, `ABANDONED`, `CANCELED`, `ERROR` en `pointTypes.ts`). |
 
 ---
 
 ##  8. Entorno de Pruebas Unitarias y Calidad de Código (`Vitest`)
 
-Para verificar las fórmulas matemáticas de los Modelos de Dominio, Modelos de Vista y reglas de validación sin depender de conexión de red, el proyecto cuenta con **46 pruebas unitarias automatizadas** en `src/__tests__/`:
+Para verificar las fórmulas matemáticas de los Modelos de Dominio, Modelos de Vista y reglas de validación sin depender de conexión de red, el proyecto cuenta con **53 pruebas unitarias automatizadas** en `src/__tests__/`:
 
 | Paquete | Rol y Justificación Técnica |
 | :--- | :--- |
@@ -106,7 +106,7 @@ Para verificar las fórmulas matemáticas de los Modelos de Dominio, Modelos de 
 1. **`src/__tests__/models/productoModel.test.ts` (11 tests):** Mapeadores `toProducto` / `toCategoria`, cálculo de margen porcentual, semáforo de salud de stock y déficit de unidades.
 2. **`src/__tests__/models/cierreCaja.test.ts` (14 tests):** Efectivo esperado (`calcularEfectivoEsperado`), diferencia de caja (`calcularDiferenciaCaja`), estado del balance (`determinarEstadoBalance`) y consolidación de totales (`calcularTotalesCierre`).
 3. **`src/__tests__/pos/calculoVentaPos.test.ts` (13 tests):** Subtotal por renglón (`calcularSubtotalRenglon`), totales de carrito (`calcularTotalesCarrito`), cálculo de vuelto (`calcularVueltoPOS`) y sugerencias de billetes (`generarSugerenciasBilletes`).
-4. **`src/__tests__/lib/validaciones.test.ts` (8 tests):** Límites `MAX_PRECIO_DB` y `MAX_STOCK_DB`, normalización de texto, emails comerciales/test, teléfono, CUIT argentino, SKU alfanumérico, código ISO de moneda y acotación entera.
+4. **`src/__tests__/lib/validaciones.test.ts` (15 tests):** Límites `MAX_PRECIO_DB` y `MAX_STOCK_DB`, sanitización en tiempo real (`sanitizarDecimalInput`, `parsearDecimalSeguro`, `sanitizarEnteroInput`, `sanitizarTelefonoInput`, `sanitizarSkuInput`, `sanitizarSimboloMonedaInput`, `sanitizarCodigoIsoInput`, `sanitizarNombrePersonaInput`), emails comerciales/test, CUIT argentino y acotación entera.
 
 ---
 

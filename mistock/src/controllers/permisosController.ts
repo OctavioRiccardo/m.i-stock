@@ -98,7 +98,7 @@ export function usePermisosController() {
 
           const rolReal: RolUsuario =
             perfil?.rol ||
-            (email.toLowerCase().startsWith('user@') ? 'vendedor' : 'admin');
+            (email.toLowerCase().startsWith('user@') || email.toLowerCase().startsWith('vendedor') ? 'vendedor' : 'admin');
           const nombreReal =
             perfil?.nombre ||
             user.user_metadata?.full_name ||
@@ -110,6 +110,7 @@ export function usePermisosController() {
 
           if (typeof window !== 'undefined') {
             window.localStorage.setItem(ROL_STORAGE_KEY, rolReal);
+            setTimeout(() => window.dispatchEvent(new Event('mistock_usuario_updated')), 0);
             window.localStorage.setItem(
               USUARIO_STORAGE_KEY,
               JSON.stringify({

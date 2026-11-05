@@ -82,7 +82,12 @@ mistock/src/
     ├── inventarioService.ts                      # Single Source of Truth de Productos y Categorías
     ├── configuracionService.ts                   # Single Source of Truth de Configuración Global
     ├── supabaseService.ts                        # Conector asíncrono resiliente con Supabase PostgreSQL
-    └── mercadopago/services/pointService.ts      # Cliente Cloud para terminales físicas Mercado Pago Point
+    └── mercadopago/                              # Suite de integración Mercado Pago Point Smart
+        ├── index.ts                              # Barrel file de exportación unificada
+        ├── config/mpConfig.ts                    # Credenciales, endpoints REST y headers con X-Idempotency-Key
+        ├── types/pointTypes.ts                   # Contratos TypeScript de terminales, intenciones y Webhooks
+        ├── services/pointService.ts              # Cliente Cloud para dispositivos e intenciones de cobro Point
+        └── webhooks/webhookHandler.ts            # Validador de firma y procesador de notificaciones Point
 ```
 
 ---
@@ -100,12 +105,12 @@ mistock/src/
      - Si las credenciales son válidas, consulta `rol`, `nombre`, `telefono` y `activo` en `public.usuario`.
      - Si `activo === false`, aborta el login alertando que la cuenta está inhabilitada.
      - **Barrera de Seguridad (`no_rol`):** Si el usuario tiene rol `'no_rol'`, cierra inmediatamente la sesión (`signOut()`) y muestra alerta indicando que la cuenta aún no tiene permisos asignados por el Administrador.
-     - Persiste `mistock_rol_activo` y `mistock_usuario_activo` en `localStorage` y redirige según el rol:
+     - Actualiza el nombre visible del operador (`mistock_usuario_activo`) y redirige según el rol verificado en `public.usuario` (sin persistir el rol en `localStorage`):
        - `admin` $\rightarrow$ `/admin`
        - `vendedor` $\rightarrow$ `/dashboard`
   3. **Cero Fugas ni Contraseñas Planas Locales:** Se eliminó todo fallback de autenticación local con contraseñas en texto plano. Todas las credenciales son administradas exclusivamente por Supabase Auth.
 * **`useLogoutController()` — Cierre de Sesión Limpio y Purga Total:**
-  - Ejecuta `supabase.auth.signOut()` y llama a `limpiarSesionLocal()`, purgando de raíz `mistock_rol_activo`, `mistock_usuario_activo`, `mistock_inventario_data_test_v1`, `mistock_usuarios_data_test_v1`, `mistock_ventas_historial_test_v1`, `mistock_sesion_caja_v1` y `mistock_configuracion_v1` para evitar fuga de datos entre operadores y redirigiendo a `/login`.
+  - Ejecuta `supabase.auth.signOut()` y llama a `limpiarSesionLocal()`, purgando cualquier caché operativa local (`mistock_usuario_activo`, `mistock_inventario_v2`, `mistock_configuracion_v1`, `mistock_sesion_caja_v1`, etc.) para evitar fuga de datos entre operadores y redirigiendo a `/login`.
 
 ---
 
@@ -114,7 +119,7 @@ mistock/src/
 * **Propósito:** Garantizar en tiempo real que cada usuario solo acceda a las pantallas autorizadas para su rol (`'admin' | 'vendedor' | 'no_rol'`).
 * **Lógica Interna y Sincronización:**
   1. Al montar el layout, consulta `supabase.auth.getUser()` y obtiene el perfil real desde `public.usuario` (`nombre`, `rol`).
-  2. Sincroniza siempre `mistock_rol_activo` y `mistock_usuario_activo` con el perfil autenticado.
+  2. Verifica en cada montaje el rol (`admin`, `vendedor`, `no_rol`) y el estado (`activo`) directamente contra `public.usuario` en Supabase (sin confiar en roles guardados en `localStorage`), sincronizando el nombre del operador (`mistock_usuario_activo`) y emitiendo el evento `mistock_usuario_updated`.
   3. Si no existe sesión en Supabase ni sesión local activa de colaborador, redirige automáticamente a `/login`.
   4. Expone banderas booleanas semánticas:
      - `esAdmin` (`rol === 'admin'`): Acceso total a `/admin*` y también a `/dashboard` (herencia funcional).
@@ -200,7 +205,7 @@ mistock/src/
 * **Responsabilidades Clave:**
   1. **Gestión de las 5 Pestañas de Configuración (`pestañaActiva`):** `'negocio' | 'pos' | 'inventario' | 'metricas' | 'respaldos'`.
   2. **Guardado Automático Reactivo en Tiempo Real:** Cada cambio en datos fiscales, formato de ticket, medios de cobro, umbrales de stock o períodos analíticos persiste inmediatamente en `configuracionService`, propagándose en vivo al POS y al Dashboard sin requerir confirmación manual.
-  3. **Estadísticas Reales de Base de Datos (`estadisticasSistema`):** Computa en vivo `totalProductos`, `totalCategorias`, `totalVentas`, `totalRegistros` y `ultimoRespaldoCSV` (`mistock_ultimo_respaldo_csv`).
+  3. **Estadísticas Reales de Base de Datos (`estadisticasSistema`):** Computa en vivo `totalProductos`, `totalCategorias`, `totalVentas`, `totalRegistros` y `ultimoRespaldoCSV` (sincronizado tanto en `localStorage` como en `public.configuracion_negocio` en Supabase mediante `fetchUltimoRespaldoCSV` / `saveUltimoRespaldoCSV`, manteniendo además las ventas hidratadas en estado React `ventasRemotas` para exportar CSV incluso sin `localStorage`).
   4. **Guardia de Medios de Cobro (`toggleMetodoPago`):** Impide desactivar todos los métodos de pago simultáneamente (garantiza que siempre exista al menos un medio habilitado en la caja).
   5. **Motor de Exportación CSV RFC 4180 con UTF-8 BOM (`exportarCatalogoCSV` y `exportarVentasCSV`):**
      - Genera archivos `.csv` con encabezado `\uFEFF` (Byte Order Mark) y comillas escapadas RFC 4180 para apertura directa en Microsoft Excel y Google Sheets, registrando automáticamente la fecha y hora de la última exportación.
@@ -217,7 +222,7 @@ mistock/src/
      - Lee y actualiza `?tab=caja | catalogo | precios | historial` mediante `useSearchParams()` y `router.push()`, manteniendo sincronizados el `UserSidebar` (en escritorio) y la barra móvil.
   2. **Control Estricto de Sesión de Caja Mono-Caja (`abrirCaja` y `confirmarCierreCaja`):**
      - La caja inicia cerrada (`cajaAbierta = false`), bloqueando la carga de productos al carrito hasta que el operador ejecute `abrirCaja(montoInicial, observaciones)`.
-     - Al abrir la caja, genera un código único de turno (`idTurno = TRN-XXXXXX`), registra `timestampApertura` y asocia automáticamente el nombre del usuario autenticado (`mistock_usuario_activo`).
+     - Al abrir la caja, genera un código único de turno (`idTurno = TRN-XXXXXX`), registra `timestampApertura`, asocia automáticamente el nombre del usuario autenticado (`mistock_usuario_activo`) y persiste la sesión de caja tanto en `localStorage` como remotamente en `public.configuracion_negocio` (`datos.sesionCaja` vía `supabaseService.saveSesionCaja` / `fetchSesionCaja`), garantizando continuidad total aunque se recargue en modo incógnito o sin datos locales.
      - `ventasTurnoActual`: Filtra exclusivamente las ventas completadas dentro del turno abierto, calculando `resumenMediosTurno`, `efectivoEsperado` ($\text{Fondo Inicial} + \text{Ventas Efectivo}$), `diferencia` y emitiendo el **Reporte Z (`ArqueoCajaDTO`)** al cerrar la caja.
   3. **Gestión del Carrito / Ticket en Curso (`carrito`):**
      - `agregarAlCarrito(producto, cantidad)`: Verifica que la caja esté abierta y que `nuevaCantidad <= producto.stock` (salvo que `permitirVentaSinStock` esté habilitado en configuración).
@@ -261,6 +266,7 @@ Para que los controladores del Administrador y del Cajero compartan el mismo est
   - **Categorías:** `fetchCategorias()`, `insertCategoria()`.
   - **Productos:** `fetchProductos()`, `insertProducto()`, `updateProducto()`, `toggleActivoProducto()`.
   - **Ventas y Movimientos:** `fetchVentas()`, `registrarVenta()`, `cancelarVenta()`, `registrarMovimiento()`.
+  - **Configuración, Sesión de Caja y Respaldos:** `fetchConfiguracionNegocio()`, `saveConfiguracionNegocio()`, `fetchSesionCaja()`, `saveSesionCaja()`, `fetchUltimoRespaldoCSV()`, `saveUltimoRespaldoCSV()`.
 
 ### 6.4. `src/services/mercadopago/services/pointService.ts`
 * **Rol:** Servicio de comunicación Cloud con terminales físicas **Mercado Pago Point Smart (PDV)**, invocado a través de los Route Handlers de Next.js (`/api/mercadopago/point/...`) desde `ModalCobroTicket.tsx`.
@@ -270,6 +276,15 @@ Para que los controladores del Administrador y del Cajero compartan el mismo est
   - `crearIntencionPagoPoint(deviceId, payload)`: Envía el importe a cobrar a la pantalla física del posnet.
   - `obtenerEstadoIntencionPoint(intentId)`: Sondea en tiempo real si el cliente ya pasó la tarjeta (`OPEN`, `ON_TERMINAL`, `PROCESSED`, `ABANDONED`).
   - `cancelarIntencionPagoPoint(deviceId, intentId)`: Aborta la orden en la terminal física.
+
+### 6.5. Submódulos Complementarios de Mercado Pago (`src/services/mercadopago/`)
+* **`config/mpConfig.ts` (`MP_CONFIG` + `getMercadoPagoHeaders`):** Centraliza las variables de entorno (`MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`, `MP_POINT_DEVICE_ID`), detecta automáticamente el modo Sandbox (`isSandbox`), expone las rutas de la API Point/QR e inyecta `Authorization: Bearer` y `X-Idempotency-Key` (UUID v4) para evitar cobros duplicados.
+* **`types/pointTypes.ts`:** Define los contratos estrictos de la integración (`PointOperatingMode`, `PointPaymentIntentStatus`, `PointDevice`, `CreatePointPaymentIntentPayload` con montos enteros en centavos, `PointPaymentIntent` y `PointWebhookPayload`).
+* **`webhooks/webhookHandler.ts` (`validarFirmaWebhook` + `procesarWebhookPoint`):** Verifica las cabeceras de seguridad (`x-signature` y `x-request-id`) de las notificaciones entrantes en `/api/mercadopago/webhooks` y realiza una doble verificación consultando `obtenerEstadoIntencionPoint(intentId)` antes de dar por aprobado un cobro.
+* **`index.ts`:** Archivo barril (*barrel export*) que unifica toda la suite de Mercado Pago bajo `@/services/mercadopago`.
+
+> [!TIP] **Documentación Profunda de Servicios**
+> Para consultar el detalle técnico completo de los 8 archivos de `src/services/`, sus firmas, parámetros y diagramas de secuencia, ver la nota dedicada: [[Servicios]].
 
 ---
 
@@ -293,6 +308,7 @@ Para que los controladores del Administrador y del Cajero compartan el mismo est
 ---
 
 ## 🔗 Enlaces Relacionados en la Bóveda
+- [[Servicios]] — Documentación exhaustiva de los 8 archivos de `src/services/` (`inventarioService`, `configuracionService`, `supabaseService` y suite `mercadopago/`).
 - [[Modelos]] — Detalle de todas las interfaces de Dominio, ViewModels y funciones puras.
 - [[Vistas]] — Componentes React que reciben el objeto `controller`.
 - [[Rutas del Sistema]] — Qué ruta (`page.tsx`) instancia cada controlador.

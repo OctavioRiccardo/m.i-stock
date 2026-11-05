@@ -323,7 +323,7 @@ flowchart TD
 * **Mecanismos de Control:**
   1. **Aprovisionamiento Criptográfico:** `crearUsuario` invoca la RPC `public.crear_colaborador_admin` (o signup seguro) requiriendo contraseña de $6 \dots 72$ caracteres cifrada con bcrypt por Supabase Auth.
   2. **Bloqueo Preventivo de Cuentas Inactivas:** La columna `activo boolean DEFAULT true` en `public.usuario` es evaluada en cada inicio de sesión y validación de layout. Si `activo === false`, el acceso queda inmediatamente revocado.
-  3. **Direccionamiento de Roles:** Los usuarios válidos activos fijan `mistock_rol_activo` y son redirigidos a `/admin` o `/dashboard` según corresponda.
+  3. **Direccionamiento de Roles:** Los usuarios válidos activos son verificados directamente contra `public.usuario` en Supabase (sin guardar roles en `localStorage`) y redirigidos a `/admin` o `/dashboard` según corresponda.
 
 ---
 
@@ -334,7 +334,7 @@ Este pilar respalda la continuidad operativa y la soberanía de los datos del co
 ### Regla 6.1: Persistencia y Sincronización de Parámetros
 * **Enunciado de Negocio:** *Los cambios de configuración (datos de empresa, umbrales de stock, modo de ticket, métodos de pago) persisten en el entorno de trabajo del comercio.*
 * **Mecanismos de Control:**
-  1. Persistencia reactiva en almacenamiento local bajo la clave `mistock_configuracion_v1`.
+  1. Persistencia sincronizada en la nube en `public.configuracion_negocio.datos` (Supabase PostgreSQL) con caché reactiva local bajo la clave `mistock_configuracion_v1`.
   2. Fusión profunda (*deep merge*) con los valores por defecto [configuracionModel.ts](file:///b:/Programas/Github/m.i-stock/mistock/src/models/modelos_vista/configuracionModel.ts) para evitar caídas ante versiones nuevas del esquema.
 
 ### Regla 6.2: Motor de Exportación RFC 4180 con UTF-8 BOM
@@ -346,13 +346,25 @@ Este pilar respalda la continuidad operativa y la soberanía de los datos del co
 
 ---
 
-### Regla 6.3: Integridad de Entradas y Techos Numéricos Relacionales
-* **Enunciado de Negocio:** *Todos los campos de entrada de la plataforma están acotados por límites físicos compatibles con los tipos de datos de PostgreSQL para impedir desbordes o errores de base de datos.*
-* **Mecanismos de Control:**
-  1. **Precios y Valores Monetarios:** Límite máximo de `$99.999.999,99` (`MAX_PRECIO_DB`) coincidente con `numeric(10,2)`.
-  2. **Cantidades y Stock:** Números enteros en el rango $0 \dots 1.000.000$ (`MAX_STOCK_DB`).
-  3. **Identificadores Fiscales y Teléfonos:** CUIT formateado estrictamente a 11 dígitos numéricos (`XX-XXXXXXXX-X`) y teléfonos acotados a 6-15 dígitos numéricos reales con sanitización en vivo.
-  4. **Códigos de Barras / SKU:** Longitud entre 2 y 40 caracteres alfanuméricos, guiones y barras sin espacios (`esSkuValido`).
+### Regla 6.3: Integridad de Entradas, Sanitización en Tiempo Real y Techos Numéricos Relacionales
+* **Enunciado de Negocio:** *Todos los campos de entrada de la plataforma filtran caracteres inválidos en tiempo real (`onChange`) y están acotados por límites físicos compatibles con los tipos de datos de PostgreSQL para impedir errores de tipeo regional (comas vs. puntos), símbolos prohibidos o desbordes en la base de datos.*
+* **Mecanismos de Control (`src/lib/validaciones.ts`):**
+  1. **Precios y Valores Monetarios Decimales (`sanitizarDecimalInput` / `parsearDecimalSeguro`):**
+     - Inputs con `type="text" inputMode="decimal"` en Alta/Edición de Inventario, Apertura de Caja, Arqueo de Caja y Cobro de Ticket.
+     - Normalizan automáticamente la coma `,` a punto `.` para soportar el teclado regional argentino (`es-AR`) sin perder decimales.
+     - Bloquean signos negativos (`-`), signos `+`, notación científica (`e`/`E`), letras, espacios y símbolos monetarios (`$`), permitiendo a lo sumo un separador decimal y hasta 2 dígitos fraccionarios.
+     - Límite máximo de `$99.999.999,99` (`MAX_PRECIO_DB`, hasta 8 dígitos enteros) coincidente con `numeric(10,2)`.
+  2. **Cantidades y Parámetros Enteros (`sanitizarEnteroInput`):**
+     - Inputs con `type="text" inputMode="numeric"` en Stock Inicial, Stock Actual, Stock Mínimo, Punto de Venta, Número de Caja, Umbral Mínimo por Defecto y Día de Corte Mensual.
+     - Eliminan en vivo comas `,`, puntos `.`, signos `-`/`+` y letras, permitiendo borrar temporalmente el dígito con `Backspace` y restaurando el valor mínimo válido en `onBlur`.
+  3. **Identificadores Fiscales y Teléfonos (`formatearCuitInput` / `sanitizarTelefonoInput`):**
+     - CUIT formateado progresivamente a 11 dígitos numéricos (`XX-XXXXXXXX-X`) y teléfonos acotados a 6-15 dígitos numéricos reales permitiendo únicamente `[0-9+\-()\s]`.
+  4. **Códigos de Barras / SKU (`sanitizarSkuInput` / `esSkuValido`):**
+     - En tiempo real reemplaza espacios por guiones `-` y elimina comas, puntos y coma o símbolos especiales (`@#$%`), admitiendo únicamente `[A-Za-z0-9._\-/]` entre 2 y 40 caracteres.
+  5. **Símbolo Monetario, Código ISO y Nombres de Personas:**
+     - `sanitizarSimboloMonedaInput`: Bloquea números, comas, puntos y signos matemáticos en el símbolo de moneda (hasta 4 caracteres, ej. `$`, `US$`, `€`).
+     - `sanitizarCodigoIsoInput`: Conserva únicamente hasta 3 letras mayúsculas (`ARS`, `USD`).
+     - `sanitizarNombrePersonaInput`: Permite letras (con tildes y diéresis), espacios, puntos, apóstrofes y guiones en nombres de colaboradores, bloqueando números y símbolos especiales.
 
 ---
 
@@ -384,6 +396,12 @@ El sistema **miStock** cuenta hoy con una base sólida de reglas de negocio que 
 2. **Cumplimiento Normativo:** Distinción clara entre tickets de control interno y facturación fiscal conforme a las leyes argentinas.
 3. **Seguridad y Usabilidad:** Los cajeros operan con rapidez sin riesgo de alterar parámetros financieros, y los administradores cuentan con control absoluto y herramientas de exportación seguras.
 
-### RN-POS-04: Apertura Previa Obligatoria de Caja
-- **Regla:** Ningún cajero puede procesar ventas, emitir comprobantes o finalizar tickets sin haber efectuado previamente la Apertura de Caja.
-- **Validación:** Si `cajaAbierta === false`, el sistema bloquea el cobro (`procesarVentaTicket`) y transforma el botón de checkout en *"Abrir Caja para Habilitar Cobro"*, desplegando el `ModalAperturaCaja` para registrar el fondo inicial en efectivo.
+---
+
+## 🔗 Enlaces Relacionados en la Bóveda
+- [[Servicios]] — Capa de servicios reactivos, persistencia en Supabase PostgreSQL e integración Mercado Pago Point.
+- [[Controladores]] — Hooks controladores MVC que aplican estas reglas de negocio.
+- [[Modelos]] — Contratos de dominio y modelos de vista.
+- [[Chema de la Base de Datos]] — Restricciones `CHECK`, claves foráneas, políticas RLS y triggers SQL.
+
+

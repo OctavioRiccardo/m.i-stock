@@ -156,10 +156,14 @@ export function ModalDetalleVenta({
                   </DialogTitle>
                   <Badge
                     variant="outline"
-                    className="text-[10px] text-emerald-700 border-emerald-300 bg-emerald-50"
+                    className={
+                      venta.estado === 'cancelada'
+                        ? 'text-[10px] text-rose-700 border-rose-300 bg-rose-50'
+                        : 'text-[10px] text-emerald-700 border-emerald-300 bg-emerald-50'
+                    }
                   >
                     <CheckCircle className="h-3 w-3 mr-1" weight="fill" />
-                    Completada
+                    {venta.estado === 'cancelada' ? 'Cancelada' : 'Completada'}
                   </Badge>
                 </div>
                 <DialogDescription className="text-xs text-[#657373]">
@@ -389,6 +393,7 @@ export function ModalDetalleVenta({
 
                   <p className="pt-0.5 text-[10px] font-semibold text-[#1F2937]">
                     {configNegocio.mensajeEncabezadoTicket || 'Comprobante de Entrega'}
+                    {venta.estado === 'cancelada' ? ' • [COMPROBANTE ANULADO]' : ''}
                   </p>
                 </div>
 

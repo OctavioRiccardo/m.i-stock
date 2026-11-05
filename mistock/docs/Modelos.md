@@ -7,7 +7,7 @@
 
 ---
 
-##  1. ¿Cómo funciona la Capa de Modelos en M.I Stock? (Guía para Defensa Oral)
+## 📌 1. ¿Cómo funciona la Capa de Modelos en M.I Stock? (Guía para Defensa Oral)
 
 En **M.I Stock**, la capa de **Modelos (`src/models/`)** no se limita a copiar las tablas de la base de datos. Para lograr una arquitectura limpia (**Clean Architecture + MVC**) en **Next.js 16 y TypeScript**, los modelos se dividen en **dos subcapas con responsabilidades bien diferenciadas**:
 
@@ -56,7 +56,7 @@ flowchart TD
 
 ---
 
-##  2. Mapa Completo de Archivos en `src/models/`
+## 🗂️ 2. Mapa Completo de Archivos en `src/models/`
 
 ```
 mistock/src/models/
@@ -81,7 +81,7 @@ mistock/src/models/
 
 ---
 
-##  3. Modelos de Dominio (`src/models/modelos_dominio/`)
+## 🏛️ 3. Modelos de Dominio (`src/models/modelos_dominio/`)
 
 ### 3.1. `productoModel.ts` — Catálogo de Productos y Categorías
 Define los artículos comercializables y su clasificación taxonómica. Está sincronizado 1:1 con las tablas `public.categorias`, `public.productos` y el enumerado `public.unidad_medida` en PostgreSQL.
@@ -220,7 +220,7 @@ Sincronizado 1:1 con `public.usuario` (que extiende `auth.users` de Supabase Aut
 
 ---
 
-##  4. Modelos de Vista / ViewModels (`src/models/modelos_vista/`)
+## 🖥️ 4. Modelos de Vista / ViewModels (`src/models/modelos_vista/`)
 
 Los **ViewModels** moldean los datos exactamente como los necesitan los componentes React y contienen **funciones puras de cálculo** que están cubiertas por pruebas unitarias en Vitest (`src/__tests__/`).
 
@@ -257,7 +257,7 @@ Define los contratos de datos y fórmulas contables para el control de turnos de
   - `ResumenMediosPagoCierre`: Acumuladores del turno por canal (`efectivo`, `mercadoPago`, `tarjetaDebito`, `tarjetaCredito`, `transferencia`, `otro`).
   - `EstadoBalanceCaja`: `'exacto' | 'sobrante' | 'faltante'`.
   - `ArqueoCajaDTO`: Comprobante inmutable de Cierre de Caja (Reporte Z) listo para imprimir en formato térmico de 80mm.
-  - `EstadoSesionCaja`: Estado persistido de la sesión de caja activa.
+  - `EstadoSesionCaja`: Estado persistido de la sesión de caja activa (incluyendo `ventasIdsTurno?: string[]` y `ultimoCierre` sincronizados en `public.configuracion_negocio`).
 * **Funciones Puras de Conciliación Contable (Testeadas en `cierreCaja.test.ts`):**
   1. `calcularEfectivoEsperado(fondoInicial, totalVentasEfectivo)`:
      $$\text{Efectivo Esperado} = \text{Fondo Inicial} + \text{Ventas en Efectivo del Turno}$$
@@ -319,7 +319,7 @@ Ubicado en `mistock/src/lib/validaciones.ts`, establece los límites máximos y 
 
 ---
 
-##  5. Estado Inicial Limpio (Clean Slate en `src/models/mock_data/`)
+## 🧪 5. Estado Inicial Limpio (Clean Slate en `src/models/mock_data/`)
 
 Para garantizar que la aplicación trabaje exclusivamente con datos reales (tanto de **Supabase PostgreSQL** como de las operaciones reales ejecutadas en el navegador), los arreglos iniciales en `src/models/mock_data/` se encuentran **vacíos por diseño**:
 
@@ -328,7 +328,7 @@ Para garantizar que la aplicación trabaje exclusivamente con datos reales (tant
 
 ---
 
-##  Enlaces Relacionados en la Bóveda
+## 🔗 Enlaces Relacionados en la Bóveda
 - [[Controladores]] — Cómo los Custom Hooks procesan estos Modelos e inyectan el estado en las Vistas.
 - [[Vistas]] — Componentes visuales que consumen los ViewModels.
 - [[Metricas y Calculo de KPIs]] — Fórmulas matemáticas detalladas de `dashboardModel.ts`.

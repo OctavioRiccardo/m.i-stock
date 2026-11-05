@@ -22,6 +22,7 @@ import {
 import { configuracionService, useConfiguracionData } from '@/services/configuracionService';
 import { inventarioService, useInventarioData } from '@/services/inventarioService';
 import { supabaseService } from '@/services/supabaseService';
+import { VentaRecientePOS } from '@/models/modelos_vista/dashboardModel';
 import {
   VENTAS_STORAGE_KEY,
   inicializarVentasCliente,
@@ -40,6 +41,9 @@ export function useAdminConfiguracionController() {
   const [guardando, setGuardando] = useState<boolean>(false);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
   const [mensajeError, setMensajeError] = useState<string | null>(null);
+  const [ventasRemotas, setVentasRemotas] = useState<VentaRecientePOS[]>(
+    () => inicializarVentasCliente().ventasRecientes || []
+  );
 
   const [totalVentas, setTotalVentas] = useState<number>(
     () => (inicializarVentasCliente().ventasRecientes || []).length
@@ -58,6 +62,15 @@ export function useAdminConfiguracionController() {
     let mounted = true;
     void inventarioService.sincronizarConSupabase();
     void configuracionService.sincronizarConSupabase();
+    void supabaseService.fetchUltimoRespaldoCSV().then((marcaRemota) => {
+      if (!mounted || !marcaRemota) return;
+      setUltimoRespaldoCSV(marcaRemota);
+      if (typeof window !== 'undefined') {
+        try {
+          window.localStorage.setItem(ULTIMO_RESPALDO_STORAGE_KEY, marcaRemota);
+        } catch {}
+      }
+    });
 
     const sincronizarConteoVentas = () => {
       setTotalVentas((inicializarVentasCliente().ventasRecientes || []).length);
@@ -73,6 +86,7 @@ export function useAdminConfiguracionController() {
       .then((res) => {
         if (!mounted || !res.ok) return;
         const actualizado = recalcularVentasStore(res.items);
+        setVentasRemotas(res.items);
         setTotalVentas(res.items.length);
         if (typeof window !== 'undefined') {
           try {
@@ -98,6 +112,7 @@ export function useAdminConfiguracionController() {
       minute: '2-digit',
     })}`;
     setUltimoRespaldoCSV(marca);
+    void supabaseService.saveUltimoRespaldoCSV(marca);
     if (typeof window !== 'undefined') {
       try {
         window.localStorage.setItem(ULTIMO_RESPALDO_STORAGE_KEY, marca);
@@ -204,7 +219,8 @@ export function useAdminConfiguracionController() {
   const exportarVentasCSV = () => {
     try {
       const headers = ['Comprobante', 'Fecha y Hora', 'Vendedor', 'Método Pago', 'Cantidad Ítems', 'Total Facturado', 'Estado'];
-      const ventasReales = inicializarVentasCliente().ventasRecientes || [];
+      const ventasReales =
+        ventasRemotas.length > 0 ? ventasRemotas : inicializarVentasCliente().ventasRecientes || [];
 
       const rows = ventasReales.map((v) => {
         const fechaHora = `${v.fecha || new Date().toLocaleDateString('es-AR')} ${v.hora || ''}`.trim();
