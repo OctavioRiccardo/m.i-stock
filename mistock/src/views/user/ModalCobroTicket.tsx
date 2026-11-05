@@ -45,7 +45,11 @@ import { ItemCarritoPOS, VentaRecientePOS } from '@/models/modelos_vista/dashboa
 import { MetodoPago } from '@/models/modelos_dominio/ventaModel';
 import { useConfiguracionData } from '@/services/configuracionService';
 import { motion, AnimatePresence } from 'motion/react';
-import { MAX_PRECIO_DB } from '@/lib/validaciones';
+import {
+  MAX_PRECIO_DB,
+  parsearDecimalSeguro,
+  sanitizarDecimalInput,
+} from '@/lib/validaciones';
 
 export interface ModalCobroTicketProps {
   isOpen: boolean;
@@ -246,7 +250,7 @@ export function ModalCobroTicket({
   }, [intentActivo, estadoPoint]);
 
   // Cálculos de vuelto para pago en efectivo
-  const montoRecibidoNum = parseFloat(montoRecibido) || 0;
+  const montoRecibidoNum = parsearDecimalSeguro(montoRecibido);
   const vuelto = Math.max(0, montoRecibidoNum - total);
   const faltante = Math.max(0, total - montoRecibidoNum);
   const esMontoSuficiente =
@@ -434,13 +438,11 @@ export function ModalCobroTicket({
                   {monedaSimbolo}
                 </span>
                 <Input
-                  type="number"
-                  step="any"
-                  min={0}
-                  max={MAX_PRECIO_DB}
+                  type="text"
+                  inputMode="decimal"
                   placeholder="0.00"
                   value={montoRecibido}
-                  onChange={(e) => setMontoRecibido(e.target.value)}
+                  onChange={(e) => setMontoRecibido(sanitizarDecimalInput(e.target.value))}
                   className="pl-8 text-base font-bold h-11 bg-white border-[#E8E6DF] focus-visible:ring-emerald-600"
                   autoFocus
                 />

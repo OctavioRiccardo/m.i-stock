@@ -1225,6 +1225,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                   <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#657373]" />
                   <Input
                     type="text"
+                    maxLength={120}
                     placeholder="Buscar por comprobante o vendedor..."
                     value={busquedaVentas}
                     onChange={(e) => cambiarBusquedaVentas(e.target.value)}

@@ -28,7 +28,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { LIMITES_TEXTO, MAX_PRECIO_DB } from '@/lib/validaciones';
+import {
+  LIMITES_TEXTO,
+  MAX_PRECIO_DB,
+  parsearDecimalSeguro,
+  sanitizarDecimalInput,
+} from '@/lib/validaciones';
 import { useUserDashboardController } from '@/controllers/userControllers/userDashboardController';
 
 interface ModalArqueoCajaProps {
@@ -68,7 +73,7 @@ export function ModalArqueoCaja({
     }
   }, [isOpen, fondoInicial]);
 
-  const parsedContado = parseFloat(efectivoContado);
+  const parsedContado = parsearDecimalSeguro(efectivoContado);
   const tieneTextoConteo = efectivoContado.trim().length > 0;
   const esConteoNegativo = tieneTextoConteo && Number.isFinite(parsedContado) && parsedContado < 0;
   const esConteoExcesivo =
@@ -83,7 +88,8 @@ export function ModalArqueoCaja({
   const diferencia = numEfectivoContado - efectivoEsperado;
 
   const handleGuardarFondo = () => {
-    const val = parseFloat(fondoInput);
+    if (!fondoInput.trim()) return;
+    const val = parsearDecimalSeguro(fondoInput);
     if (Number.isFinite(val) && val >= 0 && val <= MAX_PRECIO_DB) {
       setFondoInicial(val);
       setEditandoFondo(false);
@@ -173,12 +179,10 @@ export function ModalArqueoCaja({
               {editandoFondo ? (
                 <div className="flex items-center gap-1">
                   <Input
-                    type="number"
-                    min={0}
-                    max={MAX_PRECIO_DB}
-                    step="0.01"
+                    type="text"
+                    inputMode="decimal"
                     value={fondoInput}
-                    onChange={(e) => setFondoInput(e.target.value)}
+                    onChange={(e) => setFondoInput(sanitizarDecimalInput(e.target.value))}
                     className="w-24 h-6 text-xs font-bold px-1.5 py-0 bg-white"
                     autoFocus
                   />
@@ -243,13 +247,11 @@ export function ModalArqueoCaja({
                 {monedaSimbolo}
               </span>
               <Input
-                type="number"
-                min={0}
-                max={MAX_PRECIO_DB}
-                step="0.01"
-                placeholder="0"
+                type="text"
+                inputMode="decimal"
+                placeholder="0.00"
                 value={efectivoContado}
-                onChange={(e) => setEfectivoContado(e.target.value)}
+                onChange={(e) => setEfectivoContado(sanitizarDecimalInput(e.target.value))}
                 className="pl-8 text-lg font-black text-[#1C2424] h-12 bg-white border-[#2A7A78]/40 focus:border-[#2A7A78]"
                 autoFocus
               />

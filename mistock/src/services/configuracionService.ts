@@ -32,6 +32,7 @@ import {
   acotarEntero,
   formatearCuitInput,
   sanitizarCodigoIsoInput,
+  sanitizarSimboloMonedaInput,
   sanitizarTelefonoInput,
 } from '@/lib/validaciones';
 import { supabaseService } from './supabaseService';
@@ -253,10 +254,13 @@ export const configuracionService = {
       sanitizado.telefono = sanitizarTelefonoInput(sanitizado.telefono);
     }
     if (sanitizado.emailContacto !== undefined) {
-      sanitizado.emailContacto = sanitizado.emailContacto.trim().slice(0, LIMITES_TEXTO.EMAIL_MAX);
+      sanitizado.emailContacto = sanitizado.emailContacto
+        .replace(/\s+/g, '')
+        .toLowerCase()
+        .slice(0, LIMITES_TEXTO.EMAIL_MAX);
     }
     if (sanitizado.monedaSimbolo !== undefined) {
-      sanitizado.monedaSimbolo = sanitizado.monedaSimbolo.trim().slice(0, 4);
+      sanitizado.monedaSimbolo = sanitizarSimboloMonedaInput(sanitizado.monedaSimbolo);
     }
     if (sanitizado.monedaCodigo !== undefined) {
       sanitizado.monedaCodigo = sanitizarCodigoIsoInput(sanitizado.monedaCodigo);

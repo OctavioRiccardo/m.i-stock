@@ -85,7 +85,9 @@ export function LoginFormView({ loginController }: LoginFormViewProps) {
                   maxLength={LIMITES_TEXTO.EMAIL_MAX}
                   placeholder="usuario@ejemplo.com"
                   value={values.email}
-                  onChange={(e) => setFieldValue('email', e.target.value)}
+                  onChange={(e) =>
+                    setFieldValue('email', e.target.value.replace(/\s+/g, '').toLowerCase())
+                  }
                   error={fieldErrors.email}
                   className="pl-9"
                   required

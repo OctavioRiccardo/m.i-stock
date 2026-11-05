@@ -30,7 +30,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { LIMITES_TEXTO, MAX_PRECIO_DB } from '@/lib/validaciones';
+import {
+  LIMITES_TEXTO,
+  MAX_PRECIO_DB,
+  parsearDecimalSeguro,
+  sanitizarDecimalInput,
+} from '@/lib/validaciones';
 import { useUserDashboardController } from '@/controllers/userControllers/userDashboardController';
 
 interface ModalAperturaCajaProps {
@@ -84,7 +89,11 @@ export function ModalAperturaCaja({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const parsed = parseFloat(montoInput);
+    if (!montoInput.trim()) {
+      setErrorInput('El fondo inicial debe ser un importe numérico mayor o igual a 0.');
+      return;
+    }
+    const parsed = parsearDecimalSeguro(montoInput);
     if (!Number.isFinite(parsed) || parsed < 0) {
       setErrorInput('El fondo inicial debe ser un importe numérico mayor o igual a 0.');
       return;
@@ -157,14 +166,12 @@ export function ModalAperturaCaja({
                 {monedaSimbolo}
               </span>
               <Input
-                type="number"
-                step="0.01"
-                min={0}
-                max={MAX_PRECIO_DB}
-                placeholder="0"
+                type="text"
+                inputMode="decimal"
+                placeholder="0.00"
                 value={montoInput}
                 onChange={(e) => {
-                  setMontoInput(e.target.value);
+                  setMontoInput(sanitizarDecimalInput(e.target.value));
                   setErrorInput(null);
                 }}
                 className="pl-9 text-lg font-black h-11 bg-white border-[#E8E6DF] text-[#1C2424] focus-visible:ring-emerald-600 shadow-2xs"
@@ -185,7 +192,7 @@ export function ModalAperturaCaja({
                   type="button"
                   onClick={() => handleSeleccionarAtajo(valor)}
                   className={`text-xs px-2.5 py-1 rounded-md border font-mono font-medium transition-all cursor-pointer ${
-                    parseFloat(montoInput) === valor
+                    montoInput !== '' && parsearDecimalSeguro(montoInput) === valor
                       ? 'bg-emerald-50 border-emerald-500 text-emerald-900 font-bold shadow-2xs'
                       : 'bg-white border-[#E8E6DF] text-[#657373] hover:text-[#1C2424] hover:bg-[#F8F7F2]'
                   }`}

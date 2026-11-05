@@ -52,7 +52,11 @@ import {
   EstadoUsuario,
 } from '@/models/modelos_dominio/userModel';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { LIMITES_TEXTO, sanitizarTelefonoInput } from '@/lib/validaciones';
+import {
+  LIMITES_TEXTO,
+  sanitizarNombrePersonaInput,
+  sanitizarTelefonoInput,
+} from '@/lib/validaciones';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -706,7 +710,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                   minLength={LIMITES_TEXTO.NOMBRE_USUARIO_MIN}
                   maxLength={LIMITES_TEXTO.NOMBRE_USUARIO_MAX}
                   value={nuevoNombre}
-                  onChange={(e) => setNuevoNombre(e.target.value)}
+                  onChange={(e) => setNuevoNombre(sanitizarNombrePersonaInput(e.target.value))}
                 />
               </div>
 
@@ -721,7 +725,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                   autoComplete="email"
                   maxLength={LIMITES_TEXTO.EMAIL_MAX}
                   value={nuevoEmail}
-                  onChange={(e) => setNuevoEmail(e.target.value)}
+                  onChange={(e) => setNuevoEmail(e.target.value.replace(/\s+/g, '').toLowerCase())}
                 />
               </div>
 
@@ -868,7 +872,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                     minLength={LIMITES_TEXTO.NOMBRE_USUARIO_MIN}
                     maxLength={LIMITES_TEXTO.NOMBRE_USUARIO_MAX}
                     value={editNombre}
-                    onChange={(e) => setEditNombre(e.target.value)}
+                    onChange={(e) => setEditNombre(sanitizarNombrePersonaInput(e.target.value))}
                   />
                 </div>
 

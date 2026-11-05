@@ -11,6 +11,13 @@ import {
   esCuitValido,
   esSkuValido,
   sanitizarCodigoIsoInput,
+  sanitizarSimboloMonedaInput,
+  sanitizarDecimalInput,
+  parsearDecimalSeguro,
+  sanitizarEnteroInput,
+  sanitizarSkuInput,
+  sanitizarNombrePersonaInput,
+  sanitizarAliasTransferenciaInput,
   acotarEntero,
 } from '@/lib/validaciones';
 
@@ -70,5 +77,56 @@ describe('Utilidades de Validación y Sanitización (validaciones.ts)', () => {
     expect(acotarEntero(-10, 1, 365, 30)).toBe(1);
     expect(acotarEntero(999, 1, 365, 30)).toBe(365);
     expect(acotarEntero(Number.NaN, 1, 365, 30)).toBe(30);
+  });
+
+  it('sanitizarDecimalInput normaliza comas a puntos, bloquea símbolos y limita a 2 decimales', () => {
+    expect(sanitizarDecimalInput('1500,50')).toBe('1500.50');
+    expect(sanitizarDecimalInput('1500.')).toBe('1500.');
+    expect(sanitizarDecimalInput('1500,')).toBe('1500.');
+    expect(sanitizarDecimalInput(',75')).toBe('0.75');
+    expect(sanitizarDecimalInput('.5')).toBe('0.5');
+    expect(sanitizarDecimalInput('120..456')).toBe('120.45');
+    expect(sanitizarDecimalInput('120,4,9')).toBe('120.49');
+    expect(sanitizarDecimalInput('-$150.25e')).toBe('150.25');
+    expect(sanitizarDecimalInput('007')).toBe('7');
+    expect(sanitizarDecimalInput('0.05')).toBe('0.05');
+    expect(sanitizarDecimalInput('')).toBe('');
+  });
+
+  it('parsearDecimalSeguro convierte texto con coma o punto a número acotado a MAX_PRECIO_DB', () => {
+    expect(parsearDecimalSeguro('2200,50')).toBe(2200.5);
+    expect(parsearDecimalSeguro('150.')).toBe(150);
+    expect(parsearDecimalSeguro('')).toBe(0);
+    expect(parsearDecimalSeguro('abc')).toBe(0);
+  });
+
+  it('sanitizarEnteroInput elimina comas, puntos y signos y acota a maxValor', () => {
+    expect(sanitizarEnteroInput('125')).toBe('125');
+    expect(sanitizarEnteroInput('12,5')).toBe('125');
+    expect(sanitizarEnteroInput('-40e')).toBe('40');
+    expect(sanitizarEnteroInput('009')).toBe('9');
+    expect(sanitizarEnteroInput('0')).toBe('0');
+    expect(sanitizarEnteroInput('999', 28)).toBe('28');
+    expect(sanitizarEnteroInput('')).toBe('');
+  });
+
+  it('sanitizarSkuInput reemplaza espacios por guiones y elimina símbolos no permitidos', () => {
+    expect(sanitizarSkuInput('BEB 101,;$@#')).toBe('BEB-101');
+    expect(sanitizarSkuInput('7790040/A_1.2')).toBe('7790040/A_1.2');
+  });
+
+  it('sanitizarSimboloMonedaInput bloquea dígitos, comas, puntos y signos matemáticos', () => {
+    expect(sanitizarSimboloMonedaInput('$123.,;-+')).toBe('$');
+    expect(sanitizarSimboloMonedaInput('US$ 50')).toBe('US$');
+    expect(sanitizarSimboloMonedaInput('€')).toBe('€');
+  });
+
+  it('sanitizarNombrePersonaInput permite letras, acentos y apóstrofes pero bloquea números y símbolos', () => {
+    expect(sanitizarNombrePersonaInput('María  José 123 @$%')).toBe('María José ');
+    expect(sanitizarNombrePersonaInput("Juan P. O'Connor-Gómez")).toBe("Juan P. O'Connor-Gómez");
+  });
+
+  it('sanitizarAliasTransferenciaInput conserva solo letras, números, puntos y guiones en minúscula', () => {
+    expect(sanitizarAliasTransferenciaInput('Mi.Tienda.MP, $123!')).toBe('mi.tienda.mp123');
   });
 });

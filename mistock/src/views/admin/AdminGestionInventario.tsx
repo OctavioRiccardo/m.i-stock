@@ -47,7 +47,16 @@ import {
   valoresInicialesCargaProducto,
 } from '@/models/modelos_vista/cargaProductoModel';
 import { Producto, UnidadMedida } from '@/models/modelos_dominio/productoModel';
-import { LIMITES_TEXTO, MAX_PRECIO_DB, MAX_STOCK_DB, esSkuValido } from '@/lib/validaciones';
+import {
+  LIMITES_TEXTO,
+  MAX_PRECIO_DB,
+  MAX_STOCK_DB,
+  esSkuValido,
+  sanitizarDecimalInput,
+  parsearDecimalSeguro,
+  sanitizarEnteroInput,
+  sanitizarSkuInput,
+} from '@/lib/validaciones';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -164,10 +173,18 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
   // ==========================================
   // ESTADOS: FORMULARIO DE ALTA
   // ==========================================
+  const umbralDefault =
+    config?.inventario?.umbralMinimoPorDefecto ?? valoresInicialesCargaProducto.stockMinimo;
   const [formData, setFormData] = useState<FormularioCargaProducto>(() => ({
     ...valoresInicialesCargaProducto,
-    stockMinimo: config?.inventario?.umbralMinimoPorDefecto ?? valoresInicialesCargaProducto.stockMinimo,
+    stockMinimo: umbralDefault,
   }));
+  const [precioCostoInput, setPrecioCostoInput] = useState<string>('');
+  const [precioVentaInput, setPrecioVentaInput] = useState<string>('');
+  const [stockInicialInput, setStockInicialInput] = useState<string>(
+    String(valoresInicialesCargaProducto.stockInicial)
+  );
+  const [stockMinimoInput, setStockMinimoInput] = useState<string>(String(umbralDefault));
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof FormularioCargaProducto, string>>>({});
 
   const setFieldValue = <K extends keyof FormularioCargaProducto>(
@@ -216,6 +233,10 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
     stockMinimo: 0,
     descripcion: '',
   });
+  const [editPrecioCostoInput, setEditPrecioCostoInput] = useState<string>('');
+  const [editPrecioVentaInput, setEditPrecioVentaInput] = useState<string>('');
+  const [editStockActualInput, setEditStockActualInput] = useState<string>('');
+  const [editStockMinimoInput, setEditStockMinimoInput] = useState<string>('');
 
   // Rentabilidad calculada en tiempo real (Edición)
   const costoEdicion = Number(formEdicion.precioCosto) || 0;
@@ -305,11 +326,17 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
     const res = guardarProducto(formData);
     if (res.exito) {
       const catPrevia = formData.categoriaId;
+      const nuevoUmbral =
+        config?.inventario?.umbralMinimoPorDefecto ?? valoresInicialesCargaProducto.stockMinimo;
       setFormData({
         ...valoresInicialesCargaProducto,
         categoriaId: catPrevia,
-        stockMinimo: config?.inventario?.umbralMinimoPorDefecto ?? valoresInicialesCargaProducto.stockMinimo,
+        stockMinimo: nuevoUmbral,
       });
+      setPrecioCostoInput('');
+      setPrecioVentaInput('');
+      setStockInicialInput(String(valoresInicialesCargaProducto.stockInicial));
+      setStockMinimoInput(String(nuevoUmbral));
       setFieldErrors({});
     }
   };
@@ -334,6 +361,10 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
       stockMinimo: prod.stockMinimo,
       descripcion: prod.descripcion || '',
     });
+    setEditPrecioCostoInput(String(prod.precioCosto));
+    setEditPrecioVentaInput(String(prod.precioVenta));
+    setEditStockActualInput(String(prod.stockActual));
+    setEditStockMinimoInput(String(prod.stockMinimo));
     setModalEditarOpened(true);
   };
 
@@ -1100,7 +1131,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                           minLength={LIMITES_TEXTO.SKU_MIN}
                           maxLength={LIMITES_TEXTO.SKU_MAX}
                           value={formData.codigo}
-                          onChange={(e) => setFieldValue('codigo', e.target.value)}
+                          onChange={(e) => setFieldValue('codigo', sanitizarSkuInput(e.target.value))}
                           error={fieldErrors.codigo}
                           className="pl-9"
                         />
@@ -1118,7 +1149,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                         minLength={LIMITES_TEXTO.NOMBRE_PRODUCTO_MIN}
                         maxLength={LIMITES_TEXTO.NOMBRE_PRODUCTO_MAX}
                         value={formData.nombre}
-                        onChange={(e) => setFieldValue('nombre', e.target.value)}
+                        onChange={(e) => setFieldValue('nombre', e.target.value.replace(/\s{2,}/g, ' '))}
                         error={fieldErrors.nombre}
                       />
                     </div>
@@ -1168,26 +1199,30 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                         <div className="space-y-1.5">
                           <label className="text-xs font-medium text-[#1C2424]">Precio Costo ($)</label>
                           <Input
-                            type="number"
-                            min="0"
-                            step="any"
-                            placeholder="0"
-                            max={MAX_PRECIO_DB}
-                            value={formData.precioCosto || ''}
-                            onChange={(e) => setFieldValue('precioCosto', parseFloat(e.target.value) || 0)}
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="0.00"
+                            value={precioCostoInput}
+                            onChange={(e) => {
+                              const limpio = sanitizarDecimalInput(e.target.value);
+                              setPrecioCostoInput(limpio);
+                              setFieldValue('precioCosto', parsearDecimalSeguro(limpio));
+                            }}
                           />
                         </div>
 
                         <div className="space-y-1.5">
                           <label className="text-xs font-medium text-[#1C2424]">Precio Venta ($) *</label>
                           <Input
-                            type="number"
-                            min="0"
-                            step="any"
-                            placeholder="0"
-                            max={MAX_PRECIO_DB}
-                            value={formData.precioVenta || ''}
-                            onChange={(e) => setFieldValue('precioVenta', parseFloat(e.target.value) || 0)}
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="0.00"
+                            value={precioVentaInput}
+                            onChange={(e) => {
+                              const limpio = sanitizarDecimalInput(e.target.value);
+                              setPrecioVentaInput(limpio);
+                              setFieldValue('precioVenta', parsearDecimalSeguro(limpio));
+                            }}
                             error={fieldErrors.precioVenta}
                           />
                         </div>
@@ -1227,13 +1262,18 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                           <div className="space-y-1.5">
                             <label className="text-xs font-medium text-[#1C2424]">Stock Inicial *</label>
                             <Input
-                              type="number"
-                              min="0"
-                              placeholder="1"
-                              max={MAX_STOCK_DB}
-                              step={1}
-                              value={formData.stockInicial}
-                              onChange={(e) => setFieldValue('stockInicial', parseInt(e.target.value) || 0)}
+                              type="text"
+                              inputMode="numeric"
+                              placeholder="0"
+                              value={stockInicialInput}
+                              onChange={(e) => {
+                                const limpio = sanitizarEnteroInput(e.target.value, MAX_STOCK_DB);
+                                setStockInicialInput(limpio);
+                                setFieldValue('stockInicial', limpio === '' ? 0 : parseInt(limpio, 10));
+                              }}
+                              onBlur={() => {
+                                if (stockInicialInput === '') setStockInicialInput('0');
+                              }}
                               error={fieldErrors.stockInicial}
                             />
                           </div>
@@ -1241,13 +1281,18 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                           <div className="space-y-1.5">
                             <label className="text-xs font-medium text-[#1C2424]">Stock Mínimo (Alerta) *</label>
                             <Input
-                              type="number"
-                              min="0"
+                              type="text"
+                              inputMode="numeric"
                               placeholder="5"
-                              max={MAX_STOCK_DB}
-                              step={1}
-                              value={formData.stockMinimo}
-                              onChange={(e) => setFieldValue('stockMinimo', parseInt(e.target.value) || 0)}
+                              value={stockMinimoInput}
+                              onChange={(e) => {
+                                const limpio = sanitizarEnteroInput(e.target.value, MAX_STOCK_DB);
+                                setStockMinimoInput(limpio);
+                                setFieldValue('stockMinimo', limpio === '' ? 0 : parseInt(limpio, 10));
+                              }}
+                              onBlur={() => {
+                                if (stockMinimoInput === '') setStockMinimoInput('0');
+                              }}
                             />
                           </div>
                         </div>
@@ -1265,14 +1310,20 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() =>
+                      onClick={() => {
+                        const nuevoUmbral =
+                          config?.inventario?.umbralMinimoPorDefecto ??
+                          valoresInicialesCargaProducto.stockMinimo;
                         setFormData({
                           ...valoresInicialesCargaProducto,
-                          stockMinimo:
-                            config?.inventario?.umbralMinimoPorDefecto ??
-                            valoresInicialesCargaProducto.stockMinimo,
-                        })
-                      }
+                          stockMinimo: nuevoUmbral,
+                        });
+                        setPrecioCostoInput('');
+                        setPrecioVentaInput('');
+                        setStockInicialInput(String(valoresInicialesCargaProducto.stockInicial));
+                        setStockMinimoInput(String(nuevoUmbral));
+                        setFieldErrors({});
+                      }}
                       disabled={loading}
                     >
                       Limpiar Formulario
@@ -1317,7 +1368,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                   minLength={LIMITES_TEXTO.NOMBRE_CATEGORIA_MIN}
                   maxLength={LIMITES_TEXTO.NOMBRE_CATEGORIA_MAX}
                   value={nuevaCatNombre}
-                  onChange={(e) => setNuevaCatNombre(e.target.value)}
+                  onChange={(e) => setNuevaCatNombre(e.target.value.replace(/\s{2,}/g, ' '))}
                   autoFocus
                 />
               </div>
@@ -1431,7 +1482,12 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                       minLength={LIMITES_TEXTO.NOMBRE_PRODUCTO_MIN}
                       maxLength={LIMITES_TEXTO.NOMBRE_PRODUCTO_MAX}
                       value={formEdicion.nombre}
-                      onChange={(e) => setFormEdicion((prev) => ({ ...prev, nombre: e.target.value }))}
+                      onChange={(e) =>
+                        setFormEdicion((prev) => ({
+                          ...prev,
+                          nombre: e.target.value.replace(/\s{2,}/g, ' '),
+                        }))
+                      }
                       required
                     />
                   </div>
@@ -1444,7 +1500,12 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                       minLength={LIMITES_TEXTO.SKU_MIN}
                       maxLength={LIMITES_TEXTO.SKU_MAX}
                       value={formEdicion.codigo}
-                      onChange={(e) => setFormEdicion((prev) => ({ ...prev, codigo: e.target.value }))}
+                      onChange={(e) =>
+                        setFormEdicion((prev) => ({
+                          ...prev,
+                          codigo: sanitizarSkuInput(e.target.value),
+                        }))
+                      }
                       required
                     />
                   </div>
@@ -1471,14 +1532,18 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                       Precio de Costo ($)
                     </label>
                     <Input
-                      type="number"
-                      min="0"
-                      step="any"
-                      max={MAX_PRECIO_DB}
-                      value={formEdicion.precioCosto}
-                      onChange={(e) =>
-                        setFormEdicion((prev) => ({ ...prev, precioCosto: parseFloat(e.target.value) || 0 }))
-                      }
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
+                      value={editPrecioCostoInput}
+                      onChange={(e) => {
+                        const limpio = sanitizarDecimalInput(e.target.value);
+                        setEditPrecioCostoInput(limpio);
+                        setFormEdicion((prev) => ({
+                          ...prev,
+                          precioCosto: parsearDecimalSeguro(limpio),
+                        }));
+                      }}
                     />
                   </div>
 
@@ -1487,14 +1552,18 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                       Precio de Venta ($) *
                     </label>
                     <Input
-                      type="number"
-                      min="1"
-                      step="any"
-                      max={MAX_PRECIO_DB}
-                      value={formEdicion.precioVenta}
-                      onChange={(e) =>
-                        setFormEdicion((prev) => ({ ...prev, precioVenta: parseFloat(e.target.value) || 0 }))
-                      }
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
+                      value={editPrecioVentaInput}
+                      onChange={(e) => {
+                        const limpio = sanitizarDecimalInput(e.target.value);
+                        setEditPrecioVentaInput(limpio);
+                        setFormEdicion((prev) => ({
+                          ...prev,
+                          precioVenta: parsearDecimalSeguro(limpio),
+                        }));
+                      }}
                       required
                     />
                   </div>
@@ -1523,14 +1592,21 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                       Stock Físico Actual *
                     </label>
                     <Input
-                      type="number"
-                      min="0"
-                      max={MAX_STOCK_DB}
-                      step={1}
-                      value={formEdicion.stockActual}
-                      onChange={(e) =>
-                        setFormEdicion((prev) => ({ ...prev, stockActual: parseInt(e.target.value) || 0 }))
-                      }
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="0"
+                      value={editStockActualInput}
+                      onChange={(e) => {
+                        const limpio = sanitizarEnteroInput(e.target.value, MAX_STOCK_DB);
+                        setEditStockActualInput(limpio);
+                        setFormEdicion((prev) => ({
+                          ...prev,
+                          stockActual: limpio === '' ? 0 : parseInt(limpio, 10),
+                        }));
+                      }}
+                      onBlur={() => {
+                        if (editStockActualInput === '') setEditStockActualInput('0');
+                      }}
                       required
                     />
                   </div>
@@ -1540,14 +1616,21 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                       Stock Mínimo (Alerta)
                     </label>
                     <Input
-                      type="number"
-                      min="0"
-                      max={MAX_STOCK_DB}
-                      step={1}
-                      value={formEdicion.stockMinimo}
-                      onChange={(e) =>
-                        setFormEdicion((prev) => ({ ...prev, stockMinimo: parseInt(e.target.value) || 0 }))
-                      }
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="5"
+                      value={editStockMinimoInput}
+                      onChange={(e) => {
+                        const limpio = sanitizarEnteroInput(e.target.value, MAX_STOCK_DB);
+                        setEditStockMinimoInput(limpio);
+                        setFormEdicion((prev) => ({
+                          ...prev,
+                          stockMinimo: limpio === '' ? 0 : parseInt(limpio, 10),
+                        }));
+                      }}
+                      onBlur={() => {
+                        if (editStockMinimoInput === '') setEditStockMinimoInput('0');
+                      }}
                     />
                   </div>
 

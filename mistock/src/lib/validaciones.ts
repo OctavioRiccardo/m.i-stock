@@ -111,6 +111,117 @@ export function sanitizarCodigoIsoInput(raw: string): string {
 }
 
 /**
+ * Sanitiza el símbolo monetario (ej. `$`, `US$`, `€`, `R$`), bloqueando números,
+ * comas, puntos, signos negativos y espacios.
+ */
+export function sanitizarSimboloMonedaInput(raw: string): string {
+  return raw
+    .replace(/[0-9.,;\-+_=@#%^&*()[\]{}|\\<>?~`"]/g, '')
+    .replace(/\s+/g, '')
+    .slice(0, 4);
+}
+
+/**
+ * Sanitiza en tiempo real un input numérico decimal (precios, montos en efectivo):
+ * - Convierte comas `,` en puntos `.` para soportar teclado regional (`es-AR`).
+ * - Bloquea signos negativos `-`, `+`, notación científica `e`, letras y símbolos.
+ * - Permite a lo sumo un separador decimal y hasta `maxDecimales` dígitos fraccionarios.
+ * - Limita la parte entera a 8 dígitos (`MAX_PRECIO_DB = 99.999.999,99`).
+ */
+export function sanitizarDecimalInput(raw: string, maxDecimales = 2): string {
+  if (!raw) return '';
+  const conPuntos = raw.replace(/,/g, '.').replace(/[^0-9.]/g, '');
+  if (!conPuntos) return '';
+
+  const primerPuntoIdx = conPuntos.indexOf('.');
+  let parteEntera = primerPuntoIdx === -1 ? conPuntos : conPuntos.slice(0, primerPuntoIdx);
+  const tienePunto = primerPuntoIdx !== -1;
+  const parteDecimal = tienePunto
+    ? conPuntos.slice(primerPuntoIdx + 1).replace(/\./g, '').slice(0, maxDecimales)
+    : '';
+
+  if (parteEntera === '' && tienePunto) {
+    parteEntera = '0';
+  }
+
+  if (parteEntera.length > 1 && parteEntera.startsWith('0')) {
+    parteEntera = parteEntera.replace(/^0+/, '') || '0';
+  }
+
+  parteEntera = parteEntera.slice(0, 8);
+
+  return tienePunto ? `${parteEntera}.${parteDecimal}` : parteEntera;
+}
+
+/**
+ * Convierte de forma segura un texto o número decimal (con coma o punto) en un `number`
+ * acotado entre `0` y `MAX_PRECIO_DB`.
+ */
+export function parsearDecimalSeguro(raw: string | number): number {
+  if (typeof raw === 'number') {
+    return Number.isFinite(raw) && raw >= 0 ? Math.min(raw, MAX_PRECIO_DB) : 0;
+  }
+  const limpio = sanitizarDecimalInput(raw);
+  if (!limpio) return 0;
+  const num = parseFloat(limpio);
+  if (!Number.isFinite(num) || num < 0) return 0;
+  return Math.min(num, MAX_PRECIO_DB);
+}
+
+/**
+ * Sanitiza en tiempo real un input de número entero positivo (stock, punto de venta, caja):
+ * - Elimina comas, puntos, signos `-`/`+`, letra `e` y cualquier símbolo no numérico.
+ * - Normaliza ceros a la izquierda innecesarios y acota al `maxValor` indicado.
+ */
+export function sanitizarEnteroInput(raw: string, maxValor: number = MAX_STOCK_DB): string {
+  if (!raw) return '';
+  let soloDigitos = raw.replace(/\D/g, '');
+  if (!soloDigitos) return '';
+  if (soloDigitos.length > 1 && soloDigitos.startsWith('0')) {
+    soloDigitos = soloDigitos.replace(/^0+/, '') || '0';
+  }
+  const valorNumerico = parseInt(soloDigitos, 10);
+  if (!Number.isFinite(valorNumerico)) return '';
+  if (valorNumerico > maxValor) {
+    return String(maxValor);
+  }
+  return String(valorNumerico);
+}
+
+/**
+ * Sanitiza en tiempo real un código SKU / Código de Barras:
+ * - Convierte espacios en guiones `-` y elimina símbolos inválidos (comas, `;`, `$`, `@`, etc.).
+ */
+export function sanitizarSkuInput(raw: string): string {
+  return raw
+    .replace(/\s+/g, '-')
+    .replace(/[^A-Za-z0-9._\-/]/g, '')
+    .slice(0, LIMITES_TEXTO.SKU_MAX);
+}
+
+/**
+ * Sanitiza en tiempo real el nombre de una persona / colaborador:
+ * - Permite letras (incluyendo tildes y diéresis), espacios, puntos, apóstrofes y guiones.
+ * - Bloquea números y símbolos especiales (`@#$%^&*()`, comas, etc.).
+ */
+export function sanitizarNombrePersonaInput(raw: string): string {
+  return raw
+    .replace(/[^a-zA-ZÁÉÍÓÚáéíóúÀÈÌÒÙàèìòùÂÊÎÔÛâêîôûÄËÏÖÜäëïöüÑñÇç\s.'\-]/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .slice(0, LIMITES_TEXTO.NOMBRE_USUARIO_MAX);
+}
+
+/**
+ * Sanitiza un alias bancario / billetera virtual (solo letras, números, puntos y guiones, sin espacios ni comas).
+ */
+export function sanitizarAliasTransferenciaInput(raw: string): string {
+  return raw
+    .replace(/[^a-zA-Z0-9.\-]/g, '')
+    .toLowerCase()
+    .slice(0, 40);
+}
+
+/**
  * Acota un número entero dentro de `[min, max]` con valor de respaldo si es `NaN`.
  */
 export function acotarEntero(valor: number, min: number, max: number, fallback: number): number {

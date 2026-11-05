@@ -57,7 +57,17 @@ import {
   InicioSemana,
 } from '@/models/modelos_vista/configuracionModel';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { LIMITES_TEXTO, esCuitValido, esEmailValido, esTelefonoValido } from '@/lib/validaciones';
+import {
+  LIMITES_TEXTO,
+  esCuitValido,
+  esEmailValido,
+  esTelefonoValido,
+  sanitizarCodigoIsoInput,
+  sanitizarEnteroInput,
+  sanitizarSimboloMonedaInput,
+  sanitizarTelefonoInput,
+  formatearCuitInput,
+} from '@/lib/validaciones';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -135,6 +145,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
   } = controller;
 
   const [modalRestablecerAbierto, setModalRestablecerAbierto] = useState<boolean>(false);
+  const [campoEditandoVacio, setCampoEditandoVacio] = useState<string | null>(null);
 
   const pestañas: Array<{
     id: PestañaConfiguracion;
@@ -293,7 +304,11 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                           }
                         }}
                         value={config.negocio.nombreComercial}
-                        onChange={(e) => actualizarNegocio({ nombreComercial: e.target.value })}
+                        onChange={(e) =>
+                          actualizarNegocio({
+                            nombreComercial: e.target.value.replace(/\s{2,}/g, ' '),
+                          })
+                        }
                         placeholder="Ej: M.I Stock"
                         className="h-9 text-xs"
                       />
@@ -305,7 +320,11 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                       <Input
                         maxLength={LIMITES_TEXTO.RAZON_SOCIAL_MAX}
                         value={config.negocio.razonSocial}
-                        onChange={(e) => actualizarNegocio({ razonSocial: e.target.value })}
+                        onChange={(e) =>
+                          actualizarNegocio({
+                            razonSocial: e.target.value.replace(/\s{2,}/g, ' '),
+                          })
+                        }
                         placeholder="Ej: M.I Stock Almacén Comercial"
                         className="h-9 text-xs"
                       />
@@ -327,7 +346,9 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                             : undefined
                         }
                         value={config.negocio.cuit}
-                        onChange={(e) => actualizarNegocio({ cuit: e.target.value })}
+                        onChange={(e) =>
+                          actualizarNegocio({ cuit: formatearCuitInput(e.target.value) })
+                        }
                         placeholder="30-71829340-9"
                         className="h-9 text-xs"
                       />
@@ -358,7 +379,11 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                           }
                         }}
                         value={config.negocio.monedaSimbolo}
-                        onChange={(e) => actualizarNegocio({ monedaSimbolo: e.target.value })}
+                        onChange={(e) =>
+                          actualizarNegocio({
+                            monedaSimbolo: sanitizarSimboloMonedaInput(e.target.value),
+                          })
+                        }
                         placeholder="$"
                         className="h-9 text-xs"
                       />
@@ -375,7 +400,11 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                           }
                         }}
                         value={config.negocio.monedaCodigo}
-                        onChange={(e) => actualizarNegocio({ monedaCodigo: e.target.value })}
+                        onChange={(e) =>
+                          actualizarNegocio({
+                            monedaCodigo: sanitizarCodigoIsoInput(e.target.value),
+                          })
+                        }
                         placeholder="ARS"
                         className="h-9 text-xs uppercase"
                       />
@@ -427,7 +456,9 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                             : undefined
                         }
                         value={config.negocio.telefono}
-                        onChange={(e) => actualizarNegocio({ telefono: e.target.value })}
+                        onChange={(e) =>
+                          actualizarNegocio({ telefono: sanitizarTelefonoInput(e.target.value) })
+                        }
                         placeholder="+54 9 11 4521-8890"
                         className="h-9 text-xs"
                       />
@@ -446,7 +477,11 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                             : undefined
                         }
                         value={config.negocio.emailContacto}
-                        onChange={(e) => actualizarNegocio({ emailContacto: e.target.value })}
+                        onChange={(e) =>
+                          actualizarNegocio({
+                            emailContacto: e.target.value.replace(/\s+/g, '').toLowerCase(),
+                          })
+                        }
                         placeholder="contacto@mistock.com"
                         className="h-9 text-xs"
                       />
@@ -585,13 +620,23 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                           Punto de Venta Habilitado (N°)
                         </label>
                         <Input
-                          type="number"
-                          min="1"
-                          max="99999"
-                          value={config.negocio.puntoVenta || 1}
-                          onChange={(e) =>
-                            actualizarNegocio({ puntoVenta: Math.max(1, Number(e.target.value)) })
+                          type="text"
+                          inputMode="numeric"
+                          value={
+                            campoEditandoVacio === 'puntoVenta'
+                              ? ''
+                              : String(config.negocio.puntoVenta || 1)
                           }
+                          onChange={(e) => {
+                            const limpio = sanitizarEnteroInput(e.target.value, 99999);
+                            if (limpio === '' || limpio === '0') {
+                              setCampoEditandoVacio('puntoVenta');
+                            } else {
+                              setCampoEditandoVacio(null);
+                              actualizarNegocio({ puntoVenta: Math.max(1, parseInt(limpio, 10)) });
+                            }
+                          }}
+                          onBlur={() => setCampoEditandoVacio(null)}
                           className="h-8 text-xs bg-white"
                         />
                       </div>
@@ -1215,11 +1260,23 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                         </label>
                       </div>
                       <Input
-                        type="number"
-                        min="1"
-                        max="99"
-                        value={config.pos.numeroCaja || 1}
-                        onChange={(e) => actualizarPOS({ numeroCaja: Math.max(1, Number(e.target.value)) })}
+                        type="text"
+                        inputMode="numeric"
+                        value={
+                          campoEditandoVacio === 'numeroCaja'
+                            ? ''
+                            : String(config.pos.numeroCaja || 1)
+                        }
+                        onChange={(e) => {
+                          const limpio = sanitizarEnteroInput(e.target.value, 99);
+                          if (limpio === '' || limpio === '0') {
+                            setCampoEditandoVacio('numeroCaja');
+                          } else {
+                            setCampoEditandoVacio(null);
+                            actualizarPOS({ numeroCaja: Math.max(1, parseInt(limpio, 10)) });
+                          }
+                        }}
+                        onBlur={() => setCampoEditandoVacio(null)}
                         className="h-9 text-xs"
                       />
                       <p className="text-[10px] text-[#657373] mt-1">
@@ -1263,15 +1320,25 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                   </label>
                   <div className="flex items-center gap-3">
                     <Input
-                      type="number"
-                      min="1"
-                      max="1000"
-                      value={config.inventario.umbralMinimoPorDefecto}
-                      onChange={(e) =>
-                        actualizarInventario({
-                          umbralMinimoPorDefecto: Math.max(1, Number(e.target.value)),
-                        })
+                      type="text"
+                      inputMode="numeric"
+                      value={
+                        campoEditandoVacio === 'umbralMinimo'
+                          ? ''
+                          : String(config.inventario.umbralMinimoPorDefecto || 1)
                       }
+                      onChange={(e) => {
+                        const limpio = sanitizarEnteroInput(e.target.value, 1000);
+                        if (limpio === '' || limpio === '0') {
+                          setCampoEditandoVacio('umbralMinimo');
+                        } else {
+                          setCampoEditandoVacio(null);
+                          actualizarInventario({
+                            umbralMinimoPorDefecto: Math.max(1, parseInt(limpio, 10)),
+                          });
+                        }
+                      }}
+                      onBlur={() => setCampoEditandoVacio(null)}
                       className="h-9 text-xs w-32"
                     />
                     <span className="text-xs text-[#657373]">unidades de seguridad</span>
@@ -1488,16 +1555,23 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                       Día de Corte Mensual (1 al 28)
                     </label>
                     <Input
-                      type="number"
-                      min={1}
-                      max={28}
-                      value={config.metricas.diaCorteMensual}
+                      type="text"
+                      inputMode="numeric"
+                      value={
+                        campoEditandoVacio === 'diaCorte'
+                          ? ''
+                          : String(config.metricas.diaCorteMensual || 1)
+                      }
                       onChange={(e) => {
-                        const val = parseInt(e.target.value, 10);
-                        if (!isNaN(val) && val >= 1 && val <= 28) {
-                          actualizarMetricas({ diaCorteMensual: val });
+                        const limpio = sanitizarEnteroInput(e.target.value, 28);
+                        if (limpio === '' || limpio === '0') {
+                          setCampoEditandoVacio('diaCorte');
+                        } else {
+                          setCampoEditandoVacio(null);
+                          actualizarMetricas({ diaCorteMensual: Math.max(1, parseInt(limpio, 10)) });
                         }
                       }}
+                      onBlur={() => setCampoEditandoVacio(null)}
                       className="text-xs h-9"
                     />
                     <p className="text-[11px] text-[#657373] mt-1">
