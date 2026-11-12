@@ -64,6 +64,16 @@ export function useAdminInventarioController() {
       setFiltroEstadoHub('todos');
       setPaginaInventario(1);
     }
+
+    const onSyncError = (e: Event) => {
+      const msg = (e as CustomEvent<string>).detail;
+      setMensajeExito(null);
+      setMensajeError(
+        msg || 'No se pudo guardar el cambio en Supabase. Verifique que su sesión tenga rol Administrador.'
+      );
+    };
+    window.addEventListener('mistock_inventario_sync_error', onSyncError);
+    return () => window.removeEventListener('mistock_inventario_sync_error', onSyncError);
   }, []);
 
   const handleSetCategoriaFiltroHub = (catId: string) => {
@@ -73,11 +83,19 @@ export function useAdminInventarioController() {
 
   const handleSetFiltroStockHub = (nivel: FiltroNivelStock) => {
     setFiltroStockHub(nivel);
+    if (nivel !== 'todos') {
+      setCategoriaFiltroHub('todas');
+      setFiltroEstadoHub('activos');
+      setBusquedaHub('');
+    }
     setPaginaInventario(1);
   };
 
   const handleSetFiltroEstadoHub = (estado: FiltroEstadoComercial) => {
     setFiltroEstadoHub(estado);
+    if (estado === 'inactivos') {
+      setFiltroStockHub('todos');
+    }
     setPaginaInventario(1);
   };
 
@@ -130,16 +148,18 @@ export function useAdminInventarioController() {
       categoriaFiltroHub === 'todas' || p.categoriaId === categoriaFiltroHub;
     if (!coincideCategoria) return false;
 
-    // 3. Filtro por nivel de stock (4 estados mutuamente excluyentes)
+    // 3. Filtro por nivel de stock (4 estados mutuamente excluyentes sobre productos activos)
     let coincideStock = true;
-    if (filtroStockHub === 'critico') {
-      coincideStock = p.stockActual > 0 && p.stockActual <= p.stockMinimo;
-    } else if (filtroStockHub === 'bajo') {
-      coincideStock = p.stockActual > p.stockMinimo && p.stockActual <= p.stockMinimo * 1.5;
-    } else if (filtroStockHub === 'agotado') {
-      coincideStock = p.stockActual === 0;
-    } else if (filtroStockHub === 'optimo') {
-      coincideStock = p.stockActual > p.stockMinimo * 1.5;
+    if (filtroEstadoHub !== 'inactivos') {
+      if (filtroStockHub === 'critico') {
+        coincideStock = p.stockActual > 0 && p.stockActual <= p.stockMinimo;
+      } else if (filtroStockHub === 'bajo') {
+        coincideStock = p.stockActual > p.stockMinimo && p.stockActual <= p.stockMinimo * 1.5;
+      } else if (filtroStockHub === 'agotado') {
+        coincideStock = p.stockActual === 0;
+      } else if (filtroStockHub === 'optimo') {
+        coincideStock = p.stockActual > p.stockMinimo * 1.5;
+      }
     }
     if (!coincideStock) return false;
 

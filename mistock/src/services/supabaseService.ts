@@ -39,7 +39,7 @@ import { DetalleVenta, MetodoPago, EstadoVenta } from '@/models/modelos_dominio/
 import { ConfiguracionCompleta } from '@/models/modelos_vista/configuracionModel';
 
 const isUUID = (str: string) =>
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
 export interface FetchResult<T> {
   ok: boolean;

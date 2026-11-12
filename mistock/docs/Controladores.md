@@ -158,16 +158,17 @@ mistock/src/
   1. **Hub Unificado de Catálogo (`seccionActiva: 'menu' | 'alta'`):** Concentra la consulta, edición/reposición modal, baja lógica y reactivación en una única vista `'menu'` (con filtro `filtroEstadoHub: 'activos' | 'inactivos' | 'todos'`) y reserva `'alta'` para el formulario dedicado de nuevo producto.
   2. **Enlace Profundo desde Inventario Global (`?q=SKU`):** Al montar en el cliente, lee `window.location.search` para prefiltrar `busquedaHub` por SKU cuando el administrador navega desde `/admininventarioglobal`.
   3. **Diagnóstico Unificado de Salud de Stock (`metricasStockHub`):**
-     Clasifica los productos activos en 4 estados estrictamente disjuntos (cuya suma equivale al total de activos):
+     Clasifica los productos activos en 4 estados estrictamente disjuntos (cuya suma equivale al total de activos) y, al activar cualquiera de sus tarjetas o el botón de alerta crítica (`handleSetFiltroStockHub`), restablece automáticamente el selector de categoría a `'todas'` (`categoriaFiltroHub = 'todas'`), el estado a `'activos'` y limpia la búsqueda textual para que la tabla muestre de inmediato todos los artículos de ese nivel de stock sin quedar ocultos por un filtro previo de categoría. Recíprocamente, al cambiar el estado comercial a `'inactivos'` (*Dados de Baja* mediante `handleSetFiltroEstadoHub`), restablece `filtroStockHub` a `'todos'` e ignora el filtro de nivel de stock sobre productos inactivos para que todo producto dado de baja sea inmediatamente visible:
      - `agotados`: $\text{stockActual} = 0$
      - `criticos`: $0 < \text{stockActual} \le \text{stockMinimo}$
      - `bajasUnidades`: $\text{stockMinimo} < \text{stockActual} \le \text{stockMinimo} \times 1.5$
      - `optimos`: $\text{stockActual} > \text{stockMinimo} \times 1.5$
-  4. **ABM Completo Delegado al Servicio Central (`inventarioService`):**
+  4. **ABM Completo Delegado al Servicio Central (`inventarioService`) con Notificación de Rechazo RLS:**
      - `agregarCategoria(nombre, descripcion)`: Crea categorías con UUID v4 válido y las persiste en Supabase.
      - `guardarProducto(datos)`: Valida categoría obligatoria (`categoriaId`) y unicidad de código SKU antes de dar de alta el producto.
      - `modificarProducto(productoId, datosActualizados)`: Actualiza precios, costos, categoría y stock físico (`stockActual`, `stockMinimo`).
      - `darDeBajaProducto(productoId, motivo)` y `reactivarProducto(productoId)`: Ejecutan el borrado lógico (`activo: false/true`) preservando la integridad histórica de las ventas.
+     - Escucha el evento `mistock_inventario_sync_error` emitido por `inventarioService` cuando Supabase rechaza una operación (por ejemplo, si el usuario carece de rol `admin` en la base de datos), limpiando `mensajeExito` y desplegando `mensajeError`.
   5. **Conexión con Configuración de Inventario:** Expone `config` para que el formulario de alta tome `umbralMinimoPorDefecto` como stock mínimo inicial y muestre la advertencia preventiva cuando `alertarMargenNegativo` está activo y $\text{precioVenta} \le \text{precioCosto}$.
 
 ---

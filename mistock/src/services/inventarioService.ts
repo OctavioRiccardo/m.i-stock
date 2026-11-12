@@ -102,6 +102,12 @@ function notifySubscribers() {
   listeners.forEach((listener) => listener());
 }
 
+function notifySyncError(mensaje: string) {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('mistock_inventario_sync_error', { detail: mensaje }));
+  }
+}
+
 /**
  * Suscripción externa para useSyncExternalStore.
  */
@@ -238,6 +244,9 @@ export const inventarioService = {
           // Revertir si PostgreSQL rechazó la inserción
           currentSnapshot = snapshotPrevio;
           notifySubscribers();
+          notifySyncError(
+            `No se pudo guardar la categoría "${nombreLimpio}" en la base de datos. Verifique tener sesión iniciada como Administrador.`
+          );
           return;
         }
         if (catRemota.id !== idGenerado) {
@@ -253,6 +262,7 @@ export const inventarioService = {
       .catch(() => {
         currentSnapshot = snapshotPrevio;
         notifySubscribers();
+        notifySyncError(`Error de conexión al intentar registrar la categoría "${nombreLimpio}".`);
       });
 
     return {
@@ -389,6 +399,9 @@ export const inventarioService = {
         if (!prodRemoto) {
           currentSnapshot = snapshotPrevio;
           notifySubscribers();
+          notifySyncError(
+            `No se pudo registrar "${nuevoProducto.nombre}" en la base de datos. Verifique tener sesión iniciada como Administrador.`
+          );
           return;
         }
         if (prodRemoto.id !== idProductoGenerado) {
@@ -404,6 +417,7 @@ export const inventarioService = {
       .catch(() => {
         currentSnapshot = snapshotPrevio;
         notifySubscribers();
+        notifySyncError(`Error de conexión al intentar guardar "${nuevoProducto.nombre}".`);
       });
 
     return {
@@ -437,11 +451,15 @@ export const inventarioService = {
         if (!ok) {
           currentSnapshot = snapshotPrevio;
           notifySubscribers();
+          notifySyncError(
+            `No se pudo dar de baja "${producto.nombre}" en la base de datos. Verifique tener sesión iniciada como Administrador.`
+          );
         }
       })
       .catch(() => {
         currentSnapshot = snapshotPrevio;
         notifySubscribers();
+        notifySyncError(`Error de conexión al intentar dar de baja "${producto.nombre}".`);
       });
 
     const motivoLimpio = (motivo || '').trim().slice(0, LIMITES_TEXTO.OBSERVACIONES_MAX);
@@ -476,11 +494,15 @@ export const inventarioService = {
         if (!ok) {
           currentSnapshot = snapshotPrevio;
           notifySubscribers();
+          notifySyncError(
+            `No se pudo reactivar "${producto.nombre}" en la base de datos. Verifique tener sesión iniciada como Administrador.`
+          );
         }
       })
       .catch(() => {
         currentSnapshot = snapshotPrevio;
         notifySubscribers();
+        notifySyncError(`Error de conexión al intentar reactivar "${producto.nombre}".`);
       });
 
     return {
@@ -632,11 +654,15 @@ export const inventarioService = {
         if (!ok) {
           currentSnapshot = snapshotPrevio;
           notifySubscribers();
+          notifySyncError(
+            `No se pudieron guardar los cambios de "${nombreFinal}" en la base de datos. Verifique tener sesión iniciada como Administrador.`
+          );
         }
       })
       .catch(() => {
         currentSnapshot = snapshotPrevio;
         notifySubscribers();
+        notifySyncError(`Error de conexión al intentar modificar "${nombreFinal}".`);
       });
 
     return {
