@@ -1399,11 +1399,11 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                       <div className="flex items-center gap-1.5">
                         <CheckCircle className="h-4 w-4 text-emerald-600" weight="duotone" />
                         <p className="text-xs font-semibold text-[#1C2424]">
-                          Categoría Obligatoria en Cada Producto
+                          Categoría Obligatoria
                         </p>
                       </div>
                       <p className="text-xs text-[#657373] mt-1">
-                        Para mantener el catálogo ordenado, no se permite guardar artículos sueltos. Todo producto nuevo debe asignarse a una categoría comercial (por ejemplo: Bebidas, Almacén o Limpieza).
+                        Cada producto que cargues debe pertenecer a una categoría (por ejemplo, Bebidas o Almacén) para mantener organizado tu inventario.
                       </p>
                     </div>
                     <Badge variant="outline" className="text-[10px] text-emerald-700 border-emerald-300 bg-emerald-50 shrink-0">
