@@ -24,6 +24,7 @@ import {
   CheckCircle,
   Package,
   ArrowLeft,
+  Warning,
 } from '@phosphor-icons/react';
 import {
   Dialog,
@@ -65,11 +66,13 @@ export function ModalDetalleVenta({
   autoPrint = false,
 }: ModalDetalleVentaProps) {
   const [vistaActiva, setVistaActiva] = useState<'detalles' | 'ticket'>('detalles');
+  const [confirmandoAnulacion, setConfirmandoAnulacion] = useState<boolean>(false);
   const configGlobal = useConfiguracionData();
   const configNegocio = configGlobal.negocio;
 
   // Restablecer a vista 'detalles' o activar auto-impresión cada vez que se abre una venta
   useEffect(() => {
+    setConfirmandoAnulacion(false);
     if (isOpen) {
       if (autoPrint) {
         setVistaActiva('ticket');
@@ -189,7 +192,10 @@ export function ModalDetalleVenta({
               </button>
               <button
                 type="button"
-                onClick={() => setVistaActiva('ticket')}
+                onClick={() => {
+                  setConfirmandoAnulacion(false);
+                  setVistaActiva('ticket');
+                }}
                 className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
                   vistaActiva === 'ticket'
                     ? 'bg-white text-[#2A7A78] shadow-xs'
@@ -508,6 +514,21 @@ export function ModalDetalleVenta({
           </div>
         )}
 
+        {/* Confirmación en línea dentro del modal antes de anular */}
+        {vistaActiva === 'detalles' && confirmandoAnulacion && (
+          <div className="p-3.5 rounded-xl border border-rose-200 bg-rose-50/80 flex items-start gap-2.5">
+            <Warning className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" weight="duotone" />
+            <div className="space-y-1">
+              <p className="text-xs font-bold text-rose-900">
+                ¿Confirmás anular el comprobante {venta.id}?
+              </p>
+              <p className="text-[11px] text-rose-800 leading-relaxed">
+                El ticket pasará a estado anulado y las unidades vendidas volverán automáticamente al inventario. Esta acción no se puede deshacer.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Footer con Acciones */}
         <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-3 border-t border-[#E8E6DF]">
           {vistaActiva === 'ticket' ? (
@@ -532,18 +553,36 @@ export function ModalDetalleVenta({
                 </Button>
               </motion.div>
             </>
+          ) : confirmandoAnulacion ? (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setConfirmandoAnulacion(false)}
+                className="text-xs h-9 cursor-pointer"
+              >
+                No, mantener venta
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => {
+                  onCancelarVenta?.(venta.id);
+                  setConfirmandoAnulacion(false);
+                  onClose();
+                }}
+                className="text-xs h-9 cursor-pointer font-semibold"
+              >
+                Sí, confirmar anulación
+              </Button>
+            </>
           ) : (
             <>
               {onCancelarVenta && venta && venta.estado !== 'cancelada' && (
                 <Button
                   type="button"
                   variant="destructive"
-                  onClick={() => {
-                    if (confirm(`¿Está seguro de anular el comprobante ${venta.id}? Las existencias vendidas serán reingresadas al inventario.`)) {
-                      onCancelarVenta(venta.id);
-                      onClose();
-                    }
-                  }}
+                  onClick={() => setConfirmandoAnulacion(true)}
                   className="text-xs h-9 cursor-pointer mr-auto"
                 >
                   Anular Venta
