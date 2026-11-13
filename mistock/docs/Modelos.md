@@ -67,16 +67,12 @@ mistock/src/models/
 │   ├── inventarioModel.ts            # MovimientoStock (Ledger), AjusteInventario y toMovimientoStock
 │   └── userModel.ts                  # Usuario, RolUsuario ('admin'|'vendedor'|'no_rol') y toUsuario
 │
-├── modelos_vista/                    # ViewModels, formularios, KPIs y funciones puras de cálculo
-│   ├── authModel.ts                  # LoginFormValues, UserRole y UserProfile
-│   ├── cargaProductoModel.ts         # FormularioCargaProducto, valores iniciales y rentabilidad
-│   ├── cierreCajaModel.ts            # AperturaCajaDTO, ArqueoCajaDTO y fórmulas puras de arqueo
-│   ├── configuracionModel.ts         # ConfiguracionCompleta (Negocio, POS, Inventario, Métricas)
-│   └── dashboardModel.ts             # AdminDashboardData, UserDashboardData y cálculos del POS
-│
-└── mock_data/                        # Semillas vacías (Clean Slate) para almacenamiento local inicial
-    ├── inventarioMock.ts             # initialCategorias = [], initialProductos = []
-    └── usuariosMock.ts               # initialUsuarios = [] (sin usuarios ficticios)
+└── modelos_vista/                    # ViewModels, formularios, KPIs y funciones puras de cálculo
+    ├── authModel.ts                  # LoginFormValues, UserRole y UserProfile
+    ├── cargaProductoModel.ts         # FormularioCargaProducto, valores iniciales y rentabilidad
+    ├── cierreCajaModel.ts            # AperturaCajaDTO, ArqueoCajaDTO y fórmulas puras de arqueo
+    ├── configuracionModel.ts         # ConfiguracionCompleta (Negocio, POS, Inventario, Métricas)
+    └── dashboardModel.ts             # AdminDashboardData, UserDashboardData y cálculos del POS
 ```
 
 ---
@@ -319,12 +315,9 @@ Ubicado en `mistock/src/lib/validaciones.ts`, establece los límites máximos y 
 
 ---
 
-## 🧪 5. Estado Inicial Limpio (Clean Slate en `src/models/mock_data/`)
+## 🧪 5. Estado Inicial Limpio (Clean Slate sin Mocks)
 
-Para garantizar que la aplicación trabaje exclusivamente con datos reales (tanto de **Supabase PostgreSQL** como de las operaciones reales ejecutadas en el navegador), los arreglos iniciales en `src/models/mock_data/` se encuentran **vacíos por diseño**:
-
-* `inventarioMock.ts`: `initialCategorias = []` e `initialProductos = []`.
-* `usuariosMock.ts`: `initialUsuarios = []` (no inyecta usuarios ficticios; la nómina se hidrata desde `public.usuario` en Supabase y desde los colaboradores creados en `/adminusuarios`).
+Para garantizar que la aplicación trabaje exclusivamente con datos reales de **Supabase PostgreSQL**, se eliminaron los archivos de prueba ficticios (`mock_data`). Los estados iniciales de `inventarioService.ts` (`initialCategorias = []`, `initialProductos = []`) y `usuariosController.ts` (`initialUsuarios = []`) parten vacíos por diseño y se hidratan directamente desde las tablas `public.categorias`, `public.productos` y `public.usuario` en Supabase.
 
 ---
 

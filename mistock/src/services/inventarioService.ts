@@ -19,7 +19,6 @@ import { useSyncExternalStore } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Categoria, Producto } from '@/models/modelos_dominio/productoModel';
 import { FormularioCargaProducto } from '@/models/modelos_vista/cargaProductoModel';
-import { initialCategorias, initialProductos } from '@/models/mock_data/inventarioMock';
 import {
   LIMITES_TEXTO,
   MAX_PRECIO_DB,
@@ -28,6 +27,9 @@ import {
   normalizarTexto,
 } from '@/lib/validaciones';
 import { supabaseService } from './supabaseService';
+
+const initialCategorias: Categoria[] = [];
+const initialProductos: Producto[] = [];
 
 export const INVENTARIO_STORAGE_KEY = 'mistock_inventario_data_test_v1';
 

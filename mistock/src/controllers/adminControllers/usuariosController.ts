@@ -23,7 +23,6 @@ import {
   EstadoUsuario,
   CrearUsuarioDTO,
 } from '@/models/modelos_dominio/userModel';
-import { initialUsuarios } from '@/models/mock_data/usuariosMock';
 import {
   LIMITES_TEXTO,
   esEmailValido,
@@ -32,6 +31,8 @@ import {
   sanitizarTelefonoInput,
 } from '@/lib/validaciones';
 import { supabaseService } from '@/services/supabaseService';
+
+const initialUsuarios: Usuario[] = [];
 
 export type FiltroRol = 'todos' | RolUsuarioDB;
 export type FiltroEstado = 'todos' | 'activo' | 'inactivo';
