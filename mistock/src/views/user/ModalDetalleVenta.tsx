@@ -55,6 +55,8 @@ export interface ModalDetalleVentaProps {
   monedaSimbolo: string;
   onCancelarVenta?: (ventaId: string) => void;
   autoPrint?: boolean;
+  esNuevaVenta?: boolean;
+  onVentaFinalizadaFeedback?: (venta: VentaRecientePOS) => void;
 }
 
 export function ModalDetalleVenta({
@@ -64,11 +66,46 @@ export function ModalDetalleVenta({
   monedaSimbolo,
   onCancelarVenta,
   autoPrint = false,
+  esNuevaVenta = false,
+  onVentaFinalizadaFeedback,
 }: ModalDetalleVentaProps) {
   const [vistaActiva, setVistaActiva] = useState<'detalles' | 'ticket'>('detalles');
   const [confirmandoAnulacion, setConfirmandoAnulacion] = useState<boolean>(false);
   const configGlobal = useConfiguracionData();
   const configNegocio = configGlobal.negocio;
+
+  /**
+   * Ejecuta la impresión del ticket térmico y, al finalizar (sea por imprimir o cancelar
+   * el diálogo del navegador), notifica la finalización para mostrar el feedback de venta completada.
+   */
+  const ejecutarImpresionConFeedback = () => {
+    if (typeof window === 'undefined') return;
+
+    let finalizado = false;
+    const finalizar = () => {
+      if (finalizado) return;
+      finalizado = true;
+      window.removeEventListener('afterprint', finalizar);
+
+      if (esNuevaVenta && onVentaFinalizadaFeedback && venta) {
+        onVentaFinalizadaFeedback(venta);
+      }
+    };
+
+    window.addEventListener('afterprint', finalizar);
+
+    try {
+      window.print();
+    } catch (err) {
+      console.error('Error al invocar impresión de ticket:', err);
+      finalizar();
+    }
+
+    // Fallback seguro para navegadores Chromium/Firefox donde window.print() es síncrono
+    setTimeout(() => {
+      finalizar();
+    }, 400);
+  };
 
   // Restablecer a vista 'detalles' o activar auto-impresión cada vez que se abre una venta
   useEffect(() => {
@@ -77,9 +114,7 @@ export function ModalDetalleVenta({
       if (autoPrint) {
         setVistaActiva('ticket');
         const timer = setTimeout(() => {
-          if (typeof window !== 'undefined') {
-            window.print();
-          }
+          ejecutarImpresionConFeedback();
         }, 250);
         return () => clearTimeout(timer);
       } else {
@@ -97,20 +132,23 @@ export function ModalDetalleVenta({
   const handleImprimirTicket = () => {
     setVistaActiva('ticket');
     setTimeout(() => {
-      if (typeof window !== 'undefined') {
-        window.print();
-      }
+      ejecutarImpresionConFeedback();
     }, 150);
   };
 
   const ejecutarImpresionDirecta = () => {
-    if (typeof window !== 'undefined') {
-      window.print();
+    ejecutarImpresionConFeedback();
+  };
+
+  const handleCerrarModal = () => {
+    onClose();
+    if (esNuevaVenta && onVentaFinalizadaFeedback && venta) {
+      onVentaFinalizadaFeedback(venta);
     }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleCerrarModal()}>
       {/* Estilos dedicados para impresión en impresoras térmicas de 80mm */}
       <style
         dangerouslySetInnerHTML={{
@@ -542,6 +580,16 @@ export function ModalDetalleVenta({
                 <ArrowLeft className="h-3.5 w-3.5" />
                 <span>Volver a Detalles</span>
               </Button>
+              {esNuevaVenta && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCerrarModal}
+                  className="text-xs h-9 cursor-pointer"
+                >
+                  Omitir Impresión
+                </Button>
+              )}
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.96 }} className="inline-block">
                 <Button
                   type="button"
@@ -591,10 +639,10 @@ export function ModalDetalleVenta({
               <Button
                 type="button"
                 variant="outline"
-                onClick={onClose}
+                onClick={handleCerrarModal}
                 className="text-xs h-9 cursor-pointer"
               >
-                Cerrar
+                {esNuevaVenta ? 'Listo / Sin Imprimir' : 'Cerrar'}
               </Button>
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.96 }} className="inline-block">
                 <Button

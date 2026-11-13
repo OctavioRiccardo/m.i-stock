@@ -37,6 +37,7 @@ import { ModuloConsultorPrecios } from './ModuloConsultorPrecios';
 import { ModuloHistorialTickets } from './ModuloHistorialTickets';
 import { ModalCobroTicket } from './ModalCobroTicket';
 import { ModalDetalleVenta } from './ModalDetalleVenta';
+import { ModalVentaCompletada } from './ModalVentaCompletada';
 import { ModalAperturaCaja } from './ModalAperturaCaja';
 import { ModalArqueoCaja } from './ModalArqueoCaja';
 import { ModalReporteCierreTicket } from './ModalReporteCierreTicket';
@@ -72,6 +73,8 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
   const [isModalCobroOpen, setIsModalCobroOpen] = useState<boolean>(false);
   const [ventaSeleccionada, setVentaSeleccionada] = useState<VentaRecientePOS | null>(null);
   const [autoImprimirVenta, setAutoImprimirVenta] = useState<boolean>(false);
+  const [esNuevaVenta, setEsNuevaVenta] = useState<boolean>(false);
+  const [ventaCompletadaFeedback, setVentaCompletadaFeedback] = useState<VentaRecientePOS | null>(null);
 
   /**
    * Pestañas operativas disponibles para el vendedor / cajero (en móvil/tablet)
@@ -84,8 +87,16 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
   ];
 
   const handleVentaCompletada = (venta: VentaRecientePOS) => {
+    setEsNuevaVenta(true);
     setAutoImprimirVenta(Boolean(config.pos.autoImprimirTicket));
     setVentaSeleccionada(venta);
+  };
+
+  const handleFinalizarVentaConFeedback = (venta: VentaRecientePOS) => {
+    setVentaSeleccionada(null);
+    setAutoImprimirVenta(false);
+    setEsNuevaVenta(false);
+    setVentaCompletadaFeedback(venta);
   };
 
   return (
@@ -299,6 +310,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
               <ModuloHistorialTickets
                 controller={controller}
                 onVerVenta={(sale) => {
+                  setEsNuevaVenta(false);
                   setAutoImprimirVenta(false);
                   setVentaSeleccionada(sale);
                 }}
@@ -324,11 +336,29 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
           onClose={() => {
             setVentaSeleccionada(null);
             setAutoImprimirVenta(false);
+            setEsNuevaVenta(false);
           }}
           venta={ventaSeleccionada}
           monedaSimbolo={monedaSimbolo}
           onCancelarVenta={cancelarVenta}
           autoPrint={autoImprimirVenta}
+          esNuevaVenta={esNuevaVenta}
+          onVentaFinalizadaFeedback={handleFinalizarVentaConFeedback}
+        />
+
+        {/* Modal de Retroalimentación de Venta Completada */}
+        <ModalVentaCompletada
+          isOpen={!!ventaCompletadaFeedback}
+          onClose={() => setVentaCompletadaFeedback(null)}
+          venta={ventaCompletadaFeedback}
+          monedaSimbolo={monedaSimbolo}
+          onReimprimirTicket={() => {
+            const v = ventaCompletadaFeedback;
+            setVentaCompletadaFeedback(null);
+            setEsNuevaVenta(false);
+            setAutoImprimirVenta(false);
+            setVentaSeleccionada(v);
+          }}
         />
 
         {/* Modal de Apertura de Caja (Inicio de Turno / Sesión) */}
