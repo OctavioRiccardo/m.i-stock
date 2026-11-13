@@ -1108,14 +1108,14 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
 
             {/* Sección: Políticas Operativas de Venta y Periféricos */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Card: Política de Disponibilidad en Caja */}
+              {/* Card: Control de Stock en Caja */}
               <Card className="border-[#E8E6DF] shadow-sm">
                 <CardHeader className="pb-3 border-b border-[#E8E6DF]">
                   <CardTitle className="text-sm font-bold text-[#1C2424]">
-                    Política de Disponibilidad en Caja
+                    Control de Stock en Caja
                   </CardTitle>
                   <p className="text-xs text-[#657373]">
-                    Controla la validación de existencias físicas durante el cobro en mostrador.
+                    Define cómo actúa la caja cuando un producto se queda sin unidades cargadas.
                   </p>
                 </CardHeader>
                 <CardContent className="p-4 space-y-4">
@@ -1124,16 +1124,16 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                     <div>
                       <div className="flex items-center gap-1.5">
                         <p className="text-xs font-semibold text-[#1C2424]">
-                          Permitir Vender Sin Stock Físico
+                          Permitir vender productos sin stock
                         </p>
                         {config.pos.permitirVentaSinStock && (
                           <Badge variant="warning" className="text-[10px]">
-                            Riesgo de saldo negativo
+                            Activado
                           </Badge>
                         )}
                       </div>
                       <p className="text-xs text-[#657373] mt-1">
-                        Si está deshabilitado (recomendado), la terminal POS bloquea agregar al carrito más unidades que las disponibles en depósito. Si se habilita, permite facturar mercadería aún no ingresada al sistema.
+                        Si está desactivado (recomendado), el cajero solo puede vender las unidades que figuren disponibles en el inventario. Si lo activás, podrá cobrar igual aunque todavía no hayas cargado el ingreso de mercadería.
                       </p>
                     </div>
                     <SwitchToggle
@@ -1147,7 +1147,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                   <div className="p-3 rounded-lg bg-[#F8F7F2] border border-[#E8E6DF] flex items-start gap-2.5">
                     <Question className="h-4 w-4 text-[#2A7A78] mt-0.5 shrink-0" weight="duotone" />
                     <p className="text-[11px] text-[#657373]">
-                      Esta regla impacta instantáneamente en la terminal del operador POS sin requerir cierre de turno ni recarga de página.
+                      El cambio se aplica en el acto en la pantalla de cobro sin necesidad de cerrar la caja.
                     </p>
                   </div>
                 </CardContent>
