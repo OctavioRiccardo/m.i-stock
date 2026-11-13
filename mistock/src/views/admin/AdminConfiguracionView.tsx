@@ -1393,21 +1393,21 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                 </div>
 
                 <div className="border-t border-[#E8E6DF] pt-4">
-                  {/* Integridad Relacional: Categoría obligatoria en DB */}
+                  {/* Categoría obligatoria para mantener el catálogo ordenado */}
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <div className="flex items-center gap-1.5">
                         <CheckCircle className="h-4 w-4 text-emerald-600" weight="duotone" />
                         <p className="text-xs font-semibold text-[#1C2424]">
-                          Categorización Obligatoria (Integridad Relacional)
+                          Categoría Obligatoria en Cada Producto
                         </p>
                       </div>
                       <p className="text-xs text-[#657373] mt-1">
-                        Garantizado a nivel de base de datos PostgreSQL (clave foránea NOT NULL). Todo producto requiere pertenecer a una categoría activa.
+                        Para mantener el catálogo ordenado, no se permite guardar artículos sueltos. Todo producto nuevo debe asignarse a una categoría comercial (por ejemplo: Bebidas, Almacén o Limpieza).
                       </p>
                     </div>
                     <Badge variant="outline" className="text-[10px] text-emerald-700 border-emerald-300 bg-emerald-50 shrink-0">
-                      Activo por DB
+                      Siempre activo
                     </Badge>
                   </div>
                 </div>
@@ -1628,35 +1628,11 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                   </Badge>
                 </div>
                 <p className="text-xs text-[#657373]">
-                  Diagnóstico en tiempo real del motor relacional PostgreSQL y volumen efectivo de registros activos.
+                  Resumen de registros almacenados en el sistema y estado del último respaldo descargado.
                 </p>
               </CardHeader>
               <CardContent className="p-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="p-3 rounded-lg bg-[#F8F7F2] border border-[#E8E6DF]">
-                    <span className="text-[11px] font-semibold text-[#657373] uppercase tracking-wider">
-                      Motor de Datos
-                    </span>
-                    <p className="text-sm font-bold text-[#1C2424] mt-1">
-                      {config.sistema.versionEsquema}
-                    </p>
-                    <p className="text-[11px] text-emerald-700 font-medium mt-0.5">
-                      Políticas RLS verificadas
-                    </p>
-                  </div>
-
-                  <div className="p-3 rounded-lg bg-[#F8F7F2] border border-[#E8E6DF]">
-                    <span className="text-[11px] font-semibold text-[#657373] uppercase tracking-wider">
-                      Sincronización Realtime
-                    </span>
-                    <p className="text-sm font-bold text-[#1C2424] mt-1">
-                      Postgres Changes
-                    </p>
-                    <p className="text-[11px] text-[#657373] mt-0.5">
-                      Escucha activa en tablas clave
-                    </p>
-                  </div>
-
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="p-3 rounded-lg bg-[#F8F7F2] border border-[#E8E6DF]">
                     <span className="text-[11px] font-semibold text-[#657373] uppercase tracking-wider">
                       Última Exportación CSV
