@@ -823,7 +823,6 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                           const esAgotado = prod.stockActual === 0;
                           const esCritico = !esAgotado && prod.stockActual <= prod.stockMinimo;
                           const esBajo = !esAgotado && !esCritico && prod.stockActual <= prod.stockMinimo * 1.5;
-                          const deficit = Math.max(0, prod.stockMinimo - prod.stockActual);
 
                           return (
                             <TableRow key={prod.id} className="hover:bg-[#F8F7F2]/50">
@@ -854,34 +853,23 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                                 )}
                               </TableCell>
                               <TableCell>
-                                <div className="space-y-1">
-                                  <div className="flex items-center gap-1.5">
-                                    <span
-                                      className={`text-sm font-bold ${
-                                        esAgotado
-                                          ? 'text-red-700'
-                                          : esCritico
-                                          ? 'text-rose-600'
-                                          : esBajo
-                                          ? 'text-amber-600'
-                                          : 'text-[#1C2424]'
-                                      }`}
-                                    >
-                                      {prod.stockActual}
-                                    </span>
-                                    <span className="text-xs text-[#657373]">
-                                      {prod.unidadMedida}
-                                    </span>
-                                  </div>
-                                  <div className="text-[11px] text-[#657373]">
-                                    Mínimo: {prod.stockMinimo} {prod.unidadMedida}
-                                  </div>
-                                  {deficit > 0 && prod.activo && (
-                                    <div className="inline-flex items-center gap-1 text-[10px] font-semibold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
-                                      <AlertTriangle className="h-2.5 w-2.5" />
-                                      Déficit: {deficit} {prod.unidadMedida}
-                                    </div>
-                                  )}
+                                <div className="flex items-center gap-1.5">
+                                  <span
+                                    className={`text-sm font-bold ${
+                                      esAgotado
+                                        ? 'text-red-700'
+                                        : esCritico
+                                        ? 'text-rose-600'
+                                        : esBajo
+                                        ? 'text-amber-600'
+                                        : 'text-[#1C2424]'
+                                    }`}
+                                  >
+                                    {prod.stockActual}
+                                  </span>
+                                  <span className="text-xs text-[#657373]">
+                                    {prod.unidadMedida}
+                                  </span>
                                 </div>
                               </TableCell>
                               <TableCell>
