@@ -265,8 +265,8 @@ Todas las tablas tienen RLS habilitado explícitamente (`ENABLE ROW LEVEL SECURI
 | `usuario` | INSERT / UPDATE / DELETE | `authenticated` (Solo Admin) | `USING ((SELECT public.is_admin()))` |
 | `ventas` | SELECT / INSERT | `authenticated` (Staff) | Todo el staff autenticado puede registrar ventas |
 | `ventas` | UPDATE (Anulación) | `authenticated` (Staff) | Política `"Staff anula ventas activas"` (`WITH CHECK (estado = 'cancelada')`) |
-| `configuracion_negocio` | SELECT | `authenticated` (Staff) | Todo el personal consulta parámetros comerciales |
-| `configuracion_negocio` | INSERT / UPDATE | `authenticated` (Staff) | Política `"Staff modifica configuración y sesión de caja"` (`USING (auth.uid() IS NOT NULL)`) para persistir turnos de caja y configuración |
+| `configuracion_negocio` | SELECT | `authenticated` (Staff Activo) | Política `"Staff activo lee configuración"` (`(SELECT public.is_active_staff())`, excluye `no_rol` e inactivos) |
+| `configuracion_negocio` | INSERT / UPDATE | `authenticated` (Staff Activo) | Políticas separadas (`(SELECT public.is_active_staff())`) para persistir parámetros y turnos de caja; `DELETE` bloqueado (script [`setup_configuracion_y_productos_demo.sql`](file:///b:/Programas/Github/m.i-stock/mistock/supabase/migrations/setup_configuracion_y_productos_demo.sql)) |
 | `detalle_ventas` | SELECT / INSERT | `authenticated` (Staff) | Todo el staff autenticado puede cargar renglones |
 | `pagos` | SELECT / INSERT | `authenticated` (Staff) | Todo el staff autenticado puede registrar pagos |
 | `movimientos_stock` | SELECT / INSERT | `authenticated` (Staff) | Staff registra ingresos/egresos |
