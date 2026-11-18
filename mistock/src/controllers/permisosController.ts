@@ -28,45 +28,27 @@ const USUARIO_STORAGE_KEY = 'mistock_usuario_activo';
 export function usePermisosController() {
   const router = useRouter();
 
-  const [rol, setRol] = useState<RolUsuario>(() => {
-    if (typeof window === 'undefined') return 'admin';
-    const rolGuardado = window.localStorage.getItem(ROL_STORAGE_KEY) as RolUsuario | null;
-    if (rolGuardado && ['admin', 'vendedor', 'no_rol'].includes(rolGuardado)) {
-      return rolGuardado;
-    }
-    return 'admin';
-  });
-
-  const [nombreUsuario, setNombreUsuario] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const raw = window.localStorage.getItem(USUARIO_STORAGE_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed?.nombre) return parsed.nombre;
-        }
-      } catch {}
-    }
-    return 'Administrador';
-  });
-
-  const [emailUsuario, setEmailUsuario] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const raw = window.localStorage.getItem(USUARIO_STORAGE_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed?.email) return parsed.email;
-        }
-      } catch {}
-    }
-    return '';
-  });
-
+  const [rol, setRol] = useState<RolUsuario>('admin');
+  const [nombreUsuario, setNombreUsuario] = useState<string>('Administrador');
+  const [emailUsuario, setEmailUsuario] = useState<string>('');
   const [cargando, setCargando] = useState<boolean>(false);
 
   useEffect(() => {
     let isMounted = true;
+    if (typeof window !== 'undefined') {
+      const rolGuardado = window.localStorage.getItem(ROL_STORAGE_KEY) as RolUsuario | null;
+      if (rolGuardado && ['admin', 'vendedor', 'no_rol'].includes(rolGuardado)) {
+        setRol(rolGuardado);
+      }
+      try {
+        const raw = window.localStorage.getItem(USUARIO_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed?.nombre) setNombreUsuario(parsed.nombre);
+          if (parsed?.email) setEmailUsuario(parsed.email);
+        }
+      } catch {}
+    }
     const supabase = createClient();
 
     supabase.auth

@@ -56,23 +56,7 @@ function sanitizarParaCache(lista: Usuario[]): Usuario[] {
 }
 
 export function useAdminUsuariosController() {
-  const [usuarios, setUsuarios] = useState<Usuario[]>(() => {
-    if (typeof window === 'undefined') {
-      return sanitizarParaCache(initialUsuarios);
-    }
-    try {
-      const stored = window.localStorage.getItem(USUARIOS_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          return sanitizarParaCache(
-            parsed.filter((u: Usuario) => !LEGACY_MOCK_EMAILS.has((u.email || '').toLowerCase()))
-          );
-        }
-      }
-    } catch {}
-    return sanitizarParaCache(initialUsuarios);
-  });
+  const [usuarios, setUsuarios] = useState<Usuario[]>(() => sanitizarParaCache(initialUsuarios));
 
   const [guardandoUsuario, setGuardandoUsuario] = useState<boolean>(false);
 
@@ -88,9 +72,24 @@ export function useAdminUsuariosController() {
     });
   };
 
-  // Sincronizar nómina autoritativa desde Supabase public.usuario (reemplazando residuos locales)
+  // Hidratar caché local tras montar y sincronizar nómina autoritativa desde Supabase public.usuario
   useEffect(() => {
     let mounted = true;
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = window.localStorage.getItem(USUARIOS_STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            setUsuarios(
+              sanitizarParaCache(
+                parsed.filter((u: Usuario) => !LEGACY_MOCK_EMAILS.has((u.email || '').toLowerCase()))
+              )
+            );
+          }
+        }
+      } catch {}
+    }
     supabaseService
       .fetchUsuariosWithStatus()
       .then((res) => {

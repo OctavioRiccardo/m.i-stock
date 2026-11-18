@@ -45,6 +45,12 @@ export interface VentasHistorialStore {
   ventasRecientes: VentaRecientePOS[];
 }
 
+export const VENTAS_SERVER_SNAPSHOT: VentasHistorialStore = {
+  ventasDelDia: 0,
+  recaudacionDelDia: 0,
+  ventasRecientes: [],
+};
+
 export function recalcularVentasStore(ventas: VentaRecientePOS[]): VentasHistorialStore {
   const hoyStr = new Date().toLocaleDateString('es-AR');
   const hoyInicioTs = new Date().setHours(0, 0, 0, 0);
@@ -125,11 +131,16 @@ export function useUserDashboardController() {
       }));
   }, [storeProductos]);
 
-  const [ventasState, setVentasState] = useState<VentasHistorialStore>(inicializarVentasCliente);
+  // Estado inicial determinista idéntico en SSR e hidratación; la caché local y Supabase se cargan tras montar
+  const [ventasState, setVentasState] = useState<VentasHistorialStore>(VENTAS_SERVER_SNAPSHOT);
 
-  // Hidratar ventas autoritativas desde Supabase al montar (reemplazando cualquier residuo local)
+  // Hidratar caché local rápida y luego ventas autoritativas desde Supabase al montar
   useEffect(() => {
     let mounted = true;
+    const localSnapshot = inicializarVentasCliente();
+    if (localSnapshot.ventasRecientes.length > 0) {
+      setVentasState(localSnapshot);
+    }
     void inventarioService.sincronizarConSupabase();
 
     supabaseService

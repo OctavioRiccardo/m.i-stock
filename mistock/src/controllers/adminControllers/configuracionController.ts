@@ -41,25 +41,23 @@ export function useAdminConfiguracionController() {
   const [guardando, setGuardando] = useState<boolean>(false);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
   const [mensajeError, setMensajeError] = useState<string | null>(null);
-  const [ventasRemotas, setVentasRemotas] = useState<VentaRecientePOS[]>(
-    () => inicializarVentasCliente().ventasRecientes || []
-  );
+  const [ventasRemotas, setVentasRemotas] = useState<VentaRecientePOS[]>([]);
 
-  const [totalVentas, setTotalVentas] = useState<number>(
-    () => (inicializarVentasCliente().ventasRecientes || []).length
-  );
+  const [totalVentas, setTotalVentas] = useState<number>(0);
 
-  const [ultimoRespaldoCSV, setUltimoRespaldoCSV] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return null;
-    try {
-      return window.localStorage.getItem(ULTIMO_RESPALDO_STORAGE_KEY);
-    } catch {
-      return null;
-    }
-  });
+  const [ultimoRespaldoCSV, setUltimoRespaldoCSV] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
+    const ventasIniciales = inicializarVentasCliente().ventasRecientes || [];
+    setVentasRemotas(ventasIniciales);
+    setTotalVentas(ventasIniciales.length);
+    if (typeof window !== 'undefined') {
+      try {
+        const respaldoLocal = window.localStorage.getItem(ULTIMO_RESPALDO_STORAGE_KEY);
+        if (respaldoLocal) setUltimoRespaldoCSV(respaldoLocal);
+      } catch {}
+    }
     void inventarioService.sincronizarConSupabase();
     void configuracionService.sincronizarConSupabase();
     void supabaseService.fetchUltimoRespaldoCSV().then((marcaRemota) => {

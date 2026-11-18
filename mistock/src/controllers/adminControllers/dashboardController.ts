@@ -31,6 +31,7 @@ import { useInventarioData, inventarioService } from '@/services/inventarioServi
 import { supabaseService } from '@/services/supabaseService';
 import {
   VENTAS_STORAGE_KEY,
+  VENTAS_SERVER_SNAPSHOT,
   VentasHistorialStore,
   inicializarVentasCliente,
   recalcularVentasStore,
@@ -115,8 +116,8 @@ export function useAdminDashboardController() {
   const monedaSimbolo = config.negocio?.monedaSimbolo || '$';
   const { productos } = useInventarioData();
 
-  // Historial de ventas reactivo sincronizado con Supabase PostgreSQL
-  const [ventasState, setVentasState] = useState<VentasHistorialStore>(() => inicializarVentasCliente());
+  // Historial de ventas reactivo sincronizado con Supabase PostgreSQL (estado inicial determinista para SSR)
+  const [ventasState, setVentasState] = useState<VentasHistorialStore>(VENTAS_SERVER_SNAPSHOT);
 
   useEffect(() => {
     let mounted = true;
@@ -125,6 +126,8 @@ export function useAdminDashboardController() {
     const sincronizarVentas = () => {
       setVentasState(inicializarVentasCliente());
     };
+
+    sincronizarVentas();
 
     if (typeof window !== 'undefined') {
       window.addEventListener('storage', sincronizarVentas);
