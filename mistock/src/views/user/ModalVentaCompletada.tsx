@@ -8,15 +8,14 @@
  * Propósito:
  * Mostrar al cajero/vendedor una alerta visual destacada de "¡Venta Completada!"
  * inmediatamente después de confirmar el cobro (junto con el sonido de confirmación),
- * antes de dar paso al modal de impresión del ticket térmico de 80mm.
+ * permitiendo finalizar la operación, imprimir el ticket manualmente o anular la venta.
  */
 
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   CheckCircle,
   Receipt,
   Printer,
-  ArrowRight,
   Money,
   QrCode,
   CreditCard,
@@ -24,6 +23,7 @@ import {
   User,
   Clock,
   Sparkle,
+  Warning,
 } from '@phosphor-icons/react';
 import { motion } from 'motion/react';
 import {
@@ -45,9 +45,8 @@ export interface ModalVentaCompletadaProps {
   venta: VentaRecientePOS | null;
   monedaSimbolo: string;
   onIrAImprimirTicket?: (venta: VentaRecientePOS) => void;
+  onCancelarVenta?: (ventaId: string) => void;
 }
-
-const DELAY_AUTO_TICKET_MS = 1800;
 
 export function ModalVentaCompletada({
   isOpen,
@@ -55,18 +54,17 @@ export function ModalVentaCompletada({
   venta,
   monedaSimbolo,
   onIrAImprimirTicket,
+  onCancelarVenta,
 }: ModalVentaCompletadaProps) {
+  const [confirmandoAnulacion, setConfirmandoAnulacion] = useState(false);
+
   useEffect(() => {
-    if (!isOpen || !venta || !onIrAImprimirTicket) return;
-
-    const timer = setTimeout(() => {
-      onIrAImprimirTicket(venta);
-    }, DELAY_AUTO_TICKET_MS);
-
-    return () => clearTimeout(timer);
-  }, [isOpen, venta, onIrAImprimirTicket]);
+    setConfirmandoAnulacion(false);
+  }, [isOpen, venta?.id]);
 
   if (!venta) return null;
+
+  const codigoComprobante = formatearCodigoComprobante(venta.id);
 
   const renderBadgeMetodo = (metodo?: string) => {
     const m = (metodo || 'efectivo').toLowerCase();
@@ -135,7 +133,7 @@ export function ModalVentaCompletada({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent hideCloseButton className="max-w-md p-6 border-emerald-200 shadow-2xl rounded-2xl bg-white">
+      <DialogContent hideCloseButton className="sm:max-w-[500px] p-6 border-emerald-200 shadow-2xl rounded-2xl bg-white">
         <DialogHeader className="text-center space-y-3 pb-2">
           {/* Icono de Éxito con Animación Suave */}
           <motion.div
@@ -168,7 +166,7 @@ export function ModalVentaCompletada({
               <span className="text-xs font-semibold text-[#657373]">Ticket:</span>
             </div>
             <span className="text-xs font-mono font-bold text-[#1C2424] bg-white px-2 py-0.5 rounded border border-[#E8E6DF]">
-              {formatearCodigoComprobante(venta.id)}
+              {codigoComprobante}
             </span>
           </div>
 
@@ -196,51 +194,86 @@ export function ModalVentaCompletada({
           </div>
         </div>
 
-        {/* Barra de transición automática al modal de impresión */}
-        {onIrAImprimirTicket && (
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-[11px] text-[#657373]">
-              <span>Abriendo ticket para imprimir...</span>
-            </div>
-            <div className="h-1.5 w-full rounded-full bg-[#E8E6DF] overflow-hidden">
-              <motion.div
-                initial={{ width: '0%' }}
-                animate={{ width: '100%' }}
-                transition={{ duration: DELAY_AUTO_TICKET_MS / 1000, ease: 'linear' }}
-                className="h-full bg-[#2A7A78] rounded-full"
-              />
+        {/* Confirmación en línea antes de anular */}
+        {confirmandoAnulacion && (
+          <div className="p-3.5 rounded-xl border border-rose-200 bg-rose-50/80 flex items-start gap-2.5">
+            <Warning className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" weight="duotone" />
+            <div className="space-y-1">
+              <p className="text-xs font-bold text-rose-900">
+                ¿Confirmás anular el ticket {codigoComprobante}?
+              </p>
+              <p className="text-[11px] text-rose-800 leading-relaxed">
+                El ticket pasará a estado anulado y las unidades vendidas volverán automáticamente al inventario. Esta acción no se puede deshacer.
+              </p>
             </div>
           </div>
         )}
 
-        {/* Footer con Acciones */}
-        <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-1">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onClose}
-            className="text-xs h-9.5 border-[#E8E6DF] text-[#657373] hover:text-[#1C2424] font-semibold gap-1.5 cursor-pointer sm:flex-1"
-          >
-            <span>Nueva Venta</span>
-            <ArrowRight className="h-4 w-4" weight="bold" />
-          </Button>
-
-          {onIrAImprimirTicket && (
-            <motion.div
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
-              className="sm:flex-1"
-            >
+        {/* Footer con Acciones Manuales */}
+        <DialogFooter className="flex flex-col-reverse sm:flex-row sm:items-center gap-2 pt-2">
+          {confirmandoAnulacion ? (
+            <>
               <Button
                 type="button"
-                autoFocus
-                onClick={() => onIrAImprimirTicket(venta)}
-                className="w-full text-xs h-9.5 bg-[#2A7A78] hover:bg-[#205E5C] text-white font-bold gap-1.5 cursor-pointer shadow-xs"
+                variant="outline"
+                onClick={() => setConfirmandoAnulacion(false)}
+                className="text-xs h-9.5 cursor-pointer sm:flex-1"
               >
-                <Printer className="h-4 w-4" weight="duotone" />
-                <span>Imprimir Ticket</span>
+                No, mantener venta
               </Button>
-            </motion.div>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => {
+                  onCancelarVenta?.(venta.id);
+                  setConfirmandoAnulacion(false);
+                  onClose();
+                }}
+                className="text-xs h-9.5 font-bold cursor-pointer sm:flex-1"
+              >
+                Sí, confirmar anulación
+              </Button>
+            </>
+          ) : (
+            <>
+              {onCancelarVenta && venta.estado !== 'cancelada' && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => setConfirmandoAnulacion(true)}
+                  className="text-xs h-9.5 font-semibold cursor-pointer sm:mr-auto"
+                >
+                  Anular Venta
+                </Button>
+              )}
+
+              {onIrAImprimirTicket && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onIrAImprimirTicket(venta)}
+                  className="text-xs h-9.5 border-[#2A7A78]/35 text-[#2A7A78] hover:bg-[#E2F1F0]/60 hover:text-[#205E5C] font-semibold gap-1.5 cursor-pointer"
+                >
+                  <Printer className="h-4 w-4" weight="duotone" />
+                  <span>Imprimir Ticket</span>
+                </Button>
+              )}
+
+              <motion.div
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.98 }}
+                className="inline-block"
+              >
+                <Button
+                  type="button"
+                  autoFocus
+                  onClick={onClose}
+                  className="w-full text-xs h-9.5 bg-[#2A7A78] hover:bg-[#205E5C] text-white font-bold px-4 cursor-pointer shadow-xs"
+                >
+                  Finalizar Venta
+                </Button>
+              </motion.div>
+            </>
           )}
         </DialogFooter>
       </DialogContent>

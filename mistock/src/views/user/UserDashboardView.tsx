@@ -348,6 +348,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
           venta={ventaCompletadaFeedback}
           monedaSimbolo={monedaSimbolo}
           onIrAImprimirTicket={handleAbrirTicketDesdeVentaCompletada}
+          onCancelarVenta={cancelarVenta}
         />
 
         {/* Modal de Detalle de Venta y Ticket Térmico de 80mm */}
