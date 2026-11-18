@@ -56,6 +56,7 @@ export interface ItemCarritoPOS {
  */
 export interface VentaRecientePOS {
   id: string;
+  idTemporal?: string;
   hora: string;
   fecha?: string;
   fechaISO?: string;

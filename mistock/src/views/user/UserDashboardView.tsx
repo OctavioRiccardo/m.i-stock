@@ -101,6 +101,19 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
     setVentaCompletadaFeedback(venta);
   };
 
+  // Mantener la venta activa de los modales sincronizada con `data.ventasRecientes` cuando recibe su UUID remoto
+  const ventaCompletadaActual = ventaCompletadaFeedback
+    ? data.ventasRecientes.find(
+        (v) => v.id === ventaCompletadaFeedback.id || v.idTemporal === ventaCompletadaFeedback.id
+      ) ?? ventaCompletadaFeedback
+    : null;
+
+  const ventaSeleccionadaActual = ventaSeleccionada
+    ? data.ventasRecientes.find(
+        (v) => v.id === ventaSeleccionada.id || v.idTemporal === ventaSeleccionada.id
+      ) ?? ventaSeleccionada
+    : null;
+
   return (
     <MotionConfig reducedMotion="user">
       <div className="max-w-7xl mx-auto space-y-4">
@@ -335,9 +348,9 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
 
         {/* Modal de Retroalimentación de Venta Completada (aparece primero con el sonido) */}
         <ModalVentaCompletada
-          isOpen={!!ventaCompletadaFeedback}
+          isOpen={!!ventaCompletadaActual}
           onClose={() => setVentaCompletadaFeedback(null)}
-          venta={ventaCompletadaFeedback}
+          venta={ventaCompletadaActual}
           monedaSimbolo={monedaSimbolo}
           onIrAImprimirTicket={handleAbrirTicketDesdeVentaCompletada}
           onCancelarVenta={cancelarVenta}
@@ -345,13 +358,13 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
 
         {/* Modal de Detalle de Venta y Ticket Térmico de 80mm */}
         <ModalDetalleVenta
-          isOpen={!!ventaSeleccionada}
+          isOpen={!!ventaSeleccionadaActual}
           onClose={() => {
             setVentaSeleccionada(null);
             setAutoImprimirVenta(false);
             setEsNuevaVenta(false);
           }}
-          venta={ventaSeleccionada}
+          venta={ventaSeleccionadaActual}
           monedaSimbolo={monedaSimbolo}
           onCancelarVenta={cancelarVenta}
           autoPrint={autoImprimirVenta}

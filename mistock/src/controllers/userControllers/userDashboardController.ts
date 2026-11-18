@@ -13,7 +13,7 @@
  * - Sincronización exacta con los triggers PostgreSQL de Supabase sin doble descuento.
  */
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   UserDashboardData,
@@ -135,6 +135,8 @@ export function useUserDashboardController() {
 
   // Estado inicial determinista idéntico en SSR e hidratación; la caché local y Supabase se cargan tras montar
   const [ventasState, setVentasState] = useState<VentasHistorialStore>(VENTAS_SERVER_SNAPSHOT);
+  const pendingRegistrationsRef = useRef<Map<string, Promise<string | null>>>(new Map());
+  const idRemotoPorTempRef = useRef<Map<string, string>>(new Map());
 
   // Hidratar caché local rápida y luego ventas autoritativas desde Supabase al montar
   useEffect(() => {
@@ -950,9 +952,12 @@ export function useUserDashboardController() {
     }
 
     // Persistencia remota verificada en Supabase
-    supabaseService
-      .registrarVenta(newSale)
+    const registroPromise = supabaseService.registrarVenta(newSale);
+    pendingRegistrationsRef.current.set(ventaId, registroPromise);
+
+    registroPromise
       .then((remoteId) => {
+        pendingRegistrationsRef.current.delete(ventaId);
         if (!remoteId) {
           // Revertir venta local y re-sincronizar stock real desde Supabase
           setVentasState((prev) => {
@@ -971,9 +976,11 @@ export function useUserDashboardController() {
           return;
         }
 
+        idRemotoPorTempRef.current.set(ventaId, remoteId);
+
         setVentasState((prev) => {
           const allSales = prev.ventasRecientes.map((v) =>
-            v.id === ventaId ? { ...v, id: remoteId } : v
+            v.id === ventaId ? { ...v, id: remoteId, idTemporal: ventaId } : v
           );
           const updated = recalcularVentasStore(allSales);
           if (typeof window !== 'undefined') {
@@ -1015,6 +1022,7 @@ export function useUserDashboardController() {
         void inventarioService.sincronizarConSupabase();
       })
       .catch(() => {
+        pendingRegistrationsRef.current.delete(ventaId);
         void inventarioService.sincronizarConSupabase();
       });
 
@@ -1060,28 +1068,34 @@ export function useUserDashboardController() {
   /**
    * Cancela una venta registrada en Supabase, reintegra su stock mediante trigger PostgreSQL
    * y descuenta su monto de las métricas del turno y del día.
+   * Soporta tanto el UUID persistido como el identificador temporal `VNT-*` recién emitido.
    */
   const cancelarVenta = (ventaId: string, motivo?: string): boolean => {
-    const venta = data.ventasRecientes.find((v) => v.id === ventaId);
+    const idMapeado = idRemotoPorTempRef.current.get(ventaId) || ventaId;
+    const venta = data.ventasRecientes.find(
+      (v) => v.id === idMapeado || v.id === ventaId || v.idTemporal === ventaId
+    );
     if (!venta) {
-      setSaleErrorMessage(`No se encontró el comprobante ${ventaId}.`);
+      setSaleErrorMessage(`No se encontró el comprobante ${formatearCodigoComprobante(ventaId)}.`);
       setTimeout(() => setSaleErrorMessage(null), 3500);
       return false;
     }
 
     if (venta.estado === 'cancelada') {
-      setSaleErrorMessage(`El comprobante ${ventaId} ya fue cancelado previamente.`);
-      setTimeout(() => setSaleErrorMessage(null), 3500);
-      return false;
-    }
-
-    if (ventaId.startsWith('VNT-')) {
       setSaleErrorMessage(
-        'Aguarde un segundo a que el ticket termine de sincronizarse con la base de datos e intente nuevamente.'
+        `El comprobante ${formatearCodigoComprobante(venta.id)} ya fue cancelado previamente.`
       );
       setTimeout(() => setSaleErrorMessage(null), 3500);
       return false;
     }
+
+    const idInicial = venta.id;
+    const tempAlias = venta.idTemporal || (ventaId.startsWith('VNT-') ? ventaId : undefined);
+    const coincideVenta = (v: VentaRecientePOS, extraId?: string) =>
+      v.id === idInicial ||
+      v.id === ventaId ||
+      (extraId ? v.id === extraId : false) ||
+      (tempAlias ? v.id === tempAlias || v.idTemporal === tempAlias : false);
 
     // 1. Reintegro optimista en UI (`sincronizarRemoto = false`):
     // PostgreSQL reintegra el stock mediante `tr_cancelar_venta_reintegrar_stock`.
@@ -1092,7 +1106,7 @@ export function useUserDashboardController() {
     // 2. Actualizar estado local y verificar confirmación en Supabase
     setVentasState((prev) => {
       const allSales = prev.ventasRecientes.map((v) =>
-        v.id === ventaId ? { ...v, estado: 'cancelada' as const } : v
+        coincideVenta(v) ? { ...v, estado: 'cancelada' as const } : v
       );
       const updated = recalcularVentasStore(allSales);
       if (typeof window !== 'undefined') {
@@ -1104,42 +1118,70 @@ export function useUserDashboardController() {
       return updated;
     });
 
-    supabaseService
-      .cancelarVenta(ventaId)
-      .then((ok) => {
-        if (!ok) {
-          // Revertir si la base de datos rechazó la anulación (ej. falta aplicar patch_integridad_y_anulacion.sql)
-          setVentasState((prev) => {
-            const revertidas = prev.ventasRecientes.map((v) =>
-              v.id === ventaId ? { ...v, estado: 'completada' as const } : v
-            );
-            const updated = recalcularVentasStore(revertidas);
-            if (typeof window !== 'undefined') {
-              try {
-                window.localStorage.setItem(VENTAS_STORAGE_KEY, JSON.stringify(updated));
-                window.dispatchEvent(new Event('mistock_ventas_updated'));
-              } catch {}
-            }
-            return updated;
-          });
-          void inventarioService.sincronizarConSupabase();
-          setSaleErrorMessage(
-            'No se pudo anular el ticket en Supabase. Aplique patch_integridad_y_anulacion.sql en el SQL Editor.'
-          );
-          return;
-        }
-        void inventarioService.sincronizarConSupabase();
-      })
-      .catch(() => {
-        void inventarioService.sincronizarConSupabase();
-      });
-
     const motivoLimpio = (motivo || '').trim().slice(0, LIMITES_TEXTO.OBSERVACIONES_MAX);
     const motivoTexto = motivoLimpio ? ` (Motivo: ${motivoLimpio})` : '';
-    setSaleSuccessMessage(
-      `Venta ${ventaId} anulada con éxito y mercadería reingresada al stock.${motivoTexto}`
-    );
-    setTimeout(() => setSaleSuccessMessage(null), 4000);
+
+    const revertirAnulacionLocal = (extraId?: string) => {
+      setVentasState((prev) => {
+        const revertidas = prev.ventasRecientes.map((v) =>
+          coincideVenta(v, extraId) ? { ...v, estado: 'completada' as const } : v
+        );
+        const updated = recalcularVentasStore(revertidas);
+        if (typeof window !== 'undefined') {
+          try {
+            window.localStorage.setItem(VENTAS_STORAGE_KEY, JSON.stringify(updated));
+            window.dispatchEvent(new Event('mistock_ventas_updated'));
+          } catch {}
+        }
+        return updated;
+      });
+      void inventarioService.sincronizarConSupabase();
+      setSaleSuccessMessage(null);
+      setSaleErrorMessage(
+        'No se pudo anular el ticket en Supabase. Aplique patch_integridad_y_anulacion.sql en el SQL Editor.'
+      );
+    };
+
+    const ejecutarCancelacionRemota = async () => {
+      let idParaCancelar = idRemotoPorTempRef.current.get(idInicial) || idInicial;
+
+      // Si el cajero presionó "Anular Venta" antes de que finalizara el alta en Supabase, esperar su UUID real
+      if (idParaCancelar.startsWith('VNT-')) {
+        const pendiente =
+          pendingRegistrationsRef.current.get(idParaCancelar) ||
+          (tempAlias ? pendingRegistrationsRef.current.get(tempAlias) : undefined);
+        if (pendiente) {
+          const resolvedId = await pendiente;
+          if (resolvedId) {
+            idRemotoPorTempRef.current.set(idParaCancelar, resolvedId);
+            idParaCancelar = resolvedId;
+          }
+        }
+      }
+
+      if (!idParaCancelar || idParaCancelar.startsWith('VNT-')) {
+        revertirAnulacionLocal();
+        return;
+      }
+
+      const ok = await supabaseService.cancelarVenta(idParaCancelar);
+      if (!ok) {
+        revertirAnulacionLocal(idParaCancelar);
+        return;
+      }
+
+      void inventarioService.sincronizarConSupabase();
+      setSaleErrorMessage(null);
+      setSaleSuccessMessage(
+        `Venta ${formatearCodigoComprobante(idParaCancelar)} anulada con éxito y mercadería reingresada al stock.${motivoTexto}`
+      );
+      setTimeout(() => setSaleSuccessMessage(null), 4000);
+    };
+
+    void ejecutarCancelacionRemota().catch(() => {
+      revertirAnulacionLocal();
+    });
+
     return true;
   };
 

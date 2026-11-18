@@ -227,7 +227,7 @@ Es el ViewModel más importante para las pantallas principales tanto del Adminis
 * `PestanaOperativaPOS`: `'caja' | 'catalogo' | 'precios' | 'historial'`.
 * `ProductoRapidoPOS`: Proyección liviana de `Producto` optimizada para renderizado veloz en las grillas y tablas del mostrador (`id`, `nombre`, `categoria`, `precio`, `stock`, `stockMinimo`, `codigo`, `unidadMedida`, `oferta`).
 * `ItemCarritoPOS`: Renglón del ticket activo en memoria (`producto`, `cantidad`, `subtotal`).
-* `VentaRecientePOS`: Comprobante emitido en la caja con soporte de aislamiento por turno (`idTurno`), marca de tiempo exacta (`timestamp`, `fechaISO`), renglones (`items: DetalleVenta[]`), pagos (`pagos: Pago[]`) y `estado` (`'completada' | 'cancelada'`).
+* `VentaRecientePOS`: Comprobante emitido en la caja con soporte de alias temporal (`idTemporal`, para conciliar `VNT-*` con su UUID remoto), aislamiento por turno (`idTurno`), marca de tiempo exacta (`timestamp`, `fechaISO`), renglones (`items: DetalleVenta[]`), pagos (`pagos: Pago[]`) y `estado` (`'completada' | 'cancelada'`).
 * `UserDashboardData`: Objeto consolidado con `ventasDelDia`, `recaudacionDelDia`, `totalProductosEnStock`, `ventasRecientes` y `productosPopulares`.
 
 #### B) Estructuras para el Dashboard de Administración (`AdminDashboardView`)

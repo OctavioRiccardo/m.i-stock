@@ -234,8 +234,8 @@ mistock/src/
      - **Eliminación de Doble Deducción:** Descuenta el stock en la memoria local con `sincronizarRemoto = false`, delegando la actualización del stock físico en PostgreSQL al trigger `tr_venta_movimiento_stock` (que se ejecuta atómicamente al persistir `supabaseService.registrarVenta`). Si la inserción remota falla, revierte el ticket local.
      - Si `config.pos.sonidoConfirmacionVenta` está activo, reproduce un tono acústico de confirmación mediante **Web Audio API**.
   5. **Anulación Transaccional de Comprobantes (`cancelarVenta`):**
-     - Valida que la venta posea UUID persistido en Supabase.
-     - Persiste el estado `'cancelada'` en `public.ventas` a través de la política RLS `FOR UPDATE` (`"Staff anula ventas activas"`).
+     - Resuelve tanto el UUID persistido en Supabase como el alias temporal `VNT-*` recién emitido (`idTemporal` / `idRemotoPorTempRef`), aguardando incluso la promesa pendiente de `registrarVenta` si el cajero anula desde `ModalVentaCompletada` apenas finaliza el cobro.
+     - Persiste el estado `'cancelada'` en `public.ventas` a través de la política RLS `FOR UPDATE` (`"Staff anula ventas activas"`). Si Supabase confirma, emite el aviso verde; si rechaza o falla la red, revierte el estado local y muestra únicamente el error operativo.
      - El trigger `tr_cancelar_venta_reintegrar_stock` en PostgreSQL asienta automáticamente el movimiento de devolución en `public.movimientos_stock` y reintegra las existencias físicas en `public.productos`. En el frontend se actualiza la memoria local con `sincronizarRemoto = false` para sincronía 1:1.
   6. **Consultor de Precios (`consultarProducto`) y Catálogo General:**
      - Permite escanear o buscar artículos en `ModuloConsultorPrecios` y `ModuloCatalogoProductos` de forma independiente sin alterar el carrito activo del cliente en caja.
