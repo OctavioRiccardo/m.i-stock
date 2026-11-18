@@ -26,9 +26,10 @@ Cada cambio en el código fuente de `mistock/src/` debe reflejarse en su nota co
 | **`Controladores.md`** | Controladores MVC de cliente (Hooks React), responsabilidades, estados reactivos, métodos de negocio y desacoplamiento de la UI. | `src/controllers/adminControllers/`, `src/controllers/userControllers/`. |
 | **`Servicios.md`** | Almacenes reactivos (`useSyncExternalStore`), conector PostgreSQL (`supabaseService`) y suite de integración Mercado Pago Point (`mpConfig`, `pointTypes`, `pointService`, `webhookHandler`). | `src/services/inventarioService.ts`, `src/services/configuracionService.ts`, `src/services/supabaseService.ts`, `src/services/mercadopago/`. |
 | **`Vistas.md`** | Especificaciones de pantallas de Administrador y Operador (POS), maquetación, micro-interacciones, componentes shadcn/ui y tickets. | `src/views/admin/`, `src/views/user/`. |
-| **`Reglas de Negocio miStock.md`** | Lógica comercial, flujo de venta en mostrador, políticas de inventario, stock crítico, medios de cobro y tickets. | `src/services/`, configuración general del negocio. |
-| **`Rutas del Sistema.md`** | Mapeo de rutas de Next.js App Router, control de acceso por roles (Admin vs User) y redirecciones canónicas. | `src/app/`, middleware de autenticación. |
+| **`Reglas de Negocio miStock.md`** | Lógica comercial, flujo de venta en mostrador, políticas de inventario, stock crítico, medios de cobro y validaciones. | `src/services/`, `src/lib/validaciones.ts`, `src/__tests__/`, configuración general del negocio. |
+| **`Rutas del Sistema.md`** | Mapeo de rutas de Next.js App Router, control de acceso por roles (Admin vs User), Route Handlers Point y guardia SSR. | `src/app/`, `src/proxy.ts` (Next.js 16), `src/lib/supabase/middleware.ts`. |
 | **`Stack de Tecnologias.md`** | Pila tecnológica, versiones principales (Next.js 16, React 19, Supabase, Tailwind CSS v4, Turbopack). | Arquitectura general del repositorio. |
+| **`Chema de la Base de Datos.md`** *(Espejo: `mistock/docs/Base de datos.md`)* | Esquema relacional PostgreSQL 15+, diagramas ER, restricciones `CHECK`/`FK`, triggers de stock/anulación y políticas RLS. | `mistock/supabase/migrations/` (`schema.sql`, parches y seeds). |
 
 ---
 
