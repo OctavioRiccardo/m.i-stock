@@ -57,6 +57,7 @@ export interface ModalDetalleVentaProps {
   onCancelarVenta?: (ventaId: string) => void;
   autoPrint?: boolean;
   esNuevaVenta?: boolean;
+  onVolverAVentaCompletada?: (venta: VentaRecientePOS) => void;
 }
 
 export function ModalDetalleVenta({
@@ -67,6 +68,7 @@ export function ModalDetalleVenta({
   onCancelarVenta,
   autoPrint = false,
   esNuevaVenta = false,
+  onVolverAVentaCompletada,
 }: ModalDetalleVentaProps) {
   const [vistaActiva, setVistaActiva] = useState<'detalles' | 'ticket'>('detalles');
   const [confirmandoAnulacion, setConfirmandoAnulacion] = useState<boolean>(false);
@@ -148,7 +150,10 @@ export function ModalDetalleVenta({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && handleCerrarModal()}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={esNuevaVenta ? () => {} : (open) => !open && handleCerrarModal()}
+    >
       {/* Estilos dedicados para impresión en impresoras térmicas de 80mm */}
       <style
         dangerouslySetInnerHTML={{
@@ -182,8 +187,14 @@ export function ModalDetalleVenta({
         }}
       />
 
-      <DialogContent className="max-w-lg p-6 border-[#E8E6DF] shadow-2xl">
-        {/* Encabezado con selector de vistas: Detalles vs Ticket Térmico */}
+      <DialogContent
+        hideCloseButton={esNuevaVenta}
+        onPointerDownOutside={esNuevaVenta ? (e) => e.preventDefault() : undefined}
+        onInteractOutside={esNuevaVenta ? (e) => e.preventDefault() : undefined}
+        onEscapeKeyDown={esNuevaVenta ? (e) => e.preventDefault() : undefined}
+        className="max-w-lg p-6 border-[#E8E6DF] shadow-2xl"
+      >
+        {/* Encabezado con selector de vistas (solo en historial; en impresión directa se muestra únicamente el ticket) */}
         <DialogHeader className="space-y-2 pb-2 border-b border-[#E8E6DF]">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-3">
@@ -219,35 +230,37 @@ export function ModalDetalleVenta({
               </div>
             </div>
 
-            {/* Pestañas para alternar entre Detalles y Ticket Térmico */}
-            <div className="flex items-center bg-[#F8F7F2] p-0.5 rounded-lg border border-[#E8E6DF] self-start sm:self-auto">
-              <button
-                type="button"
-                onClick={() => setVistaActiva('detalles')}
-                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-                  vistaActiva === 'detalles'
-                    ? 'bg-white text-[#1C2424] shadow-xs'
-                    : 'text-[#657373] hover:text-[#1C2424]'
-                }`}
-              >
-                Detalles
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setConfirmandoAnulacion(false);
-                  setVistaActiva('ticket');
-                }}
-                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
-                  vistaActiva === 'ticket'
-                    ? 'bg-white text-[#2A7A78] shadow-xs'
-                    : 'text-[#657373] hover:text-[#1C2424]'
-                }`}
-              >
-                <Receipt className="h-3 w-3" />
-                <span>Ticket (80mm)</span>
-              </button>
-            </div>
+            {/* Pestañas para alternar entre Detalles y Ticket Térmico (ocultas en flujo de impresión directa) */}
+            {!esNuevaVenta && (
+              <div className="flex items-center bg-[#F8F7F2] p-0.5 rounded-lg border border-[#E8E6DF] self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setVistaActiva('detalles')}
+                  className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                    vistaActiva === 'detalles'
+                      ? 'bg-white text-[#1C2424] shadow-xs'
+                      : 'text-[#657373] hover:text-[#1C2424]'
+                  }`}
+                >
+                  Detalles
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setConfirmandoAnulacion(false);
+                    setVistaActiva('ticket');
+                  }}
+                  className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                    vistaActiva === 'ticket'
+                      ? 'bg-white text-[#2A7A78] shadow-xs'
+                      : 'text-[#657373] hover:text-[#1C2424]'
+                  }`}
+                >
+                  <Receipt className="h-3 w-3" />
+                  <span>Ticket (80mm)</span>
+                </button>
+              </div>
+            )}
           </div>
         </DialogHeader>
 
@@ -575,30 +588,42 @@ export function ModalDetalleVenta({
         <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-3 border-t border-[#E8E6DF]">
           {vistaActiva === 'ticket' ? (
             <>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setVistaActiva('detalles')}
-                className="text-xs h-9 cursor-pointer gap-1.5"
-              >
-                <ArrowLeft className="h-3.5 w-3.5" />
-                <span>Volver a Detalles</span>
-              </Button>
-              {esNuevaVenta && (
+              {!esNuevaVenta && (
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={handleCerrarModal}
-                  className="text-xs h-9 cursor-pointer"
+                  onClick={() => setVistaActiva('detalles')}
+                  className="text-xs h-9 cursor-pointer gap-1.5"
                 >
-                  Omitir Impresión
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  <span>Volver a Detalles</span>
+                </Button>
+              )}
+              {esNuevaVenta && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => {
+                    if (onVolverAVentaCompletada && venta) {
+                      onVolverAVentaCompletada(venta);
+                    } else {
+                      handleCerrarModal();
+                    }
+                  }}
+                  className="text-xs h-9 font-semibold cursor-pointer"
+                >
+                  Cancelar Impresión
                 </Button>
               )}
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.96 }} className="inline-block">
                 <Button
                   type="button"
                   onClick={ejecutarImpresionDirecta}
-                  className="text-xs h-9 bg-[#2A7A78] hover:bg-[#205E5C] text-white gap-1.5 font-semibold cursor-pointer shadow-xs"
+                  className={`text-xs h-9 text-white gap-1.5 font-semibold cursor-pointer shadow-xs ${
+                    esNuevaVenta
+                      ? 'bg-emerald-600 hover:bg-emerald-700'
+                      : 'bg-[#2A7A78] hover:bg-[#205E5C]'
+                  }`}
                 >
                   <Printer className="h-4 w-4" weight="duotone" />
                   <span>Imprimir Ticket (80mm)</span>

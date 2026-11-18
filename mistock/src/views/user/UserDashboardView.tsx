@@ -97,6 +97,13 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
     setVentaSeleccionada(venta);
   };
 
+  const handleVolverAVentaCompletada = (venta: VentaRecientePOS) => {
+    setVentaSeleccionada(null);
+    setAutoImprimirVenta(false);
+    setEsNuevaVenta(false);
+    setVentaCompletadaFeedback(venta);
+  };
+
   return (
     <MotionConfig reducedMotion="user">
       <div className="max-w-7xl mx-auto space-y-4">
@@ -364,6 +371,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
           onCancelarVenta={cancelarVenta}
           autoPrint={autoImprimirVenta}
           esNuevaVenta={esNuevaVenta}
+          onVolverAVentaCompletada={handleVolverAVentaCompletada}
         />
 
         {/* Modal de Apertura de Caja (Inicio de Turno / Sesión) */}
