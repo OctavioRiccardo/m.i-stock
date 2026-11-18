@@ -20,7 +20,6 @@ import {
   ArrowsLeftRight,
   SignOut,
   UserCheck,
-  Tag,
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 
@@ -30,7 +29,7 @@ import { cn } from '@/lib/utils';
 const userNavData = [
   { id: 'caja', link: '/dashboard?tab=caja', label: 'Terminal de Cobro', icon: ShoppingCart },
   { id: 'catalogo', link: '/dashboard?tab=catalogo', label: 'Catálogo de Productos', icon: Package },
-  { id: 'precios', link: '/dashboard?tab=precios', label: 'Consultor de Precios', icon: Tag },
+  // Consultor de Precios oculto temporalmente del panel de cajero
   { id: 'historial', link: '/dashboard?tab=historial', label: 'Historial del Día', icon: Receipt },
 ];
 

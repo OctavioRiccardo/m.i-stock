@@ -92,17 +92,19 @@ export function useUserDashboardController() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Gestión reactiva de pestaña operativa (sincronizada con ?tab=...)
+  // Gestión reactiva de pestaña operativa (Consultor de Precios oculto temporalmente)
   const tabParam = (searchParams?.get('tab') as PestanaOperativaPOS) || 'caja';
   const [pestanaOperativa, setPestanaOperativaState] = useState<PestanaOperativaPOS>(
-    ['caja', 'catalogo', 'precios', 'historial'].includes(tabParam) ? tabParam : 'caja'
+    ['caja', 'catalogo', 'historial'].includes(tabParam) ? tabParam : 'caja'
   );
 
   // Sincronizar automáticamente si cambia el searchParam de la URL
   useEffect(() => {
     const param = searchParams?.get('tab') as PestanaOperativaPOS;
-    if (param && ['caja', 'catalogo', 'precios', 'historial'].includes(param)) {
+    if (param && ['caja', 'catalogo', 'historial'].includes(param)) {
       setPestanaOperativaState(param);
+    } else if (param) {
+      setPestanaOperativaState('caja');
     }
   }, [searchParams]);
 

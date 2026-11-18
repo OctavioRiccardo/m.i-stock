@@ -160,8 +160,8 @@ Esta tabla resume cómo se conectan las **21 piezas visuales** de `src/views/` c
    - **Panel Lateral de Ticket Activo:** Muestra los renglones (`ItemCarritoPOS`), controles `+ / -` con validación de stock disponible, totalizador en vivo y botón principal **Cobrar** (o bloqueo `<Lock /> Caja Cerrada` si aún no se realizó la apertura de turno).
 2. **`ModuloCatalogoProductos.tsx` (`?tab=catalogo`):**
    - Explorador completo del catálogo con mini-KPIs de existencias físicas, filtros por rubro y disponibilidad (`Todos`, `En Stock`, `Agotados`), y botón para sumar artículos directamente al carrito.
-3. **`ModuloConsultorPrecios.tsx` (`?tab=consultor`):**
-   - Verificador rápido de precios y stock para responder consultas de clientes en mostrador **sin modificar el carrito en curso**, con opción de cargar el artículo consultado al ticket con un clic.
+3. **`ModuloConsultorPrecios.tsx` (`?tab=precios` — *oculto temporalmente en la navegación del cajero*):**
+   - Verificador rápido de precios y stock para responder consultas de clientes en mostrador **sin modificar el carrito en curso**, con opción de cargar el artículo consultado al ticket con un clic. Se mantiene implementado en el repositorio aunque oculto en `UserSidebar.tsx` y `UserDashboardView.tsx` (redirigiendo `?tab=precios` hacia `caja`).
 4. **`ModuloHistorialTickets.tsx` (`?tab=historial`):**
    - Auditoría de comprobantes emitidos en la jornada, buscador por código legible (`#XXXXXXXX`, formateado vía `formatearCodigoComprobante`), filtro por medio de pago y acceso rápido para ver el detalle o reimprimir tickets (sin botones de cierre de caja dentro de la tabla, manteniéndolos únicamente en la barra principal de `UserDashboardView.tsx`).
 

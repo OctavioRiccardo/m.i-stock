@@ -17,7 +17,6 @@ import React, { useState } from 'react';
 import {
   ShoppingCart,
   Package,
-  Tag,
   Receipt,
   CheckCircle,
   WarningCircle,
@@ -33,7 +32,6 @@ import { useUserDashboardController } from '@/controllers/userControllers/userDa
 import { VentaRecientePOS, PestanaOperativaPOS } from '@/models/modelos_vista/dashboardModel';
 import { ModuloTerminalCobro } from './ModuloTerminalCobro';
 import { ModuloCatalogoProductos } from './ModuloCatalogoProductos';
-import { ModuloConsultorPrecios } from './ModuloConsultorPrecios';
 import { ModuloHistorialTickets } from './ModuloHistorialTickets';
 import { ModalCobroTicket } from './ModalCobroTicket';
 import { ModalDetalleVenta } from './ModalDetalleVenta';
@@ -82,7 +80,6 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
   const pestanas: { id: PestanaOperativaPOS; label: string; icon: React.ElementType; badge?: number }[] = [
     { id: 'caja', label: 'Terminal de Cobro', icon: ShoppingCart, badge: carrito.length > 0 ? carrito.length : undefined },
     { id: 'catalogo', label: 'Catálogo de Productos', icon: Package },
-    { id: 'precios', label: 'Consultor de Precios', icon: Tag },
     { id: 'historial', label: 'Historial del Día', icon: Receipt },
   ];
 
@@ -302,18 +299,6 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
               transition={{ duration: 0.18 }}
             >
               <ModuloCatalogoProductos controller={controller} />
-            </motion.div>
-          )}
-
-          {pestanaOperativa === 'precios' && (
-            <motion.div
-              key="modulo-precios"
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.18 }}
-            >
-              <ModuloConsultorPrecios controller={controller} />
             </motion.div>
           )}
 
