@@ -40,6 +40,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { VentaRecientePOS } from '@/models/modelos_vista/dashboardModel';
+import { formatearCodigoComprobante } from '@/lib/validaciones';
 
 export interface ModalVentaCompletadaProps {
   isOpen: boolean;
@@ -158,7 +159,7 @@ export function ModalVentaCompletada({
               <span className="text-xs font-semibold text-[#657373]">Comprobante:</span>
             </div>
             <span className="text-xs font-mono font-bold text-[#1C2424] bg-white px-2 py-0.5 rounded border border-[#E8E6DF]">
-              {venta.id}
+              {formatearCodigoComprobante(venta.id)}
             </span>
           </div>
 

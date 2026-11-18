@@ -28,7 +28,6 @@ import {
   MagnifyingGlass,
   Printer,
   CalendarBlank,
-  Vault,
 } from '@phosphor-icons/react';
 import { motion } from 'motion/react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -45,6 +44,7 @@ import {
 } from '@/components/ui/table';
 import { useUserDashboardController } from '@/controllers/userControllers/userDashboardController';
 import { VentaRecientePOS } from '@/models/modelos_vista/dashboardModel';
+import { formatearCodigoComprobante } from '@/lib/validaciones';
 
 interface ModuloHistorialTicketsProps {
   controller: ReturnType<typeof useUserDashboardController>;
@@ -70,9 +70,6 @@ export function ModuloHistorialTickets({
     inicioPaginacionVentas,
     itemsPorPaginaVentas,
     monedaSimbolo,
-    setIsModalArqueoOpen,
-    setIsModalTicketCierreOpen,
-    ultimoCierre,
   } = controller;
 
   const [modoVistaVentas, setModoVistaVentas] = useState<'grid' | 'table'>('table');
@@ -223,62 +220,34 @@ export function ModuloHistorialTickets({
               </div>
             </div>
 
-            {/* Acciones de Cierre de Caja y Alternador de Vista */}
-            <div className="flex flex-wrap items-center gap-2 self-end sm:self-auto">
-              {ultimoCierre && (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setIsModalTicketCierreOpen(true)}
-                  className="h-8 text-xs font-semibold text-[#2A7A78] border-[#2A7A78]/30 hover:bg-[#E2F1F0] gap-1.5 cursor-pointer shadow-xs"
-                >
-                  <Receipt className="h-3.5 w-3.5" weight="duotone" />
-                  <span>Ver Cierre (Z)</span>
-                </Button>
-              )}
-
-              {controller.cajaAbierta && (
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => setIsModalArqueoOpen(true)}
-                  className="h-8 text-xs font-bold bg-[#2A7A78] hover:bg-[#205E5C] text-white gap-1.5 cursor-pointer shadow-xs"
-                >
-                  <Vault className="h-3.5 w-3.5" weight="duotone" />
-                  <span>Arqueo y Cierre</span>
-                </Button>
-              )}
-
-              {/* Alternador de Vista (Tarjetas vs Tabla) */}
-              <div className="flex items-center border border-[#E8E6DF] rounded-lg bg-white p-0.5 shrink-0 shadow-2xs">
-                <button
-                  type="button"
-                  onClick={() => setModoVistaVentas('grid')}
-                  className={`p-1.5 rounded-md transition-colors cursor-pointer flex items-center gap-1 text-xs ${
-                    modoVistaVentas === 'grid'
-                      ? 'bg-[#2A7A78] text-white font-medium'
-                      : 'text-[#657373] hover:text-[#1C2424]'
-                  }`}
-                  title="Vista cuadrícula de tarjetas"
-                >
-                  <SquaresFour className="h-4 w-4" weight={modoVistaVentas === 'grid' ? 'bold' : 'regular'} />
-                  <span className="hidden sm:inline">Tarjetas</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setModoVistaVentas('table')}
-                  className={`p-1.5 rounded-md transition-colors cursor-pointer flex items-center gap-1 text-xs ${
-                    modoVistaVentas === 'table'
-                      ? 'bg-[#2A7A78] text-white font-medium'
-                      : 'text-[#657373] hover:text-[#1C2424]'
-                  }`}
-                  title="Vista tabla detallada"
-                >
-                  <ListBullets className="h-4 w-4" weight={modoVistaVentas === 'table' ? 'bold' : 'regular'} />
-                  <span className="hidden sm:inline">Tabla</span>
-                </button>
-              </div>
+            {/* Alternador de Vista (Tarjetas vs Tabla) */}
+            <div className="flex items-center border border-[#E8E6DF] rounded-lg bg-white p-0.5 shrink-0 shadow-2xs self-end sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setModoVistaVentas('grid')}
+                className={`p-1.5 rounded-md transition-colors cursor-pointer flex items-center gap-1 text-xs ${
+                  modoVistaVentas === 'grid'
+                    ? 'bg-[#2A7A78] text-white font-medium'
+                    : 'text-[#657373] hover:text-[#1C2424]'
+                }`}
+                title="Vista cuadrícula de tarjetas"
+              >
+                <SquaresFour className="h-4 w-4" weight={modoVistaVentas === 'grid' ? 'bold' : 'regular'} />
+                <span className="hidden sm:inline">Tarjetas</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setModoVistaVentas('table')}
+                className={`p-1.5 rounded-md transition-colors cursor-pointer flex items-center gap-1 text-xs ${
+                  modoVistaVentas === 'table'
+                    ? 'bg-[#2A7A78] text-white font-medium'
+                    : 'text-[#657373] hover:text-[#1C2424]'
+                }`}
+                title="Vista tabla detallada"
+              >
+                <ListBullets className="h-4 w-4" weight={modoVistaVentas === 'table' ? 'bold' : 'regular'} />
+                <span className="hidden sm:inline">Tabla</span>
+              </button>
             </div>
           </div>
         </CardHeader>
@@ -287,7 +256,7 @@ export function ModuloHistorialTickets({
           {/* Barra de Búsqueda Rápida de Tickets */}
           <div className="relative">
             <Input
-              placeholder="Buscar por N° comprobante (ej: VNT-101), vendedor o producto..."
+              placeholder="Buscar por N° ticket (ej: #404AAD20), vendedor o producto..."
               maxLength={120}
               value={busquedaHistorial}
               onChange={(e) => setBusquedaHistorial(e.target.value)}
@@ -377,7 +346,7 @@ export function ModuloHistorialTickets({
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-xs font-bold text-[#1C2424] font-mono">
-                        {sale.id}
+                        {formatearCodigoComprobante(sale.id)}
                         {sale.estado === 'cancelada' ? (
                           <span className="ml-1.5 px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 text-[9px] font-bold uppercase font-sans">
                             Anulada
@@ -428,7 +397,7 @@ export function ModuloHistorialTickets({
                   {ventasRecientesPaginadas.map((sale) => (
                     <TableRow key={sale.id} className="hover:bg-[#F8F7F2]/50">
                       <TableCell className="py-2.5 font-bold text-xs text-[#1C2424] font-mono">
-                        {sale.id}
+                        {formatearCodigoComprobante(sale.id)}
                         {sale.estado === 'cancelada' ? (
                           <span className="ml-1.5 px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 text-[9px] font-bold uppercase font-sans">
                             Anulada

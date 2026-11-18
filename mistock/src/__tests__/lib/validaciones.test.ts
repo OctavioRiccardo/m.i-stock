@@ -19,6 +19,7 @@ import {
   sanitizarNombrePersonaInput,
   sanitizarAliasTransferenciaInput,
   acotarEntero,
+  formatearCodigoComprobante,
 } from '@/lib/validaciones';
 
 describe('Utilidades de Validación y Sanitización (validaciones.ts)', () => {
@@ -128,5 +129,12 @@ describe('Utilidades de Validación y Sanitización (validaciones.ts)', () => {
 
   it('sanitizarAliasTransferenciaInput conserva solo letras, números, puntos y guiones en minúscula', () => {
     expect(sanitizarAliasTransferenciaInput('Mi.Tienda.MP, $123!')).toBe('mi.tienda.mp123');
+  });
+
+  it('formatearCodigoComprobante abrevia UUIDs a referencia corta legible y preserva códigos cortos', () => {
+    expect(formatearCodigoComprobante('404aad20-ae04-4c20-b509-71bb6368fbef')).toBe('#404AAD20');
+    expect(formatearCodigoComprobante('VNT-3073')).toBe('VNT-3073');
+    expect(formatearCodigoComprobante('')).toBe('Sin número');
+    expect(formatearCodigoComprobante(null)).toBe('Sin número');
   });
 });

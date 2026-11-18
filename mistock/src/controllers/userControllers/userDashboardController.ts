@@ -35,7 +35,7 @@ import {
   calcularDiferenciaCaja,
   determinarEstadoBalance,
 } from '@/models/modelos_vista/cierreCajaModel';
-import { LIMITES_TEXTO, MAX_PRECIO_DB } from '@/lib/validaciones';
+import { LIMITES_TEXTO, MAX_PRECIO_DB, formatearCodigoComprobante } from '@/lib/validaciones';
 
 export const VENTAS_STORAGE_KEY = 'mistock_ventas_historial_test_v1';
 
@@ -263,6 +263,7 @@ export function useUserDashboardController() {
       const coincideBusqueda =
         !query ||
         v.id.toLowerCase().includes(query) ||
+        formatearCodigoComprobante(v.id).toLowerCase().includes(query) ||
         (v.vendedor && v.vendedor.toLowerCase().includes(query)) ||
         (v.items && v.items.some((it) => it.nombreProducto?.toLowerCase().includes(query)));
 

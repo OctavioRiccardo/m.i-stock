@@ -228,3 +228,17 @@ export function acotarEntero(valor: number, min: number, max: number, fallback: 
   if (!Number.isFinite(valor)) return fallback;
   return Math.min(max, Math.max(min, Math.trunc(valor)));
 }
+
+/**
+ * Formatea un identificador de venta (UUID de PostgreSQL o código temporal)
+ * en una referencia corta e intuitiva para el mostrador (ej. `#404AAD20`).
+ */
+export function formatearCodigoComprobante(id?: string | null): string {
+  if (!id) return 'Sin número';
+  const limpio = id.trim();
+  const esUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(limpio);
+  if (esUuid) {
+    return `#${limpio.slice(0, 8).toUpperCase()}`;
+  }
+  return limpio;
+}

@@ -158,7 +158,20 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
               </span>
             </div>
 
-            {/* Acceso a Apertura o Cierre de Caja según estado */}
+            {/* Acceso a Apertura, Cierre o Último Reporte Z en barra principal */}
+            {ultimoCierre && !cajaAbierta && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsModalTicketCierreOpen(true)}
+                className="h-10 px-3 text-xs font-semibold text-[#2A7A78] border-[#2A7A78]/30 hover:bg-[#E2F1F0] gap-1.5 cursor-pointer shadow-xs"
+              >
+                <Receipt className="h-4 w-4" weight="duotone" />
+                <span>Ver Cierre (Z)</span>
+              </Button>
+            )}
+
             {cajaAbierta ? (
               <Button
                 type="button"

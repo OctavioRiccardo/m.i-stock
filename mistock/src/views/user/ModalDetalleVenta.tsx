@@ -46,6 +46,7 @@ import {
 } from '@/components/ui/table';
 import { VentaRecientePOS } from '@/models/modelos_vista/dashboardModel';
 import { useConfiguracionData } from '@/services/configuracionService';
+import { formatearCodigoComprobante } from '@/lib/validaciones';
 import { motion } from 'motion/react';
 
 export interface ModalDetalleVentaProps {
@@ -125,6 +126,7 @@ export function ModalDetalleVenta({
 
   if (!venta) return null;
 
+  const codigoComprobante = formatearCodigoComprobante(venta.id);
   const items = venta.items || [];
   const esEfectivo = venta.metodoPago === 'efectivo';
   const esMercadoPago = venta.metodoPago === 'mercado_pago';
@@ -193,7 +195,7 @@ export function ModalDetalleVenta({
               <div>
                 <div className="flex items-center gap-2">
                   <DialogTitle className="text-base font-bold text-[#1C2424]">
-                    Comprobante {venta.id}
+                    Ticket {codigoComprobante}
                   </DialogTitle>
                   <Badge
                     variant="outline"
@@ -204,14 +206,18 @@ export function ModalDetalleVenta({
                     }
                   >
                     <CheckCircle className="h-3 w-3 mr-1" weight="fill" />
-                    {venta.estado === 'cancelada' ? 'Cancelada' : 'Completada'}
+                    {venta.estado === 'cancelada' ? 'Anulada' : 'Completada'}
                   </Badge>
                 </div>
-                <DialogDescription className="text-xs text-[#657373]">
-                  {vistaActiva === 'detalles'
-                    ? 'Registro operativo con snapshot histórico de artículos.'
-                    : 'Simulación y emisión del ticket térmico en 80mm.'}
-                </DialogDescription>
+                {vistaActiva === 'detalles' ? (
+                  <DialogDescription className="sr-only">
+                    Detalle de productos y cobro de la venta
+                  </DialogDescription>
+                ) : (
+                  <DialogDescription className="text-xs text-[#657373]">
+                    Vista previa del ticket térmico (80mm).
+                  </DialogDescription>
+                )}
               </div>
             </div>
 
@@ -430,7 +436,7 @@ export function ModalDetalleVenta({
                         FACTURA B
                       </p>
                       <p className="text-[9px] text-[#4B5563] font-semibold">
-                        PTO. VTA: {String(configNegocio.puntoVenta || 1).padStart(4, '0')} - COMP. NRO: {venta.id.replace(/\D/g, '').padStart(8, '0')}
+                        PTO. VTA: {String(configNegocio.puntoVenta || 1).padStart(4, '0')} - COMP. NRO: {venta.id.replace(/\D/g, '').slice(0, 8).padStart(8, '0')}
                       </p>
                     </div>
                   )}
@@ -450,7 +456,7 @@ export function ModalDetalleVenta({
                         : 'COMPROBANTE N°:'}
                     </span>
                     <span className="font-bold">
-                      {String(configNegocio.puntoVenta || 1).padStart(4, '0')}-{venta.id}
+                      {String(configNegocio.puntoVenta || 1).padStart(4, '0')}-{codigoComprobante.replace('#', '')}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -558,7 +564,7 @@ export function ModalDetalleVenta({
             <Warning className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" weight="duotone" />
             <div className="space-y-1">
               <p className="text-xs font-bold text-rose-900">
-                ¿Confirmás anular el comprobante {venta.id}?
+                ¿Confirmás anular el ticket {codigoComprobante}?
               </p>
               <p className="text-[11px] text-rose-800 leading-relaxed">
                 El ticket pasará a estado anulado y las unidades vendidas volverán automáticamente al inventario. Esta acción no se puede deshacer.
