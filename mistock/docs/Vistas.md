@@ -157,7 +157,7 @@ Esta tabla resume cómo se conectan las **21 piezas visuales** de `src/views/` c
 1. **`ModuloTerminalCobro.tsx` (`?tab=terminal`):**
    - **Buscador y Lector de Código de Barras:** Soporta disparo automático al presionar `Enter` o disparo instantáneo al coincidir el SKU exacto cuando `config.pos.modoEscanerRapido` está activo.
    - **Filtro Unificado por Categoría:** Selector desplegable `<Select>` con conteo de productos y alternador entre cuadrícula táctil (`SquaresFour`) y lista compacta (`ListBullets`).
-   - **Panel Lateral de Ticket Activo:** Muestra los renglones (`ItemCarritoPOS`), controles `+ / -` con validación de stock disponible, totalizador en vivo y botón principal **Cobrar Ticket** (o bloqueo `<Lock /> Caja Cerrada` si aún no se realizó la apertura de turno).
+   - **Panel Lateral de Ticket Activo:** Muestra los renglones (`ItemCarritoPOS`), controles `+ / -` con validación de stock disponible, totalizador en vivo y botón principal **Cobrar** (o bloqueo `<Lock /> Caja Cerrada` si aún no se realizó la apertura de turno).
 2. **`ModuloCatalogoProductos.tsx` (`?tab=catalogo`):**
    - Explorador completo del catálogo con mini-KPIs de existencias físicas, filtros por rubro y disponibilidad (`Todos`, `En Stock`, `Agotados`), y botón para sumar artículos directamente al carrito.
 3. **`ModuloConsultorPrecios.tsx` (`?tab=consultor`):**
@@ -168,6 +168,7 @@ Esta tabla resume cómo se conectan las **21 piezas visuales** de `src/views/` c
 #### C. Los 5 Modales Transaccionales del POS
 1. **`ModalAperturaCaja.tsx`:** Solicita el fondo fijo inicial de cambio en billetes (con atajos rápidos de `$0` a `$50.000`), identifica al cajero autenticado y habilita formalmente la terminal para operar.
 2. **`ModalCobroTicket.tsx`:**
+   - Cierre controlado exclusivamente desde el botón **Cancelar** (`hideCloseButton` sin botón `X` superior ni cierre accidental por Escape/backdrop, evitando solapamientos sobre `"Total a Cobrar"` y cancelaciones accidentales en medio de un cobro).
    - Filtra los medios de pago según `config.pos.mediosPago`.
    - En **Efectivo**, calcula el vuelto en tiempo real (`calcularVueltoPOS`) y ofrece botones con sugerencias inteligentes de billetes (`generarSugerenciasBilletes`).
    - En **Mercado Pago Point Smart**, consulta las terminales físicas vinculadas (`/api/mercadopago/point/devices`), envía la intención de cobro (`POST /api/mercadopago/point/intent`), realiza *polling* cada 3 segundos (`GET /api/mercadopago/point/intent/[id]`) mostrando el estado del posnet en vivo (`ON_TERMINAL`, `PROCESSED`, `ERROR`, `ABANDONED`) y solo habilita la emisión del ticket cuando el pago es aprobado.

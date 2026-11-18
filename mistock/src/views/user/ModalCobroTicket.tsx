@@ -304,8 +304,13 @@ export function ModalCobroTicket({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-lg p-6 border-[#E8E6DF] shadow-2xl">
+    <Dialog open={isOpen} onOpenChange={() => {}}>
+      <DialogContent
+        hideCloseButton
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+        className="max-w-lg p-6 border-[#E8E6DF] shadow-2xl"
+      >
         <DialogHeader className="space-y-1.5 pb-2 border-b border-[#E8E6DF]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">

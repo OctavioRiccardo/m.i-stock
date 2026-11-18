@@ -611,7 +611,7 @@ export function ModuloTerminalCobro({
                     className="w-full h-12 text-sm bg-emerald-700 hover:bg-emerald-800 text-white font-bold gap-2 cursor-pointer disabled:opacity-40 shadow-sm transition-all"
                   >
                     <Money className="h-5 w-5" weight="bold" />
-                    <span>Cobrar Ticket</span>
+                    <span>Cobrar</span>
                   </Button>
                 </motion.div>
               )}
