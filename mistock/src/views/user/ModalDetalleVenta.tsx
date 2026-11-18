@@ -57,7 +57,6 @@ export interface ModalDetalleVentaProps {
   onCancelarVenta?: (ventaId: string) => void;
   autoPrint?: boolean;
   esNuevaVenta?: boolean;
-  onVentaFinalizadaFeedback?: (venta: VentaRecientePOS) => void;
 }
 
 export function ModalDetalleVenta({
@@ -68,7 +67,6 @@ export function ModalDetalleVenta({
   onCancelarVenta,
   autoPrint = false,
   esNuevaVenta = false,
-  onVentaFinalizadaFeedback,
 }: ModalDetalleVentaProps) {
   const [vistaActiva, setVistaActiva] = useState<'detalles' | 'ticket'>('detalles');
   const [confirmandoAnulacion, setConfirmandoAnulacion] = useState<boolean>(false);
@@ -76,8 +74,8 @@ export function ModalDetalleVenta({
   const configNegocio = configGlobal.negocio;
 
   /**
-   * Ejecuta la impresión del ticket térmico y, al finalizar (sea por imprimir o cancelar
-   * el diálogo del navegador), notifica la finalización para mostrar el feedback de venta completada.
+   * Ejecuta la impresión del ticket térmico y, si corresponde a una venta recién cobrada,
+   * cierra el modal al finalizar para volver limpiamente al punto de venta.
    */
   const ejecutarImpresionConFeedback = () => {
     if (typeof window === 'undefined') return;
@@ -88,8 +86,8 @@ export function ModalDetalleVenta({
       finalizado = true;
       window.removeEventListener('afterprint', finalizar);
 
-      if (esNuevaVenta && onVentaFinalizadaFeedback && venta) {
-        onVentaFinalizadaFeedback(venta);
+      if (esNuevaVenta) {
+        onClose();
       }
     };
 
@@ -108,7 +106,8 @@ export function ModalDetalleVenta({
     }, 400);
   };
 
-  // Restablecer a vista 'detalles' o activar auto-impresión cada vez que se abre una venta
+  // Abrir directamente en vista ticket tras cobrar una nueva venta o al auto-imprimir;
+  // en consultas del historial se abre en vista 'detalles'
   useEffect(() => {
     setConfirmandoAnulacion(false);
     if (isOpen) {
@@ -118,11 +117,13 @@ export function ModalDetalleVenta({
           ejecutarImpresionConFeedback();
         }, 250);
         return () => clearTimeout(timer);
+      } else if (esNuevaVenta) {
+        setVistaActiva('ticket');
       } else {
         setVistaActiva('detalles');
       }
     }
-  }, [isOpen, venta?.id, autoPrint]);
+  }, [isOpen, venta?.id, autoPrint, esNuevaVenta]);
 
   if (!venta) return null;
 
@@ -144,9 +145,6 @@ export function ModalDetalleVenta({
 
   const handleCerrarModal = () => {
     onClose();
-    if (esNuevaVenta && onVentaFinalizadaFeedback && venta) {
-      onVentaFinalizadaFeedback(venta);
-    }
   };
 
   return (

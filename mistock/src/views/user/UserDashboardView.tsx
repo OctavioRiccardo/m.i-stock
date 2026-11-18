@@ -87,16 +87,14 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
   ];
 
   const handleVentaCompletada = (venta: VentaRecientePOS) => {
+    setVentaCompletadaFeedback(venta);
+  };
+
+  const handleAbrirTicketDesdeVentaCompletada = (venta: VentaRecientePOS) => {
+    setVentaCompletadaFeedback(null);
     setEsNuevaVenta(true);
     setAutoImprimirVenta(Boolean(config.pos.autoImprimirTicket));
     setVentaSeleccionada(venta);
-  };
-
-  const handleFinalizarVentaConFeedback = (venta: VentaRecientePOS) => {
-    setVentaSeleccionada(null);
-    setAutoImprimirVenta(false);
-    setEsNuevaVenta(false);
-    setVentaCompletadaFeedback(venta);
   };
 
   return (
@@ -343,6 +341,15 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
           onVentaCompletada={handleVentaCompletada}
         />
 
+        {/* Modal de Retroalimentación de Venta Completada (aparece primero con el sonido) */}
+        <ModalVentaCompletada
+          isOpen={!!ventaCompletadaFeedback}
+          onClose={() => setVentaCompletadaFeedback(null)}
+          venta={ventaCompletadaFeedback}
+          monedaSimbolo={monedaSimbolo}
+          onIrAImprimirTicket={handleAbrirTicketDesdeVentaCompletada}
+        />
+
         {/* Modal de Detalle de Venta y Ticket Térmico de 80mm */}
         <ModalDetalleVenta
           isOpen={!!ventaSeleccionada}
@@ -356,22 +363,6 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
           onCancelarVenta={cancelarVenta}
           autoPrint={autoImprimirVenta}
           esNuevaVenta={esNuevaVenta}
-          onVentaFinalizadaFeedback={handleFinalizarVentaConFeedback}
-        />
-
-        {/* Modal de Retroalimentación de Venta Completada */}
-        <ModalVentaCompletada
-          isOpen={!!ventaCompletadaFeedback}
-          onClose={() => setVentaCompletadaFeedback(null)}
-          venta={ventaCompletadaFeedback}
-          monedaSimbolo={monedaSimbolo}
-          onReimprimirTicket={() => {
-            const v = ventaCompletadaFeedback;
-            setVentaCompletadaFeedback(null);
-            setEsNuevaVenta(false);
-            setAutoImprimirVenta(false);
-            setVentaSeleccionada(v);
-          }}
         />
 
         {/* Modal de Apertura de Caja (Inicio de Turno / Sesión) */}

@@ -2,19 +2,16 @@
 
 /**
  * ====================================================================
- * COMPONENTE: MODAL DE VENTA COMPLETADA (FEEDBACK POS)
+ * COMPONENTE: MODAL DE VENTA COMPLETADA (ALERTA INMEDIATA POS)
  * ====================================================================
- * 
+ *
  * Propósito:
- * Proporcionar al cajero/vendedor una confirmación visual inmediata y clara
- * tras concretar una venta y finalizar (o cancelar/omitir) la impresión
- * del ticket térmico de 80mm.
- * 
- * Garantiza retroalimentación explícita sobre el éxito de la transacción,
- * el número de comprobante emitido, el medio de cobro y la actualización de stock.
+ * Mostrar al cajero/vendedor una alerta visual destacada de "¡Venta Completada!"
+ * inmediatamente después de confirmar el cobro (junto con el sonido de confirmación),
+ * antes de dar paso al modal de impresión del ticket térmico de 80mm.
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   CheckCircle,
   Receipt,
@@ -28,7 +25,7 @@ import {
   Clock,
   Sparkle,
 } from '@phosphor-icons/react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import {
   Dialog,
   DialogContent,
@@ -47,16 +44,28 @@ export interface ModalVentaCompletadaProps {
   onClose: () => void;
   venta: VentaRecientePOS | null;
   monedaSimbolo: string;
-  onReimprimirTicket?: () => void;
+  onIrAImprimirTicket?: (venta: VentaRecientePOS) => void;
 }
+
+const DELAY_AUTO_TICKET_MS = 1800;
 
 export function ModalVentaCompletada({
   isOpen,
   onClose,
   venta,
   monedaSimbolo,
-  onReimprimirTicket,
+  onIrAImprimirTicket,
 }: ModalVentaCompletadaProps) {
+  useEffect(() => {
+    if (!isOpen || !venta || !onIrAImprimirTicket) return;
+
+    const timer = setTimeout(() => {
+      onIrAImprimirTicket(venta);
+    }, DELAY_AUTO_TICKET_MS);
+
+    return () => clearTimeout(timer);
+  }, [isOpen, venta, onIrAImprimirTicket]);
+
   if (!venta) return null;
 
   const renderBadgeMetodo = (metodo?: string) => {
@@ -126,13 +135,13 @@ export function ModalVentaCompletada({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md p-6 border-[#E8E6DF] shadow-2xl rounded-2xl bg-white">
+      <DialogContent hideCloseButton className="max-w-md p-6 border-emerald-200 shadow-2xl rounded-2xl bg-white">
         <DialogHeader className="text-center space-y-3 pb-2">
           {/* Icono de Éxito con Animación Suave */}
           <motion.div
-            initial={{ scale: 0.7, opacity: 0 }}
+            initial={{ scale: 0.65, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 22 }}
             className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100/90 text-emerald-700 ring-6 ring-emerald-50 shadow-xs"
           >
             <CheckCircle className="h-8 w-8" weight="fill" />
@@ -140,13 +149,13 @@ export function ModalVentaCompletada({
 
           <div className="space-y-1">
             <div className="flex items-center justify-center gap-1.5">
-              <DialogTitle className="text-xl font-black text-[#1C2424] tracking-tight">
+              <DialogTitle className="text-xl font-black text-emerald-900 tracking-tight">
                 ¡Venta Completada!
               </DialogTitle>
               <Sparkle className="h-4 w-4 text-emerald-600" weight="fill" />
             </div>
             <DialogDescription className="text-xs text-[#657373] leading-relaxed">
-              La operación fue registrada con éxito en el sistema y las existencias fueron descontadas de depósito.
+              El cobro fue registrado con éxito y el stock fue actualizado.
             </DialogDescription>
           </div>
         </DialogHeader>
@@ -156,7 +165,7 @@ export function ModalVentaCompletada({
           <div className="flex items-center justify-between pb-2.5 border-b border-[#E8E6DF]/70">
             <div className="flex items-center gap-1.5">
               <Receipt className="h-4 w-4 text-[#2A7A78]" weight="duotone" />
-              <span className="text-xs font-semibold text-[#657373]">Comprobante:</span>
+              <span className="text-xs font-semibold text-[#657373]">Ticket:</span>
             </div>
             <span className="text-xs font-mono font-bold text-[#1C2424] bg-white px-2 py-0.5 rounded border border-[#E8E6DF]">
               {formatearCodigoComprobante(venta.id)}
@@ -187,35 +196,52 @@ export function ModalVentaCompletada({
           </div>
         </div>
 
-        {/* Footer con Acciones */}
-        <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2">
-          {onReimprimirTicket && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onReimprimirTicket}
-              className="text-xs h-9.5 border-[#E8E6DF] hover:bg-[#E2F1F0]/60 text-[#2A7A78] font-semibold gap-1.5 cursor-pointer sm:flex-1"
-            >
-              <Printer className="h-4 w-4" weight="duotone" />
-              <span>Reimprimir Ticket</span>
-            </Button>
-          )}
+        {/* Barra de transición automática al modal de impresión */}
+        {onIrAImprimirTicket && (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-[11px] text-[#657373]">
+              <span>Abriendo ticket para imprimir...</span>
+            </div>
+            <div className="h-1.5 w-full rounded-full bg-[#E8E6DF] overflow-hidden">
+              <motion.div
+                initial={{ width: '0%' }}
+                animate={{ width: '100%' }}
+                transition={{ duration: DELAY_AUTO_TICKET_MS / 1000, ease: 'linear' }}
+                className="h-full bg-[#2A7A78] rounded-full"
+              />
+            </div>
+          </div>
+        )}
 
-          <motion.div
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.98 }}
-            className="sm:flex-1"
+        {/* Footer con Acciones */}
+        <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-1">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            className="text-xs h-9.5 border-[#E8E6DF] text-[#657373] hover:text-[#1C2424] font-semibold gap-1.5 cursor-pointer sm:flex-1"
           >
-            <Button
-              type="button"
-              autoFocus
-              onClick={onClose}
-              className="w-full text-xs h-9.5 bg-[#2A7A78] hover:bg-[#205E5C] text-white font-bold gap-1.5 cursor-pointer shadow-xs"
+            <span>Nueva Venta</span>
+            <ArrowRight className="h-4 w-4" weight="bold" />
+          </Button>
+
+          {onIrAImprimirTicket && (
+            <motion.div
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
+              className="sm:flex-1"
             >
-              <span>Nueva Venta</span>
-              <ArrowRight className="h-4 w-4" weight="bold" />
-            </Button>
-          </motion.div>
+              <Button
+                type="button"
+                autoFocus
+                onClick={() => onIrAImprimirTicket(venta)}
+                className="w-full text-xs h-9.5 bg-[#2A7A78] hover:bg-[#205E5C] text-white font-bold gap-1.5 cursor-pointer shadow-xs"
+              >
+                <Printer className="h-4 w-4" weight="duotone" />
+                <span>Imprimir Ticket</span>
+              </Button>
+            </motion.div>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
