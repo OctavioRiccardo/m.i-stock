@@ -132,8 +132,14 @@ export function ModalVentaCompletada({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent hideCloseButton className="sm:max-w-[500px] p-6 border-emerald-200 shadow-2xl rounded-2xl bg-white">
+    <Dialog open={isOpen} onOpenChange={() => {}}>
+      <DialogContent
+        hideCloseButton
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+        className="sm:max-w-[500px] p-6 border-emerald-200 shadow-2xl rounded-2xl bg-white"
+      >
         <DialogHeader className="text-center space-y-3 pb-2">
           {/* Icono de Éxito con Animación Suave */}
           <motion.div
