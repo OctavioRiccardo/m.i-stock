@@ -44,6 +44,7 @@ Consultar el `SKILL.md` correspondiente antes de intervenir en su dominio:
 | Skill | Ruta | Cuándo Activarse |
 | :--- | :--- | :--- |
 | **`obsidian-docs`** | `.agents/skills/obsidian-docs/SKILL.md` | Obligatoria al crear/editar modelos, controladores, servicios, vistas, rutas, KPIs, reglas SQL o dependencias. |
+| **`interface-design`** | `.agents/skills/interface-design/SKILL.md` | Diseño, rediseño, auditoría o refinamiento visual de vistas, dashboards, paneles admin, POS, jerarquía y tokens UI. |
 | **`supabase`** | `.agents/skills/supabase/SKILL.md` | Autenticación, SSR (`@supabase/ssr`), RLS, Supabase CLI, Realtime o troubleshooting de Postgres/HTTP. |
 | **`supabase-postgres-best-practices`** | `.agents/skills/supabase-postgres-best-practices/SKILL.md` | Creación/alteración de tablas, migraciones SQL, triggers, índices, funciones y políticas RLS. |
 
