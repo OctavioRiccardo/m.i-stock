@@ -214,8 +214,8 @@ export function ModuloHistorialTickets({
                 <CardTitle className="text-sm font-bold text-[#1C2424]">
                   Historial de Tickets y Reimpresión
                 </CardTitle>
-                <p className="text-[11px] text-[#657373]">
-                  Seleccione cualquier comprobante para inspeccionar renglones o reimprimir en formato térmico.
+                <p className="text-[11px] text-muted-foreground">
+                  Seleccionar un ticket para ver su detalle o reimprimirlo en formato térmico.
                 </p>
               </div>
             </div>
@@ -314,8 +314,8 @@ export function ModuloHistorialTickets({
               <p className="text-xs font-bold text-[#1C2424]">
                 No se encontraron ventas para este filtro
               </p>
-              <p className="text-[11px] text-[#657373]">
-                Verifique el criterio de búsqueda o el medio de cobro seleccionado.
+              <p className="text-[11px] text-muted-foreground">
+                Comprobar el criterio de búsqueda o el medio de cobro seleccionado.
               </p>
               {(busquedaHistorial || metodoPagoFiltroVentas !== 'todos') && (
                 <Button

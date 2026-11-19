@@ -101,8 +101,8 @@ export function ModuloConsultorPrecios({ controller }: ModuloConsultorPreciosPro
                 <h2 className="text-base font-bold text-[#1C2424] tracking-tight">
                   Consultor de Precios y Disponibilidad
                 </h2>
-                <p className="text-xs text-[#657373]">
-                  Verifique precios unitarios y existencias sin alterar el ticket activo del mostrador.
+                <p className="text-xs text-muted-foreground">
+                  Consultar precios unitarios y stock disponible sin modificar el ticket en curso.
                 </p>
               </div>
             </div>
@@ -125,7 +125,7 @@ export function ModuloConsultorPrecios({ controller }: ModuloConsultorPreciosPro
             <div className="relative flex-1">
               <Input
                 ref={inputRef}
-                placeholder="Escanee código de barras o escriba el nombre del artículo (Enter para buscar)..."
+                placeholder="Escanear código de barras o buscar producto por nombre (Enter para consultar)..."
                 maxLength={120}
                 value={busquedaPrecios}
                 onChange={(e) => {
@@ -281,7 +281,7 @@ export function ModuloConsultorPrecios({ controller }: ModuloConsultorPreciosPro
                       type="button"
                       onClick={() => handleAgregarAlTicket(productoConsultado)}
                       disabled={productoConsultado.stock <= 0 || !controller.cajaAbierta}
-                      className="w-full h-11 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 cursor-pointer shadow-xs disabled:opacity-40"
+                      className="w-full min-h-11 text-xs font-bold gap-2"
                     >
                       <Plus className="h-4 w-4" weight="bold" />
                       <span>
@@ -309,8 +309,8 @@ export function ModuloConsultorPrecios({ controller }: ModuloConsultorPreciosPro
               <Package className="h-4 w-4 text-[#2A7A78]" weight="duotone" />
               <span>Sugerencias del Catálogo para Consulta</span>
             </CardTitle>
-            <span className="text-[11px] text-[#657373]">
-              Haga clic en cualquier fila para consultar el precio
+            <span className="text-[11px] text-muted-foreground">
+              Seleccionar una fila para consultar el precio
             </span>
           </div>
         </CardHeader>

@@ -287,7 +287,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
 
     const errors: Partial<Record<keyof FormularioCargaProducto, string>> = {};
     if (!formData.categoriaId || formData.categoriaId.trim() === '') {
-      errors.categoriaId = 'Debe seleccionar una categoría para el producto.';
+      errors.categoriaId = 'Seleccionar una categoría para el producto.';
     }
     if (!formData.nombre.trim()) {
       errors.nombre = 'El nombre del producto es obligatorio.';
@@ -466,8 +466,8 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                     <Boxes className="h-4 w-4 text-[#2A7A78]" />
                     Diagnóstico y Control de Stock
                   </h2>
-                  <p className="text-xs text-[#657373]">
-                    Selecciona una tarjeta para filtrar instantáneamente los artículos según su estado de abastecimiento.
+                  <p className="text-xs text-muted-foreground">
+                    Seleccionar un nivel para filtrar productos según su estado de stock.
                   </p>
                 </div>
 
@@ -1032,20 +1032,20 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                 <h1 className="text-2xl font-bold text-[#1C2424] tracking-tight mt-2">
                   Cargar Producto Nuevo
                 </h1>
-                <p className="text-sm text-[#657373]">
-                  Ingresa los datos comerciales, existencias iniciales y costos para incorporar el artículo al catálogo.
+                <p className="text-sm text-muted-foreground">
+                  Completar los datos comerciales, existencias iniciales y costos para incorporar el producto al catálogo.
                 </p>
               </div>
             </div>
 
             {/* Formulario Unificado (solo campos persistidos en el modelo de dominio) */}
             <Card>
-              <CardHeader className="border-b border-[#E8E6DF] pb-4">
-                <CardTitle className="text-base font-bold text-[#1C2424]">
+              <CardHeader className="border-b border-border pb-4">
+                <CardTitle className="text-base font-bold text-foreground">
                   Formulario de Producto
                 </CardTitle>
-                <CardDescription className="text-xs text-[#657373]">
-                  Completa los campos obligatorios (*) para registrar el artículo y sincronizarlo con el mostrador.
+                <CardDescription className="text-xs text-muted-foreground">
+                  Completar los campos obligatorios (*) para registrar el producto y sincronizarlo con el mostrador.
                 </CardDescription>
               </CardHeader>
 
@@ -1077,7 +1077,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                         fieldErrors.categoriaId ? 'border-red-500' : 'border-[#E8E6DF]'
                       }`}
                     >
-                      <option value="">-- Selecciona una categoría existente --</option>
+                      <option value="">Seleccionar una categoría...</option>
                       {categorias.map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.nombre} {c.descripcion ? `(${c.descripcion})` : ''}
@@ -1400,9 +1400,9 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
         <Dialog open={!!productoABajar} onOpenChange={(open) => !open && setProductoABajar(null)}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Confirmar Baja de Producto</DialogTitle>
+              <DialogTitle>¿Dar de baja este producto?</DialogTitle>
               <DialogDescription>
-                ¿Estás seguro de que deseas retirar este producto del catálogo comercial activo?
+                El producto se retirará del catálogo activo y dejará de estar disponible para la venta en mostrador.
               </DialogDescription>
             </DialogHeader>
 

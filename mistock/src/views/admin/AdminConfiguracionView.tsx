@@ -452,7 +452,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                         maxLength={LIMITES_TEXTO.TELEFONO_MAX}
                         error={
                           config.negocio.telefono && !esTelefonoValido(config.negocio.telefono)
-                            ? 'Ingrese entre 6 y 15 dígitos válidos'
+                            ? 'El teléfono debe tener entre 6 y 15 dígitos.'
                             : undefined
                         }
                         value={config.negocio.telefono}
@@ -911,7 +911,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                         className={`flex h-9 w-9 items-center justify-center rounded-lg ${
                           config.pos.metodosPagoHabilitados.efectivo
                             ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-gray-100 text-gray-500'
+                            : 'bg-muted text-muted-foreground'
                         }`}
                       >
                         <Money className="h-5 w-5" weight="duotone" />
@@ -952,7 +952,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                         className={`flex h-9 w-9 items-center justify-center rounded-lg ${
                           config.pos.metodosPagoHabilitados.tarjeta_debito
                             ? 'bg-sky-100 text-sky-800'
-                            : 'bg-gray-100 text-gray-500'
+                            : 'bg-muted text-muted-foreground'
                         }`}
                       >
                         <CreditCard className="h-5 w-5" weight="duotone" />
@@ -993,7 +993,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                         className={`flex h-9 w-9 items-center justify-center rounded-lg ${
                           config.pos.metodosPagoHabilitados.tarjeta_credito
                             ? 'bg-indigo-100 text-indigo-800'
-                            : 'bg-gray-100 text-gray-500'
+                            : 'bg-muted text-muted-foreground'
                         }`}
                       >
                         <CreditCard className="h-5 w-5" weight="duotone" />
@@ -1034,7 +1034,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                         className={`flex h-9 w-9 items-center justify-center rounded-lg ${
                           config.pos.metodosPagoHabilitados.transferencia
                             ? 'bg-purple-100 text-purple-800'
-                            : 'bg-gray-100 text-gray-500'
+                            : 'bg-muted text-muted-foreground'
                         }`}
                       >
                         <DeviceMobile className="h-5 w-5" weight="duotone" />
@@ -1075,7 +1075,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                         className={`flex h-9 w-9 items-center justify-center rounded-lg ${
                           config.pos.metodosPagoHabilitados.mercado_pago
                             ? 'bg-sky-100 text-sky-700'
-                            : 'bg-gray-100 text-gray-500'
+                            : 'bg-muted text-muted-foreground'
                         }`}
                       >
                         <QrCode className="h-5 w-5" weight="duotone" />
@@ -1763,8 +1763,8 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
                     <p className="text-xs font-semibold text-[#1C2424]">
                       Restablecer Parámetros de Fábrica
                     </p>
-                    <p className="text-xs text-[#657373] mt-0.5">
-                      Vuelve todos los nombres de comercio, medios de pago, períodos base y umbrales a los valores predeterminados.
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Restablece los datos del comercio, medios de pago, períodos base y umbrales a los valores predeterminados.
                     </p>
                   </div>
                   <Button
@@ -1794,7 +1794,7 @@ export function AdminConfiguracionView({ controller }: AdminConfiguracionViewPro
               <DialogDescription className="text-xs text-[#657373] pt-1">
                 Esta acción restablecerá los datos comerciales, opciones de tickets térmicos, medios de pago y reglas de inventario a su estado predeterminado.
                 <br /><br />
-                <strong className="text-[#1C2424]">Tus artículos y ventas registradas en el sistema no se eliminarán.</strong>
+                <strong className="text-foreground">Los productos y las ventas registradas en el sistema no se eliminarán.</strong>
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="gap-2 sm:gap-0 pt-3">

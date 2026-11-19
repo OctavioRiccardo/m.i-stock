@@ -303,10 +303,10 @@ export function ModuloCatalogoProductos({ controller }: ModuloCatalogoProductosP
               <button
                 type="button"
                 onClick={() => setDisponibilidadFiltroCatalogo('con_stock')}
-                className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-colors cursor-pointer ${
                   disponibilidadFiltroCatalogo === 'con_stock'
-                    ? 'bg-emerald-700 text-white font-semibold shadow-xs'
-                    : 'bg-[#F8F7F2] text-[#657373] hover:text-emerald-800 border border-[#E8E6DF]'
+                    ? 'bg-primary text-primary-foreground font-semibold'
+                    : 'bg-background text-muted-foreground hover:text-foreground border border-border'
                 }`}
               >
                 En Stock ({productosConStockCount})
@@ -363,18 +363,17 @@ export function ModuloCatalogoProductos({ controller }: ModuloCatalogoProductosP
                 return (
                   <motion.div
                     key={product.id}
-                    whileHover={deshabilitado ? {} : { y: -2 }}
-                    className={`p-3.5 rounded-xl border flex flex-col justify-between transition-all shadow-2xs relative ${
+                    className={`p-3.5 rounded-xl border flex flex-col justify-between transition-[background-color,border-color] duration-150 relative ${
                       deshabilitado
-                        ? 'bg-gray-50 border-gray-200 opacity-60 cursor-not-allowed'
+                        ? 'bg-muted/50 border-border opacity-60 cursor-not-allowed'
                         : enTicket
-                        ? 'border-[#2A7A78] bg-[#E2F1F0]/20 ring-1 ring-[#2A7A78]/30'
-                        : 'bg-white border-[#E8E6DF] hover:border-[#2A7A78]/60 hover:shadow-xs'
+                        ? 'border-primary bg-secondary/40'
+                        : 'bg-card border-border hover:border-primary/60'
                     }`}
                   >
                     {/* Badge en ticket */}
                     {enTicket && (
-                      <div className="absolute top-2 right-2 flex items-center justify-center h-5 px-1.5 rounded-full bg-[#2A7A78] text-white text-[10px] font-bold shadow-xs">
+                      <div className="absolute top-2 right-2 flex items-center justify-center h-5 px-2 rounded-full bg-primary text-primary-foreground font-mono tabular-nums text-[10px] font-bold">
                         {enTicket.cantidad} en ticket
                       </div>
                     )}
@@ -382,28 +381,28 @@ export function ModuloCatalogoProductos({ controller }: ModuloCatalogoProductosP
                     <div>
                       {/* Categoría y Código */}
                       <div className="flex items-center justify-between gap-1 mb-1.5">
-                        <Badge variant="outline" className="text-[9px] uppercase px-1.5 py-0 border-[#E8E6DF] text-[#657373]">
+                        <Badge variant="outline" className="text-[9px] uppercase px-1.5 py-0">
                           {product.categoria}
                         </Badge>
-                        <span className="text-[10px] font-mono text-[#A0A8A8]">{product.codigo}</span>
+                        <span className="text-[10px] font-mono text-foreground-subtle">{product.codigo}</span>
                       </div>
 
                       {/* Nombre y Promoción */}
-                      <h4 className="font-bold text-xs text-[#1C2424] leading-tight line-clamp-2">
+                      <h4 className="font-semibold text-xs text-foreground leading-snug line-clamp-2">
                         {product.nombre}
                       </h4>
 
                       {product.descripcion && (
-                        <p className="text-[10px] text-[#657373] mt-1 line-clamp-2">
+                        <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2">
                           {product.descripcion}
                         </p>
                       )}
 
                       {/* Disponibilidad / Stock */}
                       <div className="mt-2.5 flex items-center justify-between text-xs">
-                        <span className="text-[11px] text-[#657373]">Stock disponible:</span>
+                        <span className="text-[11px] text-muted-foreground">Stock:</span>
                         <span
-                          className={`text-xs font-bold px-2 py-0.5 rounded-md inline-flex items-center ${
+                          className={`text-[11px] font-mono tabular-nums font-semibold px-2 py-0.5 rounded-md inline-flex items-center ${
                             product.stock <= 0
                               ? 'bg-red-50 text-red-700 border border-red-200'
                               : product.stock <= (product.stockMinimo ?? 5)
@@ -417,10 +416,10 @@ export function ModuloCatalogoProductos({ controller }: ModuloCatalogoProductosP
                     </div>
 
                     {/* Precio y Acción */}
-                    <div className="pt-3 mt-2.5 border-t border-[#E8E6DF] flex items-center justify-between">
+                    <div className="pt-3 mt-2.5 border-t border-border/70 flex items-center justify-between">
                       <div>
-                        <span className="text-[10px] text-[#657373] uppercase font-semibold block leading-none">Precio</span>
-                        <span className="text-base font-black text-[#1C2424]">
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-[0.06em] font-semibold block leading-none">Precio</span>
+                        <span className="text-base font-bold font-mono tabular-nums text-foreground">
                           {monedaSimbolo} {product.precio.toLocaleString('es-AR')}
                         </span>
                       </div>
@@ -429,16 +428,16 @@ export function ModuloCatalogoProductos({ controller }: ModuloCatalogoProductosP
                         size="sm"
                         disabled={deshabilitado}
                         onClick={() => !deshabilitado && handleAgregar(product)}
-                        className={`h-8 px-3 text-xs font-bold gap-1 shadow-xs transition-all ${
+                        className={`min-h-8 px-3 text-xs font-semibold gap-1 ${
                           deshabilitado
-                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                            : 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
+                            ? 'bg-muted text-muted-foreground cursor-not-allowed shadow-none'
+                            : ''
                         }`}
                       >
                         <Plus className="h-3.5 w-3.5" weight="bold" />
                         <span>
                           {!controller.cajaAbierta
-                            ? 'Caja cerrada'
+                            ? 'Cerrada'
                             : enTicket
                             ? `Sumar (${enTicket.cantidad})`
                             : 'Agregar'}
@@ -473,36 +472,36 @@ export function ModuloCatalogoProductos({ controller }: ModuloCatalogoProductosP
                     return (
                       <TableRow
                         key={product.id}
-                        className={`hover:bg-[#F8F7F2]/50 ${deshabilitado ? 'opacity-60 bg-gray-50/50' : enTicket ? 'bg-[#E2F1F0]/20' : ''}`}
+                        className={deshabilitado ? 'opacity-60 bg-muted/40' : enTicket ? 'bg-secondary/35' : ''}
                       >
-                        <TableCell className="py-2.5 text-xs font-mono text-[#657373]">
+                        <TableCell className="py-2.5 text-xs font-mono text-muted-foreground">
                           {product.codigo}
                         </TableCell>
 
                         <TableCell className="py-2.5">
-                          <span className="text-xs font-bold text-[#1C2424] block">
+                          <span className="text-xs font-semibold text-foreground block">
                             {product.nombre}
                           </span>
                           {product.descripcion && (
-                            <span className="text-[10px] text-[#A0A8A8] block truncate max-w-xs">
+                            <span className="text-[10px] text-foreground-subtle block truncate max-w-xs">
                               {product.descripcion}
                             </span>
                           )}
                         </TableCell>
 
                         <TableCell className="py-2.5">
-                          <Badge variant="outline" className="text-[9px] uppercase px-1.5 py-0 border-[#E8E6DF] text-[#657373]">
+                          <Badge variant="outline" className="text-[9px] uppercase px-1.5 py-0">
                             {product.categoria}
                           </Badge>
                         </TableCell>
 
-                        <TableCell className="py-2.5 text-center text-xs text-[#657373]">
+                        <TableCell className="py-2.5 text-center text-xs text-muted-foreground">
                           {product.unidadMedida || 'unidad'}
                         </TableCell>
 
                         <TableCell className="py-2.5 text-center">
                           <span
-                            className={`text-xs font-bold px-2 py-0.5 rounded-md inline-block ${
+                            className={`text-xs font-mono tabular-nums font-semibold px-2 py-0.5 rounded-md inline-block ${
                               product.stock <= 0
                                 ? 'bg-red-50 text-red-700 border border-red-200'
                                 : product.stock <= (product.stockMinimo ?? 5)
@@ -514,7 +513,7 @@ export function ModuloCatalogoProductos({ controller }: ModuloCatalogoProductosP
                           </span>
                         </TableCell>
 
-                        <TableCell className="py-2.5 text-right font-black text-sm text-[#1C2424]">
+                        <TableCell className="py-2.5 text-right font-mono font-bold tabular-nums text-sm text-foreground">
                           {monedaSimbolo} {product.precio.toLocaleString('es-AR')}
                         </TableCell>
 
@@ -523,16 +522,16 @@ export function ModuloCatalogoProductos({ controller }: ModuloCatalogoProductosP
                             size="sm"
                             disabled={deshabilitado}
                             onClick={() => !deshabilitado && handleAgregar(product)}
-                            className={`h-7 px-3 text-xs font-bold gap-1 shadow-2xs ${
+                            className={`min-h-8 px-3 text-xs font-semibold gap-1 ${
                               deshabilitado
-                                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                : 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
+                                ? 'bg-muted text-muted-foreground cursor-not-allowed shadow-none'
+                                : ''
                             }`}
                           >
                             <Plus className="h-3.5 w-3.5" weight="bold" />
                             <span>
                               {!controller.cajaAbierta
-                                ? 'Caja cerrada'
+                                ? 'Cerrada'
                                 : enTicket
                                 ? `Sumar (${enTicket.cantidad})`
                                 : 'Agregar'}

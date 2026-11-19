@@ -120,24 +120,24 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
         {/* ==================================================================== */}
         {/* BARRA SUPERIOR: ESTADO DE CAJA & ACCESOS MODULARES                   */}
         {/* ==================================================================== */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border border-[#E8E6DF] bg-white shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-card shadow-[0_0_0_1px_rgba(28,36,36,0.08),0_1px_2px_rgba(28,36,36,0.04)]">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#2A7A78] text-white shadow-xs">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary text-primary shrink-0">
               <Storefront className="h-5 w-5" weight="duotone" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-lg font-bold text-[#1C2424] tracking-tight">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-base sm:text-lg font-bold text-foreground tracking-[-0.015em]">
                   Punto de Venta
                 </h1>
                 {cajaAbierta ? (
-                  <Badge variant="outline" className="text-[10px] font-bold bg-emerald-50 text-emerald-800 border-emerald-300 gap-1 inline-flex items-center">
-                    <CheckCircle className="h-3 w-3 text-emerald-600" weight="fill" />
+                  <Badge variant="success" className="text-[11px] font-semibold gap-1 inline-flex items-center">
+                    <CheckCircle className="h-3 w-3 text-emerald-700" weight="fill" />
                     <span>Caja Abierta</span>
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="text-[10px] font-bold bg-amber-50 text-amber-800 border-amber-300 gap-1 inline-flex items-center">
-                    <WarningCircle className="h-3 w-3 text-amber-600" weight="fill" />
+                  <Badge variant="warning" className="text-[11px] font-semibold gap-1 inline-flex items-center">
+                    <WarningCircle className="h-3 w-3 text-amber-700" weight="fill" />
                     <span>Caja Cerrada</span>
                   </Badge>
                 )}
@@ -147,29 +147,29 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                   </Badge>
                 )}
               </div>
-              <p className="text-xs text-[#657373]">
-                Operativa comercial en mostrador • Gestión de ventas, catálogo y cobro de tickets.
+              <p className="text-xs text-muted-foreground">
+                Operativa de mostrador • Escaneo rápido, catálogo y cobro de tickets.
               </p>
             </div>
           </div>
 
           {/* Mini-KPIs del Turno Actual */}
-          <div className="flex items-center gap-3 self-end sm:self-auto text-xs">
-            <div className="px-3 py-1.5 rounded-lg bg-[#F8F7F2] border border-[#E8E6DF] text-right">
-              <span className="text-[10px] text-[#657373] uppercase font-semibold block">
+          <div className="flex items-center gap-2.5 self-end sm:self-auto flex-wrap justify-end text-xs">
+            <div className="px-3 py-1.5 rounded-lg bg-background border border-border text-right">
+              <span className="text-[10px] text-muted-foreground uppercase tracking-[0.06em] font-semibold block">
                 Recaudación Hoy
               </span>
-              <span className="font-bold text-[#1C2424]">
+              <span className="font-mono font-bold tabular-nums text-sm text-foreground">
                 {monedaSimbolo} {data.recaudacionDelDia.toLocaleString('es-AR')}
               </span>
             </div>
 
-            <div className="px-3 py-1.5 rounded-lg bg-[#F8F7F2] border border-[#E8E6DF] text-right">
-              <span className="text-[10px] text-[#657373] uppercase font-semibold block">
+            <div className="px-3 py-1.5 rounded-lg bg-background border border-border text-right">
+              <span className="text-[10px] text-muted-foreground uppercase tracking-[0.06em] font-semibold block">
                 Tickets Hoy
               </span>
-              <span className="font-bold text-[#1C2424]">
-                {data.ventasDelDia} tickets
+              <span className="font-mono font-bold tabular-nums text-sm text-foreground">
+                {data.ventasDelDia}
               </span>
             </div>
 
@@ -180,7 +180,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                 variant="outline"
                 size="sm"
                 onClick={() => setIsModalTicketCierreOpen(true)}
-                className="h-10 px-3 text-xs font-semibold text-[#2A7A78] border-[#2A7A78]/30 hover:bg-[#E2F1F0] gap-1.5 cursor-pointer shadow-xs"
+                className="min-h-10 px-3 text-xs font-semibold text-primary border-primary/30 hover:bg-secondary gap-1.5"
               >
                 <Receipt className="h-4 w-4" weight="duotone" />
                 <span>Ver Cierre (Z)</span>
@@ -193,7 +193,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                 variant="outline"
                 size="sm"
                 onClick={() => setIsModalArqueoOpen(true)}
-                className="h-10 px-3 text-xs font-bold text-[#2A7A78] border-[#2A7A78]/30 hover:bg-[#E2F1F0] hover:text-[#205E5C] gap-1.5 cursor-pointer shadow-xs"
+                className="min-h-10 px-3 text-xs font-semibold text-primary border-primary/30 hover:bg-secondary gap-1.5"
               >
                 <Vault className="h-4 w-4" weight="duotone" />
                 <span>Arqueo y Cierre</span>
@@ -203,7 +203,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                 type="button"
                 size="sm"
                 onClick={() => setIsModalAperturaOpen(true)}
-                className="h-10 px-3.5 text-xs font-bold bg-emerald-700 hover:bg-emerald-800 text-white gap-2 cursor-pointer shadow-xs"
+                className="min-h-10 px-4 text-xs font-semibold gap-2"
               >
                 <Key className="h-4 w-4" weight="bold" />
                 <span>Abrir Caja</span>

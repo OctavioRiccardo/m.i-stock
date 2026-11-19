@@ -359,25 +359,28 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Encabezado Principal con Único Selector Global de Período */}
         <motion.div
-          initial={{ opacity: 0, y: -6 }}
+          initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, ease: 'easeOut' }}
-          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+          transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+          className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4"
         >
           <div>
-            <h1 className="text-2xl font-bold text-[#1C2424] tracking-tight">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-primary mb-1">
+              Resumen Financiero
+            </p>
+            <h1 className="text-2xl font-bold text-foreground tracking-[-0.02em]">
               Métricas de Negocio
             </h1>
-            <p className="text-sm text-[#657373]">
-              Monitoreo financiero integral sincronizado por período: recaudación, cobros, rotación y operaciones.
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Monitoreo financiero sincronizado por período: recaudación, cobros, rotación y operaciones.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center p-1 bg-[#F8F7F2] rounded-lg border border-[#E8E6DF]">
-              <CalendarBlank className="h-4 w-4 text-[#2A7A78] ml-2 mr-1 shrink-0" weight="duotone" />
-              <span className="text-xs font-semibold text-[#657373] mr-2 hidden sm:inline">Período:</span>
-              <div className="flex items-center gap-1">
+            <div className="flex items-center p-1 bg-muted/80 rounded-lg border border-border">
+              <CalendarBlank className="h-4 w-4 text-primary ml-2 mr-1 shrink-0" weight="duotone" />
+              <span className="text-xs font-semibold text-muted-foreground mr-2 hidden sm:inline">Período:</span>
+              <div className="flex items-center gap-0.5">
                 {[
                   { id: 'diario', label: 'Hoy' },
                   { id: 'semanal', label: 'Esta Semana' },
@@ -391,10 +394,10 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                       key={op.id}
                       type="button"
                       onClick={() => cambiarPeriodoMetricas(op.id as PeriodoMetricas)}
-                      className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+                      className={`px-2.5 py-1.5 rounded-md text-xs transition-[background-color,color,box-shadow] duration-150 cursor-pointer flex items-center gap-1.5 ${
                         esActivo
-                          ? 'bg-white text-[#2A7A78] font-bold shadow-2xs border border-[#E8E6DF]'
-                          : 'text-[#657373] hover:text-[#1C2424] hover:bg-white/50'
+                          ? 'bg-card text-primary font-semibold shadow-[0_1px_2px_rgba(28,36,36,0.08)]'
+                          : 'font-medium text-muted-foreground hover:text-foreground hover:bg-card/50'
                       }`}
                       title={esPorDefecto ? `${op.label} (Preferencia base configurada en el sistema)` : op.label}
                     >
@@ -402,7 +405,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                       {esPorDefecto && (
                         <span
                           className={`w-1.5 h-1.5 rounded-full ${
-                            esActivo ? 'bg-[#2A7A78]' : 'bg-[#2A7A78]/50'
+                            esActivo ? 'bg-primary' : 'bg-primary/45'
                           }`}
                         />
                       )}
@@ -415,50 +418,116 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
         </motion.div>
 
         {/* ==================================================================== */}
-        {/* 1. TARJETAS KPI DE RENDIMIENTO FINANCIERO                             */}
+        {/* 1. JERARQUÍA KPI ASIMÉTRICA: MÉTRICA HERO + TIRA DE SOPORTE          */}
         {/* ==================================================================== */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {kpisActivos.map((kpi, idx) => (
+        {kpisActivos.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+            {/* Métrica Rectora (Hero KPI) */}
             <motion.div
-              key={kpi.title}
-              initial={{ opacity: 0, y: 8 }}
+              key={kpisActivos[0].title}
+              initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.32, delay: idx * 0.05, ease: 'easeOut' }}
-              whileHover={{ y: -2, transition: { duration: 0.15 } }}
+              transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+              className="lg:col-span-5"
             >
-              <Card className="p-5 h-full transition-shadow duration-200 hover:shadow-xs border-[#E8E6DF] bg-white flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-[#657373]">
-                      {kpi.title}
-                    </span>
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78] shrink-0">
-                      {getKpiIcon(idx)}
+              <Card className="h-full overflow-hidden flex flex-col justify-between relative">
+                <div className="absolute inset-y-0 left-0 w-1 bg-primary" aria-hidden="true" />
+                <div className="p-5 sm:p-6 pl-6 sm:pl-7 flex flex-col justify-between h-full gap-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground block">
+                        {kpisActivos[0].title}
+                      </span>
+                      <span className="text-xs text-foreground-subtle mt-0.5 block">
+                        {etiquetaPeriodoActivo}
+                      </span>
+                    </div>
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary text-primary shrink-0">
+                      {getKpiIcon(0)}
                     </div>
                   </div>
 
-                  <div className="mt-3">
-                    <span className="text-2xl font-extrabold text-[#1C2424] tracking-tight block">
-                      {kpi.value}
+                  <div>
+                    <span className="text-3xl sm:text-[34px] font-bold font-mono tabular-nums text-foreground tracking-[-0.03em] leading-none block">
+                      {kpisActivos[0].value}
                     </span>
+                    {kpisActivos[0].changePercentage && (
+                      <div className="mt-3 flex items-center gap-2">
+                        <Badge
+                          variant={
+                            kpisActivos[0].status === 'positive'
+                              ? 'success'
+                              : kpisActivos[0].status === 'negative'
+                              ? 'destructive'
+                              : 'secondary'
+                          }
+                          className="font-mono tabular-nums font-semibold text-xs px-2 py-0.5"
+                        >
+                          {kpisActivos[0].changePercentage}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">vs. período anterior</span>
+                      </div>
+                    )}
                   </div>
                 </div>
-
-                {kpi.changePercentage && (
-                  <div className="mt-2.5 flex items-center gap-1.5">
-                    <Badge
-                      variant={kpi.status === 'positive' ? 'success' : kpi.status === 'negative' ? 'destructive' : 'secondary'}
-                      className="font-semibold text-xs px-2 py-0.5"
-                    >
-                      {kpi.changePercentage}
-                    </Badge>
-                    <span className="text-[11px] text-[#657373]">vs. período ant.</span>
-                  </div>
-                )}
               </Card>
             </motion.div>
-          ))}
-        </div>
+
+            {/* Tira de Métricas Secundarias (Libro Mayor) */}
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.22, delay: 0.05, ease: [0.23, 1, 0.32, 1] }}
+              className="lg:col-span-7"
+            >
+              <Card className="h-full">
+                <div className="grid grid-cols-1 sm:grid-cols-3 h-full divide-y sm:divide-y-0 sm:divide-x divide-border/80">
+                  {kpisActivos.slice(1).map((kpi, subIdx) => {
+                    const idx = subIdx + 1;
+                    return (
+                      <div
+                        key={kpi.title}
+                        className="p-5 flex flex-col justify-between gap-3"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                            {kpi.title}
+                          </span>
+                          <span className="text-primary/80 shrink-0">
+                            {getKpiIcon(idx)}
+                          </span>
+                        </div>
+
+                        <div>
+                          <span className="text-2xl font-bold font-mono tabular-nums text-foreground tracking-[-0.02em] block">
+                            {kpi.value}
+                          </span>
+                          {kpi.changePercentage && (
+                            <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                              <Badge
+                                variant={
+                                  kpi.status === 'positive'
+                                    ? 'success'
+                                    : kpi.status === 'negative'
+                                    ? 'destructive'
+                                    : 'secondary'
+                                }
+                                className="font-mono tabular-nums font-semibold text-[11px] px-1.5 py-0.5"
+                              >
+                                {kpi.changePercentage}
+                              </Badge>
+                              <span className="text-[11px] text-foreground-subtle">vs. ant.</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            </motion.div>
+          </div>
+        )}
 
         {/* ==================================================================== */}
         {/* 2. ANALÍTICA VISUAL: EVOLUCIÓN TEMPORAL & MÉTODOS DE PAGO             */}
@@ -839,7 +908,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                             tickFormatter={(val) => `${monedaSimbolo}${(val / 1000).toLocaleString('es-AR')}k`}
                           />
                           <ChartTooltip
-                            cursor={{ fill: '#F3F4F6', opacity: 0.5 }}
+                            cursor={{ fill: '#EFECE4', opacity: 0.7 }}
                             content={
                               <ChartTooltipContent
                                 formatter={(value) => `${monedaSimbolo}${Number(value).toLocaleString('es-AR')}`}
@@ -1051,7 +1120,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                             tickFormatter={(val) => `${monedaSimbolo}${(val / 1000).toLocaleString('es-AR')}k`}
                           />
                           <ChartTooltip
-                            cursor={{ fill: '#F3F4F6', opacity: 0.5 }}
+                            cursor={{ fill: '#EFECE4', opacity: 0.7 }}
                             content={
                               <ChartTooltipContent
                                 formatter={(value) => `${monedaSimbolo}${Number(value).toLocaleString('es-AR')}`}

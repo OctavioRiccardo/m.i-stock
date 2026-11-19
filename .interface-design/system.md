@@ -150,3 +150,25 @@ Hallazgos detectados en la primera pasada sobre el código actual de `mistock/sr
 | **P3** | `AdminSidebar.tsx`, `UserSidebar.tsx`, `LoginFormView.tsx` | Sidebar `bg-white` fragmenta el canvas; ítem activo teal sólido compite con CTAs; 3 íconos distintos de marca; badge `v1.0` en `gray-100` | Unificar fondo de sidebar con `#F8F7F2`, estado activo tintado (`#E2F1F0` + indicador lateral `#2A7A78`), unificar emblema de marca `miStock`. |
 | **P4** | `AdminDashboardView.tsx` | 4 cards KPI idénticas con `whileHover` falso; falta `tabular-nums`; selector de período con sombras/bordes mixtos | Jerarquía KPI asimétrica (Recaudación protagonista + strip secundario), `tabular-nums` en todas las cifras y gráficos, limpieza de bordes/sombras. |
 | **P5** | `UserDashboardView.tsx`, `ModuloTerminalCobro.tsx` | Botones `Abrir Caja` (`emerald-700`) y `Agregar` (`emerald-600`) rompen la marca; steppers de `28px` chicos para mostrador; header POS compite con el escáner/ticket | Unificar CTAs al `#2A7A78`, elevar el Ticket de Venta a elemento firma tipo comprobante térmico (`font-mono tabular-nums`, línea punteada), agrandar controles táctiles POS. |
+
+---
+
+## 9. Voz, Tono y Lenguaje Neutro (UX Writing & Semántica)
+
+Reglas permanentes de redacción UI para todo texto visible en **miStock** (en línea con `.agents/skills/ux-writing/SKILL.md` y `.agents/skills/web-design-guidelines/SKILL.md`):
+
+* **Registro estrictamente neutro / impersonal (infinitivo):**
+  - Prohibido mezclar voseo (*Ingresá, Escaneá*), tuteo (*Ingresa, Selecciona, tus datos*) o trato de usted (*Ingrese, Seleccione, Verifique*).
+  - Usar siempre **infinitivo o enunciado impersonal directo**:
+    - Instrucciones y placeholders: `"Escanear código de barras o buscar producto..."`, `"Seleccionar una categoría..."`, `"Completar los datos del producto..."`.
+    - Confirmaciones críticas: enunciado directo + consecuencia clara (`"¿Dar de baja este producto?"` + `"El producto se retirará del catálogo activo..."`).
+    - Errores: estructura **Qué ocurrió + Cómo resolverlo**, sin culpar al usuario ni exponer códigos técnicos crudos (`"El teléfono debe tener entre 6 y 15 dígitos."`).
+    - Botones / CTAs: patrón **Verbo en infinitivo + Objeto** en 2–4 palabras (`"Abrir caja"`, `"Cobrar ticket"`, `"Guardar cambios"`, `"Eliminar cuenta"`).
+* **Glosario canónico:**
+  - **Producto** (catálogo, inventario, stock).
+  - **Ticket** (comprobante de venta en POS) y **Cierre Z** (reporte de cierre de caja).
+  - **Caja** (turno/terminal operativa).
+  - **Categoría** (agrupación comercial).
+* **Semántica HTML y accesibilidad de texto:**
+  - Asociar `<label htmlFor>` con inputs mediante `useId()`, añadir `aria-label` a controles de solo ícono y `aria-current="page"` en enlaces activos de navegación.
+

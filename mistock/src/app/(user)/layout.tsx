@@ -4,17 +4,10 @@
  * ====================================================================
  * LAYOUT DE EMPLEADO / OPERADOR (Responsive POS Shell + RBAC Guard)
  * ====================================================================
- * 
- * Propósito:
- * Proveer la estructura de diseño adaptativo para las terminales de ventas:
- * - Sidebar de escritorio con accesos a la operativa diaria.
- * - Drawer responsivo para tablets o teléfonos en línea de cajas.
- * - Validación de rol para restringir acceso si el usuario no tiene rol asignado.
- * - Integración con control de jerarquía (Admin operando en caja).
  */
 
 import React, { useState, Suspense } from 'react';
-import { List, X, UserCheck } from '@phosphor-icons/react';
+import { List, X, Package } from '@phosphor-icons/react';
 import { UserSidebar } from '@/views/user/UserSidebar';
 import { Footer } from '@/views/comunes/Footer';
 import { usePermisosController } from '@/controllers/permisosController';
@@ -29,8 +22,7 @@ export default function UserLayout({
   const { esAdmin, esSinRol, cargando, cambiarRolSimulado } = usePermisosController();
 
   return (
-    <div className="min-h-screen bg-[#F8F7F2] text-[#1C2424] flex">
-      {/* Si el usuario no tiene rol asignado, bloquea la operación de caja */}
+    <div className="min-h-screen bg-background text-foreground flex">
       {!cargando && esSinRol && (
         <ModalAccesoRestringido
           tipo="sin_rol"
@@ -40,7 +32,7 @@ export default function UserLayout({
 
       {/* Sidebar Desktop */}
       <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:w-64">
-        <Suspense fallback={<div className="w-64 h-full bg-white border-r border-[#E8E6DF]" />}>
+        <Suspense fallback={<div className="w-64 h-full bg-background border-r border-border" />}>
           <UserSidebar esAdmin={esAdmin} />
         </Suspense>
       </aside>
@@ -48,27 +40,28 @@ export default function UserLayout({
       {/* Mobile Drawer Backdrop */}
       {mobileMenuOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs lg:hidden"
+          className="fixed inset-0 z-40 bg-[#1C2424]/45 backdrop-blur-[2px] lg:hidden"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
       {/* Mobile Drawer Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-2xl transition-transform duration-200 ease-in-out lg:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-background shadow-[0_12px_32px_rgba(28,36,36,0.20)] transition-transform duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] lg:hidden ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="absolute right-3 top-3 lg:hidden">
+        <div className="absolute right-3 top-3.5 z-10 lg:hidden">
           <button
+            type="button"
             onClick={() => setMobileMenuOpen(false)}
-            className="p-1 rounded-md text-[#657373] hover:text-[#1C2424]"
+            className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
             aria-label="Cerrar menú"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
-        <Suspense fallback={<div className="w-64 h-full bg-white" />}>
+        <Suspense fallback={<div className="w-64 h-full bg-background" />}>
           <UserSidebar
             esAdmin={esAdmin}
             onNavigate={() => setMobileMenuOpen(false)}
@@ -79,30 +72,31 @@ export default function UserLayout({
       {/* Main Content */}
       <div className="flex-1 lg:pl-64 flex flex-col min-h-screen">
         {/* Mobile Header */}
-        <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-[#E8E6DF] bg-white px-4 lg:hidden">
+        <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-border bg-background/95 backdrop-blur-sm px-4 lg:hidden">
           <div className="flex items-center gap-3">
             <button
+              type="button"
               onClick={() => setMobileMenuOpen(true)}
-              className="p-1.5 rounded-lg text-[#1C2424] hover:bg-gray-100 transition-colors"
+              className="p-2 rounded-lg text-foreground hover:bg-muted transition-colors cursor-pointer"
               aria-label="Abrir menú"
             >
               <List className="h-5 w-5" />
             </button>
             <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#2A7A78] text-white">
-                <UserCheck className="h-4 w-4" weight="duotone" />
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <Package className="h-4 w-4" weight="duotone" />
               </div>
-              <span className="font-bold text-sm text-[#1C2424]">M.I Stock</span>
+              <span className="font-bold text-sm text-foreground tracking-tight">M.I Stock</span>
             </div>
           </div>
-          <span className="rounded-full bg-[#E2F1F0] px-2 py-0.5 text-xs font-semibold text-[#2A7A78] border border-[#2A7A78]/20">
+          <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-semibold text-secondary-foreground border border-primary/20">
             {esAdmin ? 'Admin en Caja' : 'Cajero / POS'}
           </span>
         </header>
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
           {cargando ? (
-            <div className="flex items-center justify-center py-20 text-[#657373] text-sm">
+            <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">
               Iniciando terminal de caja...
             </div>
           ) : (

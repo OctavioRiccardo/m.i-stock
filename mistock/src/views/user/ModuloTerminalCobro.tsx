@@ -141,15 +141,15 @@ export function ModuloTerminalCobro({
                   placeholder={
                     controller.cajaAbierta
                       ? config.pos.modoEscanerRapido
-                        ? "Escanear código de barras o buscar por nombre (presione Enter)..."
+                        ? "Escanear código de barras o buscar producto (Enter para agregar)..."
                         : "Buscar producto por código o nombre..."
-                      : "Caja cerrada • Abra la caja desde la barra superior para operar"
+                      : "Caja cerrada · Abrir la caja desde la barra superior para operar"
                   }
                   value={searchQuery}
                   maxLength={120}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={handleSearchKeyDown}
-                  className="pl-9 h-10 text-xs bg-white border-[#E8E6DF] focus-visible:ring-[#2A7A78] disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                  className="pl-9 h-10 text-xs"
                   autoFocus
                 />
                 <Barcode className="absolute left-3 top-2.5 h-5 w-5 text-[#657373]" />
@@ -224,8 +224,8 @@ export function ModuloTerminalCobro({
               <div className="p-8 text-center text-[#657373] border border-dashed border-[#E8E6DF] rounded-xl">
                 <Package className="h-8 w-8 mx-auto text-[#A0A8A8] mb-1.5" weight="duotone" />
                 <p className="text-xs font-medium">No se encontraron productos coincidentes.</p>
-                <p className="text-[11px] text-[#A0A8A8] mt-0.5">
-                  Verifique el código escaneado o la categoría seleccionada.
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Comprobar el código escaneado o el filtro de categoría.
                 </p>
                 {(searchQuery || categoriaFiltro !== 'todas') && (
                   <Button
@@ -252,39 +252,38 @@ export function ModuloTerminalCobro({
                   return (
                     <motion.div
                       key={product.id}
-                      whileHover={deshabilitado ? {} : { y: -2, scale: 1.01 }}
-                      whileTap={deshabilitado ? {} : { scale: 0.98 }}
+                      whileTap={deshabilitado ? {} : { scale: 0.985 }}
                       onClick={() => !deshabilitado && agregarAlCarrito(product, 1)}
-                      className={`p-3 rounded-xl border transition-all flex flex-col justify-between relative group ${
+                      className={`p-3 rounded-xl border transition-[background-color,border-color] duration-150 flex flex-col justify-between relative group ${
                         deshabilitado
-                          ? 'bg-gray-50 border-gray-200 opacity-60 cursor-not-allowed'
+                          ? 'bg-muted/50 border-border opacity-60 cursor-not-allowed'
                           : itemEnCarrito
-                          ? 'bg-[#E2F1F0]/40 border-[#2A7A78] shadow-xs cursor-pointer'
-                          : 'bg-white border-[#E8E6DF] hover:border-[#2A7A78] hover:bg-[#F8F7F2]/60 shadow-2xs cursor-pointer'
+                          ? 'bg-secondary/50 border-primary cursor-pointer'
+                          : 'bg-card border-border hover:border-primary/70 hover:bg-background/60 cursor-pointer'
                       }`}
                     >
                       {itemEnCarrito && (
-                        <div className="absolute top-2 right-2 flex items-center justify-center h-5 px-1.5 rounded-full bg-[#2A7A78] text-white text-[10px] font-bold shadow-xs">
+                        <div className="absolute top-2 right-2 flex items-center justify-center h-5 px-2 rounded-full bg-primary text-primary-foreground font-mono tabular-nums text-[10px] font-bold">
                           {itemEnCarrito.cantidad} en ticket
                         </div>
                       )}
 
                       <div>
                         <div className="flex items-center justify-between gap-1 mb-1">
-                          <Badge variant="outline" className="text-[9px] uppercase px-1.5 py-0 border-[#E8E6DF] text-[#657373]">
+                          <Badge variant="outline" className="text-[9px] uppercase px-1.5 py-0">
                             {product.categoria}
                           </Badge>
-                          <span className="text-[10px] font-mono text-[#A0A8A8]">{product.codigo}</span>
+                          <span className="text-[10px] font-mono text-foreground-subtle">{product.codigo}</span>
                         </div>
-                        <h4 className="font-semibold text-xs text-[#1C2424] line-clamp-2 leading-tight">
+                        <h4 className="font-semibold text-xs text-foreground line-clamp-2 leading-snug">
                           {product.nombre}
                         </h4>
 
                         {/* Indicador de Unidades Disponibles */}
                         <div className="mt-2 flex items-center justify-between text-xs">
-                          <span className="text-[11px] text-[#657373]">Stock disponible:</span>
+                          <span className="text-[11px] text-muted-foreground">Stock:</span>
                           <span
-                            className={`text-xs font-bold px-2 py-0.5 rounded-md inline-flex items-center ${
+                            className={`text-[11px] font-mono tabular-nums font-semibold px-2 py-0.5 rounded-md inline-flex items-center ${
                               product.stock <= 0
                                 ? 'bg-red-50 text-red-700 border border-red-200'
                                 : product.stock <= (product.stockMinimo ?? 5)
@@ -297,10 +296,10 @@ export function ModuloTerminalCobro({
                         </div>
                       </div>
 
-                      <div className="pt-2.5 mt-2 border-t border-[#E8E6DF]/60 flex items-center justify-between gap-2">
+                      <div className="pt-2.5 mt-2 border-t border-border/70 flex items-center justify-between gap-2">
                         <div>
-                          <span className="text-[10px] text-[#657373] uppercase font-semibold block leading-none">Precio</span>
-                          <span className="text-sm font-black text-[#1C2424]">
+                          <span className="text-[10px] text-muted-foreground uppercase tracking-[0.06em] font-semibold block leading-none">Precio</span>
+                          <span className="text-sm font-bold font-mono tabular-nums text-foreground">
                             {monedaSimbolo} {product.precio.toLocaleString('es-AR')}
                           </span>
                         </div>
@@ -313,16 +312,16 @@ export function ModuloTerminalCobro({
                             e.stopPropagation();
                             if (!deshabilitado) agregarAlCarrito(product, 1);
                           }}
-                          className={`h-7 px-2.5 text-xs font-bold gap-1 shadow-xs transition-all ${
+                          className={`min-h-8 px-2.5 text-xs font-semibold gap-1 ${
                             deshabilitado
-                              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                              : 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
+                              ? 'bg-muted text-muted-foreground cursor-not-allowed shadow-none'
+                              : ''
                           }`}
                         >
                           <Plus className="h-3.5 w-3.5" weight="bold" />
                           <span>
                             {!controller.cajaAbierta
-                              ? 'Caja cerrada'
+                              ? 'Cerrada'
                               : itemEnCarrito
                               ? `Sumar (${itemEnCarrito.cantidad})`
                               : 'Agregar'}
@@ -356,24 +355,24 @@ export function ModuloTerminalCobro({
                       return (
                         <TableRow
                           key={product.id}
-                          className={`hover:bg-[#F8F7F2]/50 ${deshabilitado ? 'opacity-60 bg-gray-50/50' : ''}`}
+                          className={deshabilitado ? 'opacity-60 bg-muted/40' : ''}
                         >
-                          <TableCell className="py-2 text-xs font-mono text-[#657373]">
+                          <TableCell className="py-2 text-xs font-mono text-muted-foreground">
                             {product.codigo}
                           </TableCell>
                           <TableCell className="py-2">
-                            <span className="text-xs font-semibold text-[#1C2424] block">
+                            <span className="text-xs font-semibold text-foreground block">
                               {product.nombre}
                             </span>
                           </TableCell>
                           <TableCell className="py-2">
-                            <Badge variant="outline" className="text-[9px] uppercase px-1.5 py-0 border-[#E8E6DF] text-[#657373]">
+                            <Badge variant="outline" className="text-[9px] uppercase px-1.5 py-0">
                               {product.categoria}
                             </Badge>
                           </TableCell>
                           <TableCell className="py-2.5 text-right">
                             <span
-                              className={`text-xs font-bold px-2 py-0.5 rounded-md inline-block ${
+                              className={`text-xs font-mono tabular-nums font-semibold px-2 py-0.5 rounded-md inline-block ${
                                 product.stock <= 0
                                   ? 'bg-red-50 text-red-700 border border-red-200'
                                   : product.stock <= (product.stockMinimo ?? 5)
@@ -384,7 +383,7 @@ export function ModuloTerminalCobro({
                               {product.stock <= 0 ? 'Sin stock' : `${product.stock} un.`}
                             </span>
                           </TableCell>
-                          <TableCell className="py-2.5 text-right font-black text-sm text-[#1C2424]">
+                          <TableCell className="py-2.5 text-right font-mono font-bold tabular-nums text-sm text-foreground">
                             {monedaSimbolo} {product.precio.toLocaleString('es-AR')}
                           </TableCell>
                           <TableCell className="py-2.5 text-right">
@@ -392,16 +391,16 @@ export function ModuloTerminalCobro({
                               size="sm"
                               disabled={deshabilitado}
                               onClick={() => !deshabilitado && agregarAlCarrito(product, 1)}
-                              className={`h-7 px-3 text-xs font-bold gap-1 shadow-2xs ${
+                              className={`min-h-8 px-3 text-xs font-semibold gap-1 ${
                                 deshabilitado
-                                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                  : 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
+                                  ? 'bg-muted text-muted-foreground cursor-not-allowed shadow-none'
+                                  : ''
                               }`}
                             >
                               <Plus className="h-3.5 w-3.5" weight="bold" />
                               <span>
                                 {!controller.cajaAbierta
-                                  ? 'Caja cerrada'
+                                  ? 'Cerrada'
                                   : itemEnCarrito
                                   ? `Sumar (${itemEnCarrito.cantidad})`
                                   : 'Agregar'}
@@ -456,21 +455,22 @@ export function ModuloTerminalCobro({
       </div>
 
       {/* ================================================================== */}
-      {/* COLUMNA DERECHA: TICKET / CARRITO DE VENTA ACTIVO (5 de 12 cols)    */}
+      {/* COLUMNA DERECHA: COMPROBANTE TÉRMICO VIVO (ELEMENTO FIRMA POS)     */}
       {/* ================================================================== */}
       <div className="lg:col-span-5 sticky top-4">
-        <Card className="border-[#E8E6DF] shadow-sm bg-white overflow-hidden">
-          <div className="p-3.5 border-b border-[#E8E6DF] bg-[#F8F7F2]/60 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#2A7A78] text-white">
+        <Card className="overflow-hidden">
+          <div className="h-1 w-full bg-primary" aria-hidden="true" />
+          <div className="p-4 border-b border-border/80 bg-background/70 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary text-primary">
                 <ShoppingCart className="h-4 w-4" weight="duotone" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-[#1C2424] leading-tight">
-                  Ticket de Venta en Curso
+                <h3 className="text-sm font-bold text-foreground leading-tight tracking-[-0.01em]">
+                  Ticket en Curso
                 </h3>
-                <span className="text-[11px] text-[#657373]">
-                  {cantidadArticulosCarrito} {cantidadArticulosCarrito === 1 ? 'artículo' : 'artículos'} agregados
+                <span className="font-mono tabular-nums text-[11px] text-muted-foreground">
+                  {cantidadArticulosCarrito} {cantidadArticulosCarrito === 1 ? 'ítem' : 'ítems'}
                 </span>
               </div>
             </div>
@@ -481,7 +481,7 @@ export function ModuloTerminalCobro({
                 variant="ghost"
                 disabled={!controller.cajaAbierta}
                 onClick={vaciarCarrito}
-                className="h-7 px-2 text-[11px] text-red-600 hover:text-red-700 hover:bg-red-50 cursor-pointer gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="min-h-8 px-2.5 text-xs text-red-700 hover:text-red-800 hover:bg-red-50 gap-1"
                 title="Vaciar ticket completo"
               >
                 <Trash className="h-3.5 w-3.5" />
@@ -490,15 +490,15 @@ export function ModuloTerminalCobro({
             )}
           </div>
 
-          <CardContent className="p-3.5 space-y-3">
+          <CardContent className="p-4 space-y-3.5">
             {carrito.length === 0 ? (
-              <div className="py-12 px-4 text-center border border-dashed border-[#E8E6DF] rounded-xl space-y-2">
-                <div className="flex h-12 w-12 mx-auto items-center justify-center rounded-full bg-[#F8F7F2] text-[#A0A8A8]">
-                  <ShoppingCart className="h-6 w-6" weight="duotone" />
+              <div className="py-12 px-4 text-center border border-dashed border-border rounded-xl bg-background/40 space-y-2">
+                <div className="flex h-11 w-11 mx-auto items-center justify-center rounded-full bg-muted text-foreground-subtle">
+                  <ShoppingCart className="h-5 w-5" weight="duotone" />
                 </div>
-                <p className="text-xs font-bold text-[#1C2424]">El ticket está listo y vacío</p>
-                <p className="text-[11px] text-[#657373] max-w-xs mx-auto">
-                  Escanee un código de barras o seleccione productos del catálogo para comenzar a registrar la venta.
+                <p className="text-sm font-semibold text-foreground">Ticket listo y vacío</p>
+                <p className="text-xs text-muted-foreground max-w-xs mx-auto">
+                  Escanear un código de barras o seleccionar productos del catálogo para iniciar una venta.
                 </p>
               </div>
             ) : (
@@ -507,20 +507,20 @@ export function ModuloTerminalCobro({
                   {carrito.map((item) => (
                     <motion.div
                       key={item.producto.id}
-                      initial={{ opacity: 0, y: 4 }}
+                      initial={{ opacity: 0, y: 3 }}
                       animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ duration: 0.15 }}
-                      className="p-2.5 rounded-lg border border-[#E8E6DF] bg-white hover:border-[#2A7A78]/50 shadow-2xs transition-colors"
+                      exit={{ opacity: 0, scale: 0.97 }}
+                      transition={{ duration: 0.12 }}
+                      className="p-3 rounded-lg border border-border/80 bg-background/50 hover:border-primary/40 transition-colors"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-xs font-bold text-[#1C2424] truncate">
+                          <h4 className="text-xs font-semibold text-foreground truncate">
                             {item.producto.nombre}
                           </h4>
-                          <div className="flex items-center gap-2 mt-0.5 text-[10px] text-[#657373]">
-                            <span className="font-mono">{item.producto.codigo}</span>
-                            <span>•</span>
+                          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-muted-foreground font-mono tabular-nums">
+                            <span>{item.producto.codigo}</span>
+                            <span className="text-border">·</span>
                             <span>{monedaSimbolo} {item.producto.precio.toLocaleString('es-AR')} c/u</span>
                           </div>
                         </div>
@@ -529,42 +529,45 @@ export function ModuloTerminalCobro({
                           type="button"
                           disabled={!controller.cajaAbierta}
                           onClick={() => removerItemCarrito(item.producto.id)}
-                          className="text-[#657373] hover:text-red-600 transition-colors p-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                          className="rounded-md p-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-700 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                           title="Quitar artículo"
+                          aria-label={`Quitar ${item.producto.nombre}`}
                         >
                           <Trash className="h-3.5 w-3.5" />
                         </button>
                       </div>
 
-                      <div className="flex items-center justify-between pt-2 mt-1.5 border-t border-[#E8E6DF]/50">
-                        {/* Selector de Cantidad */}
-                        <div className="flex items-center border border-[#E8E6DF] rounded-lg bg-[#F8F7F2]/60 overflow-hidden shadow-2xs">
+                      <div className="flex items-center justify-between pt-2.5 mt-2 border-t border-dashed border-border">
+                        {/* Selector de Cantidad táctil POS */}
+                        <div className="flex items-center border border-border rounded-lg bg-card overflow-hidden">
                           <button
                             type="button"
                             disabled={!controller.cajaAbierta}
                             onClick={() => actualizarCantidadItem(item.producto.id, item.cantidad - 1)}
-                            className="h-7 w-7 flex items-center justify-center hover:bg-[#E8E6DF] text-[#1C2424] cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="h-8 w-8 flex items-center justify-center hover:bg-muted text-foreground cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             title="Restar 1"
+                            aria-label="Restar 1 unidad"
                           >
-                            <Minus className="h-3 w-3" />
+                            <Minus className="h-3.5 w-3.5" weight="bold" />
                           </button>
-                          <span className="min-w-11 px-1.5 py-0.5 text-center text-xs font-black text-emerald-950 bg-emerald-50 border-x border-[#E8E6DF] select-none">
-                            {item.cantidad} un.
+                          <span className="min-w-12 px-2 py-1 text-center font-mono tabular-nums text-xs font-bold text-secondary-foreground bg-secondary/70 border-x border-border select-none">
+                            {item.cantidad}
                           </span>
                           <button
                             type="button"
                             disabled={!controller.cajaAbierta}
                             onClick={() => actualizarCantidadItem(item.producto.id, item.cantidad + 1)}
-                            className="h-7 w-7 flex items-center justify-center hover:bg-[#E8E6DF] text-[#1C2424] cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="h-8 w-8 flex items-center justify-center hover:bg-muted text-foreground cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             title="Sumar 1"
+                            aria-label="Sumar 1 unidad"
                           >
-                            <Plus className="h-3 w-3" />
+                            <Plus className="h-3.5 w-3.5" weight="bold" />
                           </button>
                         </div>
 
                         {/* Subtotal del Renglón */}
                         <div className="text-right">
-                          <span className="text-xs font-black text-[#1C2424]">
+                          <span className="font-mono tabular-nums text-sm font-bold text-foreground">
                             {monedaSimbolo} {item.subtotal.toLocaleString('es-AR')}
                           </span>
                         </div>
@@ -575,18 +578,20 @@ export function ModuloTerminalCobro({
               </div>
             )}
 
-            {/* Resumen Financiero y Botón de Cobro */}
-            <div className="pt-3 border-t border-[#E8E6DF] space-y-3">
-              <div className="space-y-1 text-xs">
-                <div className="flex justify-between text-[#657373]">
-                  <span>Subtotal ({cantidadArticulosCarrito} artículos):</span>
-                  <span className="font-semibold text-[#1C2424]">
+            {/* Resumen Financiero estilo Comprobante Térmico y Botón de Cobro */}
+            <div className="pt-3.5 receipt-divider space-y-3.5">
+              <div className="space-y-1.5 text-xs">
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Subtotal ({cantidadArticulosCarrito} {cantidadArticulosCarrito === 1 ? 'artículo' : 'artículos'})</span>
+                  <span className="font-mono tabular-nums font-semibold text-foreground-secondary">
                     {monedaSimbolo} {totalCarrito.toLocaleString('es-AR')}
                   </span>
                 </div>
-                <div className="flex justify-between items-baseline pt-1 border-t border-dashed border-[#E8E6DF]">
-                  <span className="text-sm font-bold text-[#1C2424]">TOTAL A COBRAR:</span>
-                  <span className="text-2xl font-black text-emerald-800 tracking-tight">
+                <div className="flex justify-between items-baseline pt-2.5 receipt-divider">
+                  <span className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                    Total a cobrar
+                  </span>
+                  <span className="text-3xl font-bold font-mono tabular-nums text-foreground tracking-[-0.03em]">
                     {monedaSimbolo} {totalCarrito.toLocaleString('es-AR')}
                   </span>
                 </div>
@@ -597,23 +602,22 @@ export function ModuloTerminalCobro({
                 <Button
                   type="button"
                   disabled
-                  className="w-full h-12 text-sm bg-gray-200 text-gray-500 font-bold gap-2 cursor-not-allowed shadow-none"
+                  className="w-full min-h-12 text-sm bg-muted text-muted-foreground font-semibold gap-2 cursor-not-allowed shadow-none"
                 >
-                  <Lock className="h-5 w-5" weight="bold" />
+                  <Lock className="h-4 w-4" weight="bold" />
                   <span>Caja Cerrada</span>
                 </Button>
               ) : (
-                <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
-                  <Button
-                    type="button"
-                    disabled={carrito.length === 0}
-                    onClick={onAbrirCobro}
-                    className="w-full h-12 text-sm bg-emerald-700 hover:bg-emerald-800 text-white font-bold gap-2 cursor-pointer disabled:opacity-40 shadow-sm transition-all"
-                  >
-                    <Money className="h-5 w-5" weight="bold" />
-                    <span>Cobrar</span>
-                  </Button>
-                </motion.div>
+                <Button
+                  type="button"
+                  size="lg"
+                  disabled={carrito.length === 0}
+                  onClick={onAbrirCobro}
+                  className="w-full min-h-12 text-sm font-bold gap-2"
+                >
+                  <Money className="h-5 w-5" weight="bold" />
+                  <span>Cobrar Ticket</span>
+                </Button>
               )}
             </div>
           </CardContent>

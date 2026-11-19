@@ -2,10 +2,6 @@
  * ====================================================================
  * LAYOUT DE AUTENTICACIÓN (Pantallas Públicas)
  * ====================================================================
- * 
- * Propósito:
- * Provee un contenedor centrado, sobrio y libre de barras de navegación
- * para los formularios de login, recuperación de cuenta y logout.
  */
 
 import React from 'react';
@@ -16,9 +12,8 @@ export default function AuthLayout({
 }: {
   children: React.ReactNode;
 }) {
-
   return (
-    <div className="min-h-screen bg-[#F8F7F2] text-[#1C2424] flex flex-col">
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
       <main className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
         {children}
       </main>

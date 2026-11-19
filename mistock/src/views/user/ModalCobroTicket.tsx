@@ -340,8 +340,8 @@ export function ModalCobroTicket({
         <form onSubmit={handleSubmit} className="space-y-4 pt-1">
           {/* Selector de Medio de Pago */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-[#1C2424] block">
-              Seleccione el medio de cobro:
+            <label className="text-xs font-semibold text-foreground block">
+              Medio de cobro
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {metodosConfig.efectivo && (
@@ -666,18 +666,18 @@ export function ModalCobroTicket({
             <div className="p-4 rounded-xl border border-[#E8E6DF] bg-[#F8F7F2]/60 space-y-2 text-center">
               <CreditCard className="h-8 w-8 mx-auto text-[#2A7A78]" weight="duotone" />
               <p className="text-xs font-bold text-[#1C2424]">Cobro con Tarjeta en Terminal POS</p>
-              <p className="text-[11px] text-[#657373]">
-                Pase la tarjeta por la terminal bancaria e ingrese el cupón o autorización.
+              <p className="text-[11px] text-muted-foreground">
+                Pasar la tarjeta por la terminal bancaria y confirmar la autorización.
               </p>
             </div>
           )}
 
           {metodoSeleccionado === 'transferencia' && (
-            <div className="p-4 rounded-xl border border-[#E8E6DF] bg-[#F8F7F2]/60 space-y-2 text-center">
-              <ArrowsLeftRight className="h-8 w-8 mx-auto text-[#2A7A78]" weight="duotone" />
-              <p className="text-xs font-bold text-[#1C2424]">Transferencia Bancaria Inmediata</p>
-              <p className="text-[11px] text-[#657373]">
-                Verifique la acreditación en la cuenta corriente comercial antes de emitir el ticket.
+            <div className="p-4 rounded-xl border border-border bg-background/60 space-y-2 text-center">
+              <ArrowsLeftRight className="h-8 w-8 mx-auto text-primary" weight="duotone" />
+              <p className="text-xs font-bold text-foreground">Transferencia Bancaria Inmediata</p>
+              <p className="text-[11px] text-muted-foreground">
+                Confirmar la acreditación en la cuenta comercial antes de emitir el ticket.
               </p>
             </div>
           )}
@@ -717,7 +717,7 @@ export function ModalCobroTicket({
                 {estadoPoint === 'aprobado' ? (
                   <Button
                     type="submit"
-                    className="w-full text-xs h-10 bg-emerald-600 hover:bg-emerald-700 text-white gap-2 font-bold cursor-pointer shadow-sm"
+                    className="w-full text-xs min-h-10 gap-2 font-semibold"
                   >
                     <CheckCircle className="h-4 w-4" weight="bold" />
                     <span>Operación Completada • Emitir Ticket</span>
@@ -756,7 +756,7 @@ export function ModalCobroTicket({
                 <Button
                   type="submit"
                   disabled={!esMontoSuficiente}
-                  className="w-full text-xs h-10 bg-emerald-700 hover:bg-emerald-800 text-white gap-2 font-bold cursor-pointer disabled:opacity-50 shadow-sm"
+                  className="w-full text-xs min-h-10 gap-2 font-semibold"
                 >
                   <CheckCircle className="h-4 w-4" weight="bold" />
                   <span>Confirmar y Finalizar Venta</span>

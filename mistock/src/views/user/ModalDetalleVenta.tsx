@@ -619,11 +619,7 @@ export function ModalDetalleVenta({
                 <Button
                   type="button"
                   onClick={ejecutarImpresionDirecta}
-                  className={`text-xs h-9 text-white gap-1.5 font-semibold cursor-pointer shadow-xs ${
-                    esNuevaVenta
-                      ? 'bg-emerald-600 hover:bg-emerald-700'
-                      : 'bg-[#2A7A78] hover:bg-[#205E5C]'
-                  }`}
+                  className="text-xs min-h-9 gap-1.5 font-semibold"
                 >
                   <Printer className="h-4 w-4" weight="duotone" />
                   <span>Imprimir Ticket (80mm)</span>

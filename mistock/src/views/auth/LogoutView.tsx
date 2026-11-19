@@ -28,20 +28,20 @@ export function LogoutView({ logoutController }: LogoutViewProps) {
     <div className="w-full max-w-md mx-auto">
       <Card className="text-center p-6 sm:p-8">
         <CardContent className="flex flex-col items-center justify-center p-0 space-y-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#2A7A78] text-white shadow-md">
-            <SignOut className="h-8 w-8" weight="duotone" />
+          <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-secondary text-primary">
+            <SignOut className="h-7 w-7" weight="duotone" />
           </div>
 
-          <h2 className="text-2xl font-bold text-[#1C2424] tracking-tight">
-            Cerrando Sesión
-          </h2>
+          <h1 className="text-xl font-bold text-foreground tracking-[-0.02em]">
+            Cerrando sesión
+          </h1>
 
-          <p className="text-sm text-[#657373] max-w-xs">
-            Estamos finalizando tu sesión en miStock de forma segura...
+          <p className="text-sm text-muted-foreground max-w-xs">
+            Finalizando sesión en M.I Stock de forma segura...
           </p>
 
           <div className="pt-2">
-            {loading && <CircleNotch className="h-6 w-6 animate-spin text-[#2A7A78]" />}
+            {loading && <CircleNotch className="h-6 w-6 animate-spin text-primary" aria-label="Cerrando sesión" />}
           </div>
         </CardContent>
       </Card>

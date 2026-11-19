@@ -45,6 +45,8 @@ Consultar el `SKILL.md` correspondiente antes de intervenir en su dominio:
 | :--- | :--- | :--- |
 | **`obsidian-docs`** | `.agents/skills/obsidian-docs/SKILL.md` | Obligatoria al crear/editar modelos, controladores, servicios, vistas, rutas, KPIs, reglas SQL o dependencias. |
 | **`interface-design`** | `.agents/skills/interface-design/SKILL.md` | Diseño, rediseño, auditoría o refinamiento visual de vistas, dashboards, paneles admin, POS, jerarquía y tokens UI. |
+| **`ux-writing`** | `.agents/skills/ux-writing/SKILL.md` | Redacción, claridad y auditoría de microcopy UI (botones, etiquetas, mensajes de error, estados vacíos, formularios, tono y accesibilidad cognitiva). |
+| **`web-design-guidelines`** | `.agents/skills/web-design-guidelines/SKILL.md` | Auditoría de semántica HTML, accesibilidad ARIA, foco/teclado, buenas prácticas de formularios y calidad UI en producción. |
 | **`supabase`** | `.agents/skills/supabase/SKILL.md` | Autenticación, SSR (`@supabase/ssr`), RLS, Supabase CLI, Realtime o troubleshooting de Postgres/HTTP. |
 | **`supabase-postgres-best-practices`** | `.agents/skills/supabase-postgres-best-practices/SKILL.md` | Creación/alteración de tablas, migraciones SQL, triggers, índices, funciones y políticas RLS. |
 

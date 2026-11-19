@@ -19,7 +19,14 @@ const TableHeader = React.forwardRef<
   HTMLTableSectionElement,
   React.HTMLAttributes<HTMLTableSectionElement>
 >(({ className, ...props }, ref) => (
-  <thead ref={ref} className={cn('[&_tr]:border-b [&_tr]:border-[#E8E6DF]', className)} {...props} />
+  <thead
+    ref={ref}
+    className={cn(
+      'bg-muted/55 [&_tr]:border-b [&_tr]:border-border',
+      className
+    )}
+    {...props}
+  />
 ));
 TableHeader.displayName = 'TableHeader';
 
@@ -42,7 +49,7 @@ const TableFooter = React.forwardRef<
   <tfoot
     ref={ref}
     className={cn(
-      'border-t border-[#E8E6DF] bg-gray-50/50 font-medium [&>tr]:last:border-b-0',
+      'border-t border-border bg-background font-medium [&>tr]:last:border-b-0',
       className
     )}
     {...props}
@@ -57,7 +64,7 @@ const TableRow = React.forwardRef<
   <tr
     ref={ref}
     className={cn(
-      'border-b border-[#E8E6DF] transition-colors hover:bg-gray-50/80 data-[state=selected]:bg-gray-100',
+      'border-b border-border/75 transition-colors duration-100 hover:bg-background/90 data-[state=selected]:bg-secondary/50',
       className
     )}
     {...props}
@@ -72,7 +79,7 @@ const TableHead = React.forwardRef<
   <th
     ref={ref}
     className={cn(
-      'h-10 px-4 text-left align-middle font-semibold text-[#657373] text-xs uppercase tracking-wider [&:has([role=checkbox])]:pr-0',
+      'min-h-9 py-2.5 px-4 text-left align-middle font-semibold text-muted-foreground text-[11px] uppercase tracking-[0.06em] [&:has([role=checkbox])]:pr-0',
       className
     )}
     {...props}
@@ -86,7 +93,7 @@ const TableCell = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <td
     ref={ref}
-    className={cn('p-4 align-middle text-[#1C2424] [&:has([role=checkbox])]:pr-0', className)}
+    className={cn('px-4 py-3 align-middle text-foreground [&:has([role=checkbox])]:pr-0', className)}
     {...props}
   />
 ));
@@ -98,7 +105,7 @@ const TableCaption = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <caption
     ref={ref}
-    className={cn('mt-4 text-xs text-[#657373]', className)}
+    className={cn('mt-4 text-xs text-muted-foreground', className)}
     {...props}
   />
 ));

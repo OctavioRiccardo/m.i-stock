@@ -190,6 +190,20 @@ Esta tabla resume cómo se conectan las **21 piezas visuales** de `src/views/` c
 
 ---
 
+## 🎨 4. Sistema Visual y Lenguaje de Interfaz («Mostrador & Libro Mayor Moderno»)
+
+La identidad visual de **M.I Stock** está formalizada en `.interface-design/system.md` y aplicada transversalmente en `src/app/layout.tsx`, `src/app/globals.css`, `src/components/ui/*` y todas las vistas de `src/views/`:
+
+* **Tipografía con Personalidad y Precisión Numérica:** Carga nativa mediante `next/font/google` de **`Plus Jakarta Sans`** (`--font-sans`) para interfaz y encabezados (`text-wrap: balance`), combinada con **`JetBrains Mono`** (`--font-mono`) y `tabular-nums` en SKUs, precios, KPIs financieros y comprobantes térmicos para evitar saltos de maquetación.
+* **Temperatura Cálida Unificada (Regla 60 / 30 / 10):** Lienzo cálido tipo papel de libro mayor (`--background: #F8F7F2`), superficies de apoyo suaves (`--muted: #EFECE4`), tarjetas blancas con sombra sutil de 3 capas (`--card: #FFFFFF`), inputs con superficie hundida (*inset*) y un único acento de marca (`--primary: #2A7A78`) reservado para todos los CTAs primarios (unificando `Abrir Caja`, `Agregar`, `Cobrar Ticket`, `Imprimir Ticket` y `Iniciar Sesión`).
+* **Navegación Integrada y Marca Unificada:** `AdminSidebar.tsx`, `UserSidebar.tsx`, `LoginFormView.tsx` y `Footer.tsx` comparten el isotipo `Package` (Phosphor `duotone`). Las barras laterales se integran al lienzo `#F8F7F2` y marcan la ruta activa con fondo tintado (`#E2F1F0`) más barra lateral de acento (`3px` `#2A7A78`) para no competir con los botones de acción principales.
+* **Elementos Firma por Rol:**
+  - **Administración (`AdminDashboardView` y `AdminInventarioGlobalView`):** Jerarquía KPI asimétrica (métrica rectora destacada con acento lateral a la izquierda + tira compacta de 3 métricas de soporte separadas por divisores internos).
+  - **Mostrador POS (`ModuloTerminalCobro` y `UserDashboardView`):** Columna derecha del carrito diseñada como comprobante térmico vivo (franja superior `#2A7A78`, SKUs y precios en `font-mono tabular-nums`, separador punteado `.receipt-divider`, steppers táctiles de 32px y total protagonista).
+* **Microcopy en Lenguaje Neutro y Semántica:** Todos los textos de interfaz (instrucciones, placeholders, validaciones, confirmaciones y estados vacíos) siguen un registro estrictamente neutro/infinitivo (sin mezclar voseo, tuteo ni trato de usted) con glosario unificado (`producto`, `ticket`, `caja`, `categoría`) y reglas persistidas en `.interface-design/system.md`.
+
+---
+
 ## 🔗 Enlaces Relacionados en la Bóveda
 - [[Servicios]] — Documentación detallada de la capa `src/services/` (`inventarioService`, `configuracionService`, `supabaseService` y suite `mercadopago/`).
 - [[Modelos]] — Documentación detallada de la capa de Modelos (`modelos_dominio` y `modelos_vista`).

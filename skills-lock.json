@@ -19,6 +19,20 @@
       "sourceType": "github",
       "skillPath": "skills/supabase-postgres-best-practices/SKILL.md",
       "computedHash": "3eb972c2d7c818e544e35cc33ea8d7147d4d78ae08142ef40037b0fbac7a2505"
+    },
+    "ux-writing": {
+      "source": "content-designer/ux-writing-skill",
+      "commit": "98cacde4ba2dd10ed28df43a8d53eef1e321c539",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "6de71e9765142c33f55389eb1f4dd73cd08cb562b24167634878da1b5d2ad91c"
+    },
+    "web-design-guidelines": {
+      "source": "vercel-labs/agent-skills",
+      "commit": "1a2c79d4e6c4a2283dc2c614b6538cbe1ed5ca62",
+      "sourceType": "github",
+      "skillPath": "skills/web-design-guidelines/SKILL.md",
+      "computedHash": "4f68ae07187fb0d1fb78c88b503d089da4cf5a9d9625d1f2e425b1590bf96d92"
     }
   }
 }

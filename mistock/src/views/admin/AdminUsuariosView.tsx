@@ -693,8 +693,8 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                   Incorporar Colaborador
                 </DialogTitle>
               </div>
-              <DialogDescription className="text-xs text-[#657373]">
-                Ingresa los datos del nuevo miembro del equipo y asígnale su rol en el sistema.
+              <DialogDescription className="text-xs text-muted-foreground">
+                Completar los datos del nuevo integrante del equipo y asignar su rol en el sistema.
               </DialogDescription>
             </DialogHeader>
 
@@ -1026,14 +1026,14 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-600">
                   <Trash className="h-4 w-4" weight="duotone" />
                 </div>
-                <DialogTitle className="text-base font-bold text-[#1C2424]">
-                  Confirmar Desvinculación
+                <DialogTitle className="text-base font-bold text-foreground">
+                  ¿Eliminar cuenta de usuario?
                 </DialogTitle>
               </div>
-              <DialogDescription className="text-xs text-[#657373] pt-1">
-                ¿Estás seguro de que deseas eliminar la cuenta de{' '}
-                <strong className="text-[#1C2424]">{usuarioSeleccionado?.nombre}</strong> ({usuarioSeleccionado?.email})?
-                El colaborador perderá acceso inmediato a la plataforma.
+              <DialogDescription className="text-xs text-muted-foreground pt-1">
+                Se eliminará la cuenta de{' '}
+                <strong className="text-foreground">{usuarioSeleccionado?.nombre}</strong> ({usuarioSeleccionado?.email}).
+                El usuario perderá el acceso a la plataforma de inmediato.
               </DialogDescription>
             </DialogHeader>
 

@@ -1,8 +1,14 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: light;
+  accent-color: #2A7A78;
+
+  /* Superficies cálidas — Mostrador & Libro Mayor */
   --background: #F8F7F2;
   --foreground: #1C2424;
+  --foreground-secondary: #3F4D4D;
+  --foreground-subtle: #8E9B9B;
 
   --card: #FFFFFF;
   --card-foreground: #1C2424;
@@ -10,31 +16,37 @@
   --popover: #FFFFFF;
   --popover-foreground: #1C2424;
 
-  /* Primary Emerald de miStock */
+  /* Marca — Verde Petróleo miStock */
   --primary: #2A7A78;
   --primary-foreground: #FFFFFF;
   --primary-hover: #205E5D;
+  --primary-active: #184847;
 
-  /* Secondary Mint suave */
+  /* Acento / Superficie Tintada */
   --secondary: #E2F1F0;
-  --secondary-foreground: #2A7A78;
+  --secondary-foreground: #1E5C5A;
 
-  --muted: #F3F4F6;
+  --muted: #EFECE4;
   --muted-foreground: #657373;
 
   --accent: #E2F1F0;
-  --accent-foreground: #2A7A78;
+  --accent-foreground: #1E5C5A;
 
-  --destructive: #EF4444;
+  --destructive: #DC2626;
   --destructive-foreground: #FFFFFF;
 
-  --border: #E8E6DF;
-  --input: #E8E6DF;
+  /* Bordes y controles cálidos */
+  --border: #E5E1D6;
+  --border-subtle: rgba(28, 36, 36, 0.06);
+  --input: #DFDACD;
   --ring: #2A7A78;
 
+  /* Radios y sombras canónicas */
   --radius: 0.5rem;
+  --shadow-card: 0 0 0 1px rgba(28, 36, 36, 0.08), 0 1px 2px rgba(28, 36, 36, 0.04);
+  --shadow-elevated: 0 0 0 1px rgba(28, 36, 36, 0.08), 0 8px 24px -4px rgba(28, 36, 36, 0.12);
 
-  /* Chart Tokens shadcn */
+  /* Chart Tokens */
   --chart-1: #2A7A78;
   --chart-2: #34D399;
   --chart-3: #009EE3;
@@ -45,6 +57,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-foreground-secondary: var(--foreground-secondary);
+  --color-foreground-subtle: var(--foreground-subtle);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
@@ -52,6 +66,7 @@
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -70,16 +85,38 @@
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
 
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: var(--font-jakarta), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-* {
-  border-color: var(--border);
+@layer base {
+  html {
+    scrollbar-color: #8E9B9B #EFECE4;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, th {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
 }
 
-body {
-  background-color: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
+.receipt-divider {
+  border-top: 1px dashed rgba(28, 36, 36, 0.16);
 }

@@ -230,7 +230,7 @@ export function ModalAperturaCaja({
             <Button
               type="submit"
               size="sm"
-              className="text-xs h-9 bg-emerald-700 hover:bg-emerald-800 text-white font-bold gap-1.5 cursor-pointer shadow-xs"
+              className="text-xs min-h-9 font-semibold gap-1.5"
             >
               <CheckCircle className="h-4 w-4" weight="bold" />
               <span>Abrir Caja e Iniciar Ventas</span>

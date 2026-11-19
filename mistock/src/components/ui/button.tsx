@@ -7,29 +7,29 @@ import { CircleNotch } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2A7A78] focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]',
+  'inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-[background-color,border-color,color,transform,box-shadow] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98] cursor-pointer',
   {
     variants: {
       variant: {
         default:
-          'bg-[#2A7A78] text-white shadow-sm hover:bg-[#205E5D] active:bg-[#1A4C4B]',
+          'bg-primary text-primary-foreground shadow-[0_1px_2px_rgba(28,36,36,0.14)] hover:bg-primary-hover active:bg-primary-active',
         secondary:
-          'bg-[#E2F1F0] text-[#2A7A78] hover:bg-[#D0E9E8] font-semibold',
+          'bg-secondary text-secondary-foreground hover:bg-[#D2EAE8] font-semibold',
         outline:
-          'border border-[#E8E6DF] bg-white text-[#1C2424] shadow-sm hover:bg-gray-50 hover:text-black',
+          'border border-border bg-card text-foreground shadow-[0_1px_2px_rgba(28,36,36,0.04)] hover:bg-muted/70 hover:border-[#D6D1C4]',
         ghost:
-          'text-[#1C2424] hover:bg-black/5 hover:text-black',
+          'text-foreground-secondary hover:bg-muted/80 hover:text-foreground',
         destructive:
-          'bg-red-600 text-white shadow-sm hover:bg-red-700 active:bg-red-800',
+          'bg-destructive text-destructive-foreground shadow-[0_1px_2px_rgba(28,36,36,0.12)] hover:bg-red-700 active:bg-red-800',
         link:
-          'text-[#2A7A78] underline-offset-4 hover:underline p-0 h-auto',
+          'text-primary underline-offset-4 hover:underline p-0 min-h-0 h-auto',
       },
       size: {
-        default: 'h-9 px-4 py-2',
-        sm: 'h-8 rounded-md px-3 text-xs',
-        lg: 'h-10 rounded-lg px-6 text-base',
+        default: 'min-h-9 px-4 py-2',
+        sm: 'min-h-8 rounded-md px-3 py-1.5 text-xs',
+        lg: 'min-h-11 rounded-lg px-6 py-2.5 text-sm font-semibold',
         icon: 'h-9 w-9',
-        'icon-sm': 'h-7 w-7 rounded-md',
+        'icon-sm': 'h-8 w-8 rounded-md',
       },
     },
     defaultVariants: {

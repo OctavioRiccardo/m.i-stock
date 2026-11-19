@@ -20,7 +20,6 @@ import Link from 'next/link';
 import { motion, MotionConfig } from 'motion/react';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
 import {
-  Stack,
   MagnifyingGlass,
   CaretLeft,
   CaretRight,
@@ -103,27 +102,21 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
         className="max-w-7xl mx-auto space-y-6"
       >
         {/* Encabezado Principal */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78]">
-                <Stack className="h-4 w-4" weight="duotone" />
-              </div>
-              <h1 className="text-2xl font-bold text-[#1C2424] tracking-tight">
-                Inventario Global y Valuación
-              </h1>
-            </div>
-            <p className="text-sm text-[#657373] mt-1">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-primary mb-1">
+              Auditoría de Capital
+            </p>
+            <h1 className="text-2xl font-bold text-foreground tracking-[-0.02em]">
+              Inventario Global y Valuación
+            </h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
               Auditoría financiera del capital en mercadería, márgenes de rentabilidad y distribución por familias comerciales.
             </p>
           </div>
 
           <div className="flex items-center gap-2.5">
-            <Button
-              asChild
-              size="sm"
-              className="bg-[#2A7A78] hover:bg-[#205E5C] text-white shadow-sm gap-1.5"
-            >
+            <Button asChild size="sm" className="gap-1.5">
               <Link href="/admingestioninven">
                 <Package className="h-4 w-4" weight="bold" />
                 <span>Ir a Gestión Operativa</span>
@@ -132,98 +125,110 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
           </div>
         </div>
 
-        {/* Tarjetas KPI de Resumen Global */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Card 1: Total Artículos */}
-          <Card className="p-4 border-[#E8E6DF] shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-[#657373]">
-                Catálogo Activo
-              </span>
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78]">
-                <Package className="h-4 w-4" weight="duotone" />
-              </div>
-            </div>
-            <p className="text-2xl font-extrabold text-[#1C2424] tracking-tight mt-2">
-              {metricasGlobales.totalProductos}
-            </p>
-            <p className="text-xs text-[#657373] mt-1">
-              En {metricasGlobales.totalCategorias} categorías comerciales
-            </p>
-          </Card>
-
-          {/* Card 2: Existencias Físicas */}
-          <Card className="p-4 border-[#E8E6DF] shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-[#657373]">
-                Unidades en Stock
-              </span>
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78]">
-                <CheckCircle className="h-4 w-4" weight="duotone" />
-              </div>
-            </div>
-            <p className="text-2xl font-extrabold text-[#1C2424] tracking-tight mt-2">
-              {metricasGlobales.unidadesTotales.toLocaleString('es-AR')}
-            </p>
-            <p className="text-xs text-[#657373] mt-1">
-              Unidades físicas disponibles
-            </p>
-          </Card>
-
-          {/* Card 3: Valuación del Inventario */}
-          <Card className="p-4 border-[#E8E6DF] shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-[#657373]">
-                Valuación Comercial
-              </span>
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E2F1F0] text-[#2A7A78]">
-                <CurrencyDollar className="h-4 w-4" weight="duotone" />
-              </div>
-            </div>
-            <p className="text-2xl font-extrabold text-[#1C2424] tracking-tight mt-2">
-              ${metricasGlobales.valuacionVenta.toLocaleString('es-AR')}
-            </p>
-            <div className="flex items-center gap-1.5 text-xs text-[#657373] mt-1">
-              <span>Costo: ${metricasGlobales.valuacionCosto.toLocaleString('es-AR')}</span>
-              <span className="text-emerald-700 font-semibold">(+{metricasGlobales.margenEstimadoPorcentaje}%)</span>
-            </div>
-          </Card>
-
-          {/* Card 4: Alertas de Stock */}
-          <Card className="p-4 border-[#E8E6DF] shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-[#657373]">
-                Salud de Stock
-              </span>
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
-                <Warning className="h-4 w-4" weight="duotone" />
-              </div>
-            </div>
-            <div className="flex flex-wrap items-baseline gap-2 mt-2">
-              <p className="text-2xl font-extrabold text-[#1C2424] tracking-tight">
-                {metricasGlobales.articulosCriticos}
-              </p>
-              <span className="text-xs text-rose-700 font-semibold">críticos</span>
-              {metricasGlobales.articulosBajos > 0 && (
-                <>
-                  <span className="text-xs text-[#657373]">•</span>
-                  <span className="text-xs text-amber-700 font-semibold">
-                    {metricasGlobales.articulosBajos} bajos
+        {/* Jerarquía KPI Asimétrica: Valuación Hero + Tira de Stock */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+          {/* Métrica Rectora: Valuación Comercial */}
+          <Card className="lg:col-span-5 overflow-hidden relative flex flex-col justify-between">
+            <div className="absolute inset-y-0 left-0 w-1 bg-primary" aria-hidden="true" />
+            <div className="p-5 sm:p-6 pl-6 sm:pl-7 flex flex-col justify-between h-full gap-4">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground block">
+                    Valuación Comercial
                   </span>
-                </>
-              )}
-              {metricasGlobales.articulosSinStock > 0 && (
-                <>
-                  <span className="text-xs text-[#657373]">•</span>
-                  <span className="text-xs text-red-600 font-semibold">
-                    {metricasGlobales.articulosSinStock} agotados
+                  <span className="text-xs text-foreground-subtle mt-0.5 block">
+                    Valor proyectado de venta en stock
                   </span>
-                </>
-              )}
+                </div>
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary text-primary shrink-0">
+                  <CurrencyDollar className="h-4 w-4" weight="duotone" />
+                </div>
+              </div>
+
+              <div>
+                <p className="text-3xl font-bold font-mono tabular-nums text-foreground tracking-[-0.03em] leading-none">
+                  ${metricasGlobales.valuacionVenta.toLocaleString('es-AR')}
+                </p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-3 font-mono tabular-nums">
+                  <span>Costo: ${metricasGlobales.valuacionCosto.toLocaleString('es-AR')}</span>
+                  <Badge variant="success" className="font-mono tabular-nums font-semibold text-[11px] px-1.5 py-0.5">
+                    +{metricasGlobales.margenEstimadoPorcentaje}%
+                  </Badge>
+                </div>
+              </div>
             </div>
-            <p className="text-xs text-[#657373] mt-1">
-              Monitoreo contra umbrales mínimos
-            </p>
+          </Card>
+
+          {/* Tira de Métricas Operativas */}
+          <Card className="lg:col-span-7">
+            <div className="grid grid-cols-1 sm:grid-cols-3 h-full divide-y sm:divide-y-0 sm:divide-x divide-border/80">
+              {/* Catálogo Activo */}
+              <div className="p-5 flex flex-col justify-between gap-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                    Catálogo Activo
+                  </span>
+                  <Package className="h-4 w-4 text-primary/80 shrink-0" weight="duotone" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold font-mono tabular-nums text-foreground tracking-[-0.02em]">
+                    {metricasGlobales.totalProductos}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    En {metricasGlobales.totalCategorias} categorías
+                  </p>
+                </div>
+              </div>
+
+              {/* Existencias Físicas */}
+              <div className="p-5 flex flex-col justify-between gap-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                    Unidades en Stock
+                  </span>
+                  <CheckCircle className="h-4 w-4 text-primary/80 shrink-0" weight="duotone" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold font-mono tabular-nums text-foreground tracking-[-0.02em]">
+                    {metricasGlobales.unidadesTotales.toLocaleString('es-AR')}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Unidades disponibles
+                  </p>
+                </div>
+              </div>
+
+              {/* Salud de Stock */}
+              <div className="p-5 flex flex-col justify-between gap-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                    Salud de Stock
+                  </span>
+                  <Warning className="h-4 w-4 text-amber-700 shrink-0" weight="duotone" />
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-baseline gap-1.5 font-mono tabular-nums">
+                    <p className="text-2xl font-bold text-foreground tracking-[-0.02em]">
+                      {metricasGlobales.articulosCriticos}
+                    </p>
+                    <span className="font-sans text-xs text-rose-700 font-semibold">críticos</span>
+                    {metricasGlobales.articulosBajos > 0 && (
+                      <span className="font-sans text-xs text-amber-700 font-semibold">
+                        · {metricasGlobales.articulosBajos} bajos
+                      </span>
+                    )}
+                    {metricasGlobales.articulosSinStock > 0 && (
+                      <span className="font-sans text-xs text-red-700 font-semibold">
+                        · {metricasGlobales.articulosSinStock} agotados
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Según umbrales mínimos
+                  </p>
+                </div>
+              </div>
+            </div>
           </Card>
         </div>
 
@@ -237,8 +242,8 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
                 <CardTitle className="text-base font-bold text-[#1C2424]">
                   Familias de Categorías
                 </CardTitle>
-                <p className="text-xs text-[#657373] mt-0.5">
-                  Selecciona una familia comercial para analizar su valuación parcial y artículos asociados.
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Seleccionar una categoría para analizar su valuación parcial y productos asociados.
                 </p>
               </div>
 

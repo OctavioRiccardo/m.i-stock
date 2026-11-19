@@ -78,18 +78,18 @@ export function ModalAccesoRestringido({
             </div>
           </div>
 
-          <DialogDescription className="text-xs text-[#657373] leading-relaxed pt-2">
+          <DialogDescription className="text-xs text-muted-foreground leading-relaxed pt-2">
             {esVendedorEnAdmin ? (
               <>
-                Esta sección contiene información financiera sensible, configuración de la empresa, márgenes de utilidad y gestión de usuarios reservada exclusivamente para el <strong>Nivel Administrador</strong>.
+                Esta sección contiene información financiera, configuración del comercio, márgenes de utilidad y gestión de usuarios reservada exclusivamente para el rol <strong>Administrador</strong>.
                 <br /><br />
-                Tu perfil de usuario está autorizado para operar el mostrador y la línea de cajas.
+                Este perfil está autorizado para operar el mostrador y la terminal de caja.
               </>
             ) : (
               <>
-                Tu cuenta está registrada en el sistema pero aún no tiene un rol operativo activo (Administrador o Vendedor).
+                La cuenta está registrada en el sistema, pero aún no tiene un rol operativo asignado (Administrador o Vendedor).
                 <br /><br />
-                Por favor, solicita al Administrador del comercio que active tus permisos de acceso desde el panel de Gestión de Usuarios.
+                Solicitar al Administrador del comercio la activación de permisos desde Gestión de Usuarios.
               </>
             )}
           </DialogDescription>
