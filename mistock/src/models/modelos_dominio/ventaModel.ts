@@ -89,6 +89,7 @@ export interface DetalleVenta {
 export interface VentaRow {
   id_venta: string;
   id_usuario: string | null;
+  id_sesion_caja?: string | null;
   total: number;
   estado: EstadoVenta | string;
   creado_el: string;
@@ -103,6 +104,7 @@ export interface Venta {
   numeroComprobante?: string; // Identificador visual legible para el cliente (ej: 'VNT-101')
   fecha: Date | string;
   usuarioId: string;          // UUID del empleado o cajero que atendió la transacción (id_usuario)
+  sesionCajaId?: string;      // UUID opcional de `public.sesiones_caja`
   nombreVendedor?: string;
   items: DetalleVenta[];      // Desglose de productos vendidos
   total: number;              // Monto total facturado
@@ -132,6 +134,7 @@ export function toVenta(
     numeroComprobante: `VNT-${row.id_venta.slice(-4).toUpperCase()}`,
     fecha: row.creado_el,
     usuarioId: row.id_usuario || '',
+    sesionCajaId: row.id_sesion_caja || undefined,
     nombreVendedor,
     items,
     pagos,

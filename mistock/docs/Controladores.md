@@ -213,6 +213,16 @@ mistock/src/
 
 ---
 
+### 4.6. `auditoriaController.ts` (`useAdminAuditoriaController`)
+* **Ruta y Vista:** `/adminauditoria` $\rightarrow$ `AdminAuditoriaView.tsx`.
+* **Modelos y Servicios que consume:** `AuditoriaEvento`, `ModuloAuditoria`, `filtrarEventosAuditoria`, `calcularResumenAuditoria` (`auditoriaModel.ts`), `SesionCaja` (`sesionCajaModel.ts`), `supabaseService`.
+* **Responsabilidades Clave:**
+  1. **Consulta Paralela de Bitácora y Turnos:** Carga `fetchAuditoriaEventos`, `fetchSesionesCaja` y `fetchUsuariosWithStatus`, informando `migracionPendiente` si las tablas aún no se crearon en Supabase.
+  2. **Filtrado Combinado y Paginación:** Gestiona filtros por módulo (`todos`, `inventario`, `caja`, `ventas`, `auth`), usuario responsable, búsqueda textual y rango de fechas (`fechaDesde` / `fechaHasta`), además de alternar entre la vista de **Eventos Generales** y **Turnos de Caja**.
+  3. **Inspección Antes/Después:** Expone `eventoSeleccionado` para auditar en modal los cambios `datosAnteriores` vs `datosNuevos`.
+
+---
+
 ## 🛒 5. Controlador del Punto de Venta / Operador POS (`src/controllers/userControllers/`)
 
 ### 5.1. `userDashboardController.ts` (`useUserDashboardController`)

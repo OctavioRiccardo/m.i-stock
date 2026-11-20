@@ -23,6 +23,7 @@ import {
   Package,
   Users,
   Stack,
+  ClipboardText,
   Gear,
   SignOut,
   ArrowsLeftRight,
@@ -34,6 +35,7 @@ const adminNavData = [
   { link: '/admingestioninven', label: 'Gestión de Inventario', icon: Package },
   { link: '/admininventarioglobal', label: 'Inventario Global', icon: Stack },
   { link: '/adminusuarios', label: 'Gestión de Usuarios', icon: Users },
+  { link: '/adminauditoria', label: 'Auditoría', icon: ClipboardText },
   { link: '/adminconfiguracion', label: 'Configuración', icon: Gear },
 ];
 

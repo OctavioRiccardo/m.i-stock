@@ -193,6 +193,14 @@ Representa la trazabilidad inmutable de entradas y salidas de mercadería (`publ
     | 'merma_danio';
   ```
   - `MovimientoStock` (y `MovimientoStockRow` + mapper `toMovimientoStock`): Guarda `id`, `productoId`, `nombreProducto`, `tipo`, `cantidad`, `stockAnterior`, `stockPosterior`, `motivo`, `usuarioId`, `referenciaId`, `fecha`.
+
+---
+
+### 3.4. `auditoriaModel.ts` y `sesionCajaModel.ts` — Bitácora Centralizada y Turnos de Caja
+Modelan la auditoría operativa inmutable (`public.auditoria_eventos`) y el historial relacional de turnos de caja (`public.sesiones_caja`):
+* **`auditoriaModel.ts`:** `ModuloAuditoria` (`'auth' | 'inventario' | 'caja' | 'ventas' | 'usuarios'`), `AccionAuditoria` (`login`, `logout`, `producto_alta`, `producto_modificacion`, `producto_baja`, `producto_reactivacion`, `stock_ajuste`, `caja_apertura`, `caja_cierre`, `venta_creada`, `venta_anulada`), `AuditoriaEventoRow`, `AuditoriaEvento`, `toAuditoriaEvento()`, `filtrarEventosAuditoria()` y `calcularResumenAuditoria()`.
+* **`sesionCajaModel.ts`:** `EstadoSesionCajaDB` (`'abierta' | 'cerrada'`), `SesionCajaRow`, `SesionCaja` y mapper `toSesionCaja()`.
+* **`ventaModel.ts`:** Suma `id_sesion_caja` (`VentaRow`) y `sesionCajaId` (`Venta`) para vincular cada ticket al turno de caja persistido.
   - `ItemAjusteInventario` y `AjusteInventario`: Modelan las actas de recuento físico donde se compara el stock teórico del sistema contra el conteo físico en estantería (`diferencia = stockFisico - stockSistema`).
   - `RegistrarMovimientoDTO`: DTO para asentar un movimiento manual o automático.
 

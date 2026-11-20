@@ -17,4 +17,6 @@ export * from './productoModel';
 export * from './ventaModel';
 export * from './inventarioModel';
 export * from './userModel';
+export * from './sesionCajaModel';
+export * from './auditoriaModel';
 

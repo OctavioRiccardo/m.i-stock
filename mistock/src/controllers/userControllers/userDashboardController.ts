@@ -321,9 +321,11 @@ export function useUserDashboardController() {
     return 'Administrador';
   };
 
-  const [cajeroApertura, setCajeroApertura] = useState<string>(() => getNombreUsuarioActivo());
+  const [cajeroApertura, setCajeroApertura] = useState<string>('Administrador');
   const [observacionesApertura, setObservacionesApertura] = useState<string>('');
   const [idTurnoActivo, setIdTurnoActivo] = useState<string | null>(null);
+  const [idSesionRemota, setIdSesionRemota] = useState<string | null>(null);
+  const idSesionRemotaRef = useRef<string | null>(null);
   const [ventasIdsTurno, setVentasIdsTurno] = useState<string[]>([]);
   const [timestampApertura, setTimestampApertura] = useState<number | null>(null);
   const [isModalAperturaOpen, setIsModalAperturaOpen] = useState<boolean>(false);
@@ -362,6 +364,10 @@ export function useUserDashboardController() {
       setCajaAbierta(abiertaRemota);
       if (abiertaRemota) {
         if (remota.idTurno) setIdTurnoActivo(remota.idTurno);
+        if (remota.idSesionRemota) {
+          setIdSesionRemota(remota.idSesionRemota);
+          idSesionRemotaRef.current = remota.idSesionRemota;
+        }
         if (remota.timestampApertura) setTimestampApertura(remota.timestampApertura);
         if (remota.fondoInicial !== undefined) setFondoInicial(remota.fondoInicial);
         if (remota.fechaApertura) setFechaApertura(remota.fechaApertura);
@@ -370,6 +376,8 @@ export function useUserDashboardController() {
         if (Array.isArray(remota.ventasIdsTurno)) setVentasIdsTurno(remota.ventasIdsTurno);
       } else {
         setIdTurnoActivo(null);
+        setIdSesionRemota(null);
+        idSesionRemotaRef.current = null;
         setTimestampApertura(null);
         setVentasIdsTurno([]);
         setCajeroApertura(getNombreUsuarioActivo());
@@ -400,6 +408,10 @@ export function useUserDashboardController() {
           setCajaAbierta(sesion.cajaAbierta);
           if (sesion.cajaAbierta) {
             if (sesion.idTurno) setIdTurnoActivo(sesion.idTurno);
+            if (sesion.idSesionRemota) {
+              setIdSesionRemota(sesion.idSesionRemota);
+              idSesionRemotaRef.current = sesion.idSesionRemota;
+            }
             if (sesion.timestampApertura) setTimestampApertura(sesion.timestampApertura);
             if (sesion.fondoInicial !== undefined) setFondoInicial(sesion.fondoInicial);
             if (sesion.fechaApertura) setFechaApertura(sesion.fechaApertura);
@@ -443,6 +455,8 @@ export function useUserDashboardController() {
     const nuevoTimestamp = ahora.getTime();
 
     setIdTurnoActivo(nuevoIdTurno);
+    setIdSesionRemota(null);
+    idSesionRemotaRef.current = null;
     setTimestampApertura(nuevoTimestamp);
     setCajaAbierta(true);
     setFondoInicial(montoSeguro);
@@ -451,33 +465,44 @@ export function useUserDashboardController() {
     setObservacionesApertura(obsSegura);
     setIsModalAperturaOpen(false);
     setVentasIdsTurno([]);
-    void supabaseService.saveSesionCaja({
+
+    const estadoBaseApertura = {
       cajaAbierta: true,
       estaAbierta: true,
       idTurno: nuevoIdTurno,
+      idSesionRemota: null as string | null,
       timestampApertura: nuevoTimestamp,
       fondoInicial: montoSeguro,
       fechaApertura: strFechaApertura,
       cajeroApertura: cajeroActual,
       observacionesApertura: obsSegura,
       ultimoCierre,
-      ventasIdsTurno: [],
-    });
+      ventasIdsTurno: [] as string[],
+    };
+
+    void supabaseService.saveSesionCaja(estadoBaseApertura);
+
+    // Registrar apertura formal en `public.sesiones_caja` para auditoría relacional
+    void supabaseService
+      .abrirSesionCajaRemota({
+        codigoTurno: nuevoIdTurno,
+        numeroCaja: config.pos.numeroCaja || 1,
+        fondoInicial: montoSeguro,
+        observaciones: obsSegura || undefined,
+      })
+      .then((remoteSessionId) => {
+        if (!remoteSessionId) return;
+        setIdSesionRemota(remoteSessionId);
+        idSesionRemotaRef.current = remoteSessionId;
+        const actualizado = { ...estadoBaseApertura, idSesionRemota: remoteSessionId };
+        void supabaseService.saveSesionCaja(actualizado);
+        try {
+          localStorage.setItem('mistock_sesion_caja_v1', JSON.stringify(actualizado));
+        } catch {}
+      });
 
     try {
-      localStorage.setItem(
-        'mistock_sesion_caja_v1',
-        JSON.stringify({
-          cajaAbierta: true,
-          idTurno: nuevoIdTurno,
-          timestampApertura: nuevoTimestamp,
-          fondoInicial: montoSeguro,
-          fechaApertura: strFechaApertura,
-          cajeroApertura: cajeroActual,
-          observacionesApertura: obsSegura,
-          ultimoCierre,
-        })
-      );
+      localStorage.setItem('mistock_sesion_caja_v1', JSON.stringify(estadoBaseApertura));
     } catch {}
 
     setSaleSuccessMessage(
@@ -579,17 +604,34 @@ export function useUserDashboardController() {
       observaciones: obsSegura || undefined,
     };
 
+    const sesionRemotaACerrar = idSesionRemotaRef.current || idSesionRemota;
+
     setCajaAbierta(false);
     setIdTurnoActivo(null);
+    setIdSesionRemota(null);
+    idSesionRemotaRef.current = null;
     setTimestampApertura(null);
     setUltimoCierre(nuevoCierre);
     setIsModalArqueoOpen(false);
     setIsModalTicketCierreOpen(true);
     setVentasIdsTurno([]);
+
+    if (sesionRemotaACerrar) {
+      void supabaseService.cerrarSesionCajaRemota(sesionRemotaACerrar, {
+        efectivoEsperado,
+        efectivoReal: efectivoSeguro,
+        diferencia,
+        totalRecaudado: granTotalRecaudado,
+        cantidadTickets: cantidadTicketsValidos,
+        observaciones: obsSegura || undefined,
+      });
+    }
+
     void supabaseService.saveSesionCaja({
       cajaAbierta: false,
       estaAbierta: false,
       idTurno: undefined,
+      idSesionRemota: null,
       timestampApertura: undefined,
       fondoInicial,
       fechaApertura: null,
@@ -904,6 +946,7 @@ export function useUserDashboardController() {
       fechaISO: ahora.toISOString(),
       timestamp: ahora.getTime(),
       idTurno: idTurnoActivo || undefined,
+      sesionCajaId: idSesionRemotaRef.current || idSesionRemota || undefined,
       montoTotal: totalVenta,
       cantidadItems: cantidadArticulosCarrito,
       metodoPago,
@@ -999,6 +1042,7 @@ export function useUserDashboardController() {
               cajaAbierta: true,
               estaAbierta: true,
               idTurno: idTurnoActivo || undefined,
+              idSesionRemota: idSesionRemotaRef.current || idSesionRemota || null,
               timestampApertura: timestampApertura || undefined,
               fondoInicial,
               fechaApertura,

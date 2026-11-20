@@ -228,6 +228,15 @@ La tabla `public.configuracion_negocio` almacena una única fila maestra (`id = 
 | **`fetchUltimoRespaldoCSV()`** | `() => Promise<string \| null>` | Lee la marca temporal ISO de la última exportación CSV desde `datos.ultimoRespaldoCSV`. |
 | **`saveUltimoRespaldoCSV()`** | `(fechaISO: string) => Promise<boolean>` | Registra en Supabase la fecha y hora exacta en que un administrador descargó un respaldo CSV de inventario o ventas. |
 
+#### G. Auditoría Centralizada e Historial de Sesiones de Caja (`public.auditoria_eventos` y `public.sesiones_caja`)
+| Función | Firma | Descripción |
+| :--- | :--- | :--- |
+| **`registrarEventoAuth()`** | `(accion: 'login' \| 'logout', detalle?) => Promise<boolean>` | Inserta eventos de acceso (`modulo: 'auth'`) del usuario autenticado bajo política RLS propia (`auth.uid() = id_usuario`), invocado desde `authController.ts`. |
+| **`abrirSesionCajaRemota()`** | `(params) => Promise<string \| null>` | Crea una sesión abierta en `public.sesiones_caja` al abrir caja en POS, disparando `tr_auditar_sesiones_caja` y devolviendo `id_sesion` para asociar las ventas del turno. |
+| **`cerrarSesionCajaRemota()`** | `(idSesion: string, params) => Promise<boolean>` | Cierra la sesión en `public.sesiones_caja` con `efectivo_esperado`, `efectivo_real`, `diferencia`, `total_recaudado` y `cantidad_tickets`. |
+| **`fetchAuditoriaEventos()`** | `(limite?: number) => Promise<FetchResult<AuditoriaEvento>>` | Consulta `public.auditoria_eventos` con relación a `public.usuario` (solo accesible para administradores por RLS), detectando `migracionPendiente` si aún no se aplicó el parche SQL. |
+| **`fetchSesionesCaja()`** | `(limite?: number) => Promise<FetchResult<SesionCaja>>` | Obtiene el historial de turnos de caja con joins explícitos `usuario!id_usuario` y `usuario!id_usuario_cierre`. |
+
 ---
 
 ## 💳 5. Suite de Integración Mercado Pago Point (`src/services/mercadopago/`)

@@ -26,6 +26,7 @@ import { LoginFormValues } from '@/models/modelos_vista/authModel';
 import { RolUsuario } from '@/models/modelos_dominio/userModel';
 import { LIMITES_TEXTO, esEmailValido } from '@/lib/validaciones';
 import { inventarioService, INVENTARIO_STORAGE_KEY } from '@/services/inventarioService';
+import { supabaseService } from '@/services/supabaseService';
 
 /**
  * Limpia todas las claves de sesión y cachés de datos en el navegador al cerrar sesión.
@@ -160,6 +161,13 @@ export function useLoginController() {
           );
         }
 
+        // Registrar inicio de sesión en auditoría centralizada (tolerante a fallos)
+        await supabaseService.registrarEventoAuth('login', {
+          rol: rolAsignado,
+          nombre: nombreColaborador,
+          email: data.session.user.email || emailLower,
+        });
+
         if (rolAsignado === 'vendedor') {
           router.push('/dashboard');
         } else {
@@ -203,9 +211,32 @@ export function useLogoutController(autoExecute: boolean = true) {
   const [loading, setLoading] = useState<boolean>(autoExecute);
   const [loggedOut, setLoggedOut] = useState<boolean>(false);
 
+  const registrarCierreAuditoria = async () => {
+    let rolLocal: RolUsuario | undefined;
+    let nombreLocal: string | undefined;
+    let emailLocal: string | undefined;
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = window.localStorage.getItem('mistock_usuario_activo');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          rolLocal = parsed?.rol;
+          nombreLocal = parsed?.nombre;
+          emailLocal = parsed?.email;
+        }
+      } catch {}
+    }
+    await supabaseService.registrarEventoAuth('logout', {
+      rol: rolLocal,
+      nombre: nombreLocal,
+      email: emailLocal,
+    });
+  };
+
   const handleLogout = useCallback(async () => {
     setLoading(true);
     try {
+      await registrarCierreAuditoria();
       limpiarSesionLocal();
       const supabase = createClient();
       await supabase.auth.signOut();
@@ -226,6 +257,7 @@ export function useLogoutController(autoExecute: boolean = true) {
     let isMounted = true;
     const performLogout = async () => {
       try {
+        await registrarCierreAuditoria();
         limpiarSesionLocal();
         const supabase = createClient();
         await supabase.auth.signOut();

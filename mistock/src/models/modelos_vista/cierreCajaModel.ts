@@ -68,6 +68,7 @@ export interface AperturaCajaDTO {
  */
 export interface EstadoSesionCaja {
   idTurno?: string;
+  idSesionRemota?: string | null;
   timestampApertura?: number;
   fondoInicial: number;
   fechaApertura: string | null;

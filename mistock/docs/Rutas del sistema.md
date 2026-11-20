@@ -17,7 +17,7 @@ En **M.I Stock**, los archivos `page.tsx` dentro de `src/app/` cumplen el rol de
 Además, el sistema organiza las rutas mediante **Route Groups** de Next.js:
 - `(auth)`: Rutas de autenticación (`/login`, `/logout`) centradas y con pie de página institucional (`Footer.tsx`).
 - `(user)`: Entorno de terminal de Punto de Venta (`/dashboard`) protegido por `UserLayout` (`UserSidebar.tsx` + `usePermisosController`).
-- `(admin)`: Consola ejecutiva de administración (`/admin`, `/admingestioninven`, `/admininventarioglobal`, `/adminusuarios`, `/adminconfiguracion`) protegida por `AdminLayout` (`AdminSidebar.tsx` + `usePermisosController`).
+- `(admin)`: Consola ejecutiva de administración (`/admin`, `/admingestioninven`, `/admininventarioglobal`, `/adminusuarios`, `/adminauditoria`, `/adminconfiguracion`) protegida por `AdminLayout` (`AdminSidebar.tsx` + `usePermisosController`).
 - `api/`: **Route Handlers** de servidor para la integración con hardware **Mercado Pago Point Smart** y webhooks.
 
 ```mermaid
@@ -62,6 +62,7 @@ flowchart TD
 | **`/admininventarioglobal`** | `src/app/(admin)/admininventarioglobal/page.tsx` | `admin` | `AdminLayout` (`AdminSidebar` + `usePermisosController`) | `admin/AdminInventarioGlobalView.tsx` | `useAdminInventarioGlobalController` (`inventarioGlobalController.ts`) |
 | **`/adminstockcritico`** | `src/app/(admin)/adminstockcritico/page.tsx` | `admin` | Redirección Canónica | Redirige a `/admininventarioglobal` | N/A |
 | **`/adminusuarios`** | `src/app/(admin)/adminusuarios/page.tsx` | `admin` | `AdminLayout` (`AdminSidebar` + `usePermisosController`) | `admin/AdminUsuariosView.tsx` | `useAdminUsuariosController` (`usuariosController.ts`) |
+| **`/adminauditoria`** | `src/app/(admin)/adminauditoria/page.tsx` | `admin` | `AdminLayout` (`AdminSidebar` + `usePermisosController`) | `admin/AdminAuditoriaView.tsx` | `useAdminAuditoriaController` (`auditoriaController.ts`) |
 | **`/adminconfiguracion`** | `src/app/(admin)/adminconfiguracion/page.tsx` | `admin` | `AdminLayout` (`AdminSidebar` + `usePermisosController`) | `admin/AdminConfiguracionView.tsx` | `useAdminConfiguracionController` (`configuracionController.ts`) |
 | **`/adminmetricas`** | `src/app/(admin)/adminmetricas/page.tsx` | `admin` | Redirección Canónica | Redirige a `/admin` | N/A |
 

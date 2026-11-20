@@ -62,6 +62,7 @@ export interface VentaRecientePOS {
   fechaISO?: string;
   timestamp?: number;
   idTurno?: string;
+  sesionCajaId?: string;
   montoTotal: number;
   cantidadItems: number;
   metodoPago?: MetodoPago | string;

@@ -478,3 +478,120 @@ CREATE POLICY "Solo admin modifica configuración" ON public.configuracion_negoc
   FOR ALL TO authenticated
   USING ((SELECT public.is_admin()))
   WITH CHECK ((SELECT public.is_admin()));
+
+-- ----------------------------------------------------------------------------
+-- 9. AUDITORÍA CENTRALIZADA E HISTORIAL DE SESIONES DE CAJA
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.sesiones_caja (
+  id_sesion uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  codigo_turno text,
+  id_usuario uuid NOT NULL REFERENCES public.usuario(id_usuario) ON DELETE RESTRICT,
+  id_usuario_cierre uuid REFERENCES public.usuario(id_usuario) ON DELETE SET NULL,
+  numero_caja integer NOT NULL DEFAULT 1 CHECK (numero_caja > 0),
+  fondo_inicial numeric(10,2) NOT NULL DEFAULT 0.00 CHECK (fondo_inicial >= 0),
+  efectivo_esperado numeric(10,2),
+  efectivo_real numeric(10,2),
+  diferencia numeric(10,2),
+  total_recaudado numeric(10,2) NOT NULL DEFAULT 0.00 CHECK (total_recaudado >= 0),
+  cantidad_tickets integer NOT NULL DEFAULT 0 CHECK (cantidad_tickets >= 0),
+  estado text NOT NULL DEFAULT 'abierta' CHECK (estado IN ('abierta', 'cerrada')),
+  observaciones_apertura text,
+  observaciones_cierre text,
+  abierta_el timestamptz NOT NULL DEFAULT now(),
+  cerrada_el timestamptz
+);
+
+ALTER TABLE public.ventas
+  ADD COLUMN IF NOT EXISTS id_sesion_caja uuid REFERENCES public.sesiones_caja(id_sesion) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_sesiones_caja_usuario ON public.sesiones_caja(id_usuario);
+CREATE INDEX IF NOT EXISTS idx_sesiones_caja_usuario_cierre ON public.sesiones_caja(id_usuario_cierre);
+CREATE INDEX IF NOT EXISTS idx_sesiones_caja_abierta_el ON public.sesiones_caja(abierta_el DESC);
+CREATE INDEX IF NOT EXISTS idx_sesiones_caja_estado ON public.sesiones_caja(estado, abierta_el DESC);
+CREATE INDEX IF NOT EXISTS idx_ventas_sesion_caja ON public.ventas(id_sesion_caja);
+
+CREATE TABLE IF NOT EXISTS public.auditoria_eventos (
+  id_evento uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  id_usuario uuid REFERENCES public.usuario(id_usuario) ON DELETE SET NULL,
+  rol_usuario public.user_rol,
+  modulo text NOT NULL CHECK (modulo IN ('auth', 'inventario', 'caja', 'ventas', 'usuarios')),
+  accion text NOT NULL CHECK (accion IN (
+    'login',
+    'logout',
+    'producto_alta',
+    'producto_modificacion',
+    'producto_baja',
+    'producto_reactivacion',
+    'stock_ajuste',
+    'caja_apertura',
+    'caja_cierre',
+    'venta_creada',
+    'venta_anulada'
+  )),
+  entidad text,
+  entidad_id uuid,
+  resumen text NOT NULL,
+  datos_anteriores jsonb,
+  datos_nuevos jsonb,
+  creado_el timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_auditoria_creado_el ON public.auditoria_eventos(creado_el DESC);
+CREATE INDEX IF NOT EXISTS idx_auditoria_modulo_fecha ON public.auditoria_eventos(modulo, creado_el DESC);
+CREATE INDEX IF NOT EXISTS idx_auditoria_usuario_fecha ON public.auditoria_eventos(id_usuario, creado_el DESC);
+CREATE INDEX IF NOT EXISTS idx_auditoria_entidad ON public.auditoria_eventos(entidad, entidad_id);
+
+CREATE OR REPLACE FUNCTION public.registrar_evento_auditoria(
+  p_id_usuario uuid,
+  p_modulo text,
+  p_accion text,
+  p_entidad text,
+  p_entidad_id uuid,
+  p_resumen text,
+  p_datos_anteriores jsonb DEFAULT NULL,
+  p_datos_nuevos jsonb DEFAULT NULL
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_actor uuid := COALESCE(p_id_usuario, auth.uid());
+  v_rol public.user_rol;
+BEGIN
+  IF v_actor IS NOT NULL THEN
+    SELECT u.rol INTO v_rol FROM public.usuario u WHERE u.id_usuario = v_actor;
+  END IF;
+
+  INSERT INTO public.auditoria_eventos (
+    id_usuario, rol_usuario, modulo, accion, entidad, entidad_id, resumen, datos_anteriores, datos_nuevos
+  ) VALUES (
+    v_actor, v_rol, p_modulo, p_accion, p_entidad, p_entidad_id, p_resumen, p_datos_anteriores, p_datos_nuevos
+  );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.registrar_evento_auditoria(uuid, text, text, text, uuid, text, jsonb, jsonb)
+  FROM PUBLIC, anon, authenticated;
+
+ALTER TABLE public.sesiones_caja ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.auditoria_eventos ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Staff ve sesiones de caja" ON public.sesiones_caja
+  FOR SELECT TO authenticated USING ((SELECT auth.uid()) IS NOT NULL);
+
+CREATE POLICY "Staff abre su sesion de caja" ON public.sesiones_caja
+  FOR INSERT TO authenticated WITH CHECK ((SELECT auth.uid()) = id_usuario);
+
+CREATE POLICY "Staff o admin cierra sesion abierta" ON public.sesiones_caja
+  FOR UPDATE TO authenticated
+  USING (estado = 'abierta' AND ((SELECT auth.uid()) = id_usuario OR (SELECT public.is_admin())))
+  WITH CHECK (estado = 'cerrada' AND (SELECT auth.uid()) IS NOT NULL);
+
+CREATE POLICY "Solo admin lee auditoria" ON public.auditoria_eventos
+  FOR SELECT TO authenticated USING ((SELECT public.is_admin()));
+
+CREATE POLICY "Usuario registra su propio login o logout" ON public.auditoria_eventos
+  FOR INSERT TO authenticated
+  WITH CHECK ((SELECT auth.uid()) = id_usuario AND modulo = 'auth' AND accion IN ('login', 'logout'));
