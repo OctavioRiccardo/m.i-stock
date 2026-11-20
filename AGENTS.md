@@ -45,8 +45,11 @@ Consultar el `SKILL.md` correspondiente antes de intervenir en su dominio:
 | :--- | :--- | :--- |
 | **`obsidian-docs`** | `.agents/skills/obsidian-docs/SKILL.md` | Obligatoria al crear/editar modelos, controladores, servicios, vistas, rutas, KPIs, reglas SQL o dependencias. |
 | **`interface-design`** | `.agents/skills/interface-design/SKILL.md` | Diseño, rediseño, auditoría o refinamiento visual de vistas, dashboards, paneles admin, POS, jerarquía y tokens UI. |
-| **`ux-writing`** | `.agents/skills/ux-writing/SKILL.md` | Redacción, claridad y auditoría de microcopy UI (botones, etiquetas, mensajes de error, estados vacíos, formularios, tono y accesibilidad cognitiva). |
+| **`ux-writing`** | `.agents/skills/ux-writing/SKILL.md` | Redacción, claridad y auditoría de microcopy UI (botones, etiquetas, mensajes de error, estados vacíos, formularios, tono neutro y accesibilidad cognitiva). |
 | **`web-design-guidelines`** | `.agents/skills/web-design-guidelines/SKILL.md` | Auditoría de semántica HTML, accesibilidad ARIA, foco/teclado, buenas prácticas de formularios y calidad UI en producción. |
+| **`vitest`** | `.agents/skills/vitest/SKILL.md` | Creación, refactorización y depuración de pruebas unitarias y de integración con Vitest (`mistock/src/__tests__/`). |
+| **`playwright-best-practices`** | `.agents/skills/playwright-best-practices/SKILL.md` | Pruebas End-to-End (E2E) en navegador con Playwright (flujos POS, caja, autenticación, accesibilidad y regresiones). |
+| **`security-audit`** | `.agents/skills/security-audit/SKILL.md` | Auditoría de seguridad multifase sobre Route Handlers de Mercado Pago Point, webhooks, RBAC, `src/proxy.ts`, RLS y manejo de secretos. |
 | **`supabase`** | `.agents/skills/supabase/SKILL.md` | Autenticación, SSR (`@supabase/ssr`), RLS, Supabase CLI, Realtime o troubleshooting de Postgres/HTTP. |
 | **`supabase-postgres-best-practices`** | `.agents/skills/supabase-postgres-best-practices/SKILL.md` | Creación/alteración de tablas, migraciones SQL, triggers, índices, funciones y políticas RLS. |
 
