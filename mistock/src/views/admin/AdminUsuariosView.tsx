@@ -303,7 +303,7 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
           <Card className="p-4 border-[#E8E6DF] shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-[#657373]">
-                Vendedores (POS)
+                Vendedores
               </span>
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
                 <UserCheck className="h-4 w-4" weight="duotone" />
@@ -333,16 +333,9 @@ export function AdminUsuariosView({ controller }: AdminUsuariosViewProps) {
                 <Clock className="h-4 w-4" weight="duotone" />
               </div>
             </div>
-            <div className="flex items-baseline gap-2 mt-2">
-              <p className="text-2xl font-extrabold text-[#1C2424] tracking-tight">
-                {metricasUsuarios.noRol}
-              </p>
-              {metricasUsuarios.noRol > 0 && (
-                <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 text-[10px] px-1.5">
-                  Por asignar
-                </Badge>
-              )}
-            </div>
+            <p className="text-2xl font-extrabold text-[#1C2424] tracking-tight mt-2">
+              {metricasUsuarios.noRol}
+            </p>
             <p className="text-xs text-[#657373] mt-1">
               Pendientes de asignación de rol
             </p>
