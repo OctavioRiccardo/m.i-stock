@@ -826,7 +826,7 @@ export function AdminDashboardView({ controller }: AdminDashboardViewProps) {
                     key={cat}
                     type="button"
                     onClick={() => cambiarCategoriaRotacion(cat)}
-                    className={`px-3 py-1 rounded-full text-xs transition-all duration-150 shrink-0 cursor-pointer ${
+                    className={`px-3 py-1 rounded-md text-xs transition-all duration-150 shrink-0 cursor-pointer ${
                       esActiva
                         ? 'bg-[#2A7A78] text-white shadow-xs font-semibold'
                         : 'bg-[#F8F7F2] text-[#657373] hover:text-[#1C2424] hover:bg-[#E8E6DF]/70 border border-[#E8E6DF] font-medium'

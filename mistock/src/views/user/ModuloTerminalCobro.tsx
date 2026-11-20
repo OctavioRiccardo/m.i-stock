@@ -263,7 +263,7 @@ export function ModuloTerminalCobro({
                       }`}
                     >
                       {itemEnCarrito && (
-                        <div className="absolute top-2 right-2 flex items-center justify-center h-5 px-2 rounded-full bg-primary text-primary-foreground font-mono tabular-nums text-[10px] font-bold">
+                        <div className="absolute top-2 right-2 flex items-center justify-center h-5 px-2 rounded-md bg-primary text-primary-foreground font-mono tabular-nums text-[10px] font-bold">
                           {itemEnCarrito.cantidad} en ticket
                         </div>
                       )}

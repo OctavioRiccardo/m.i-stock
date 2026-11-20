@@ -238,7 +238,7 @@ export function UserDashboardView({ controller }: UserDashboardViewProps) {
                 />
                 <span>{pestana.label}</span>
                 {pestana.badge !== undefined && (
-                  <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-[#2A7A78] text-white">
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold font-mono tabular-nums bg-[#2A7A78] text-white">
                     {pestana.badge}
                   </span>
                 )}

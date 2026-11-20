@@ -100,8 +100,8 @@ Todos los componentes deben consumir tokens semánticos (`bg-background`, `bg-ca
 - **Radios concéntricos (`outerRadius = innerRadius + padding`):**
   - Contenedores / Cards / Modales: `rounded-xl` (`12px`)
   - Controles internos (Botones, Inputs, Items de nav, Chips internos con `p-1`): `rounded-lg` (`8px`)
-  - Sub-elementos compactos (Badges cuadrados, indicadores, botones `sm`): `rounded-md` (`6px`)
-  - Pills de estado: `rounded-full`
+  - Sub-elementos compactos (Badges de estado, categorías, filtros y botones `sm`): `rounded-md` (`6px`), alineados con la geometría rectangular de los botones (evitar `rounded-full` en tablas y etiquetas de categoría).
+  - Indicadores circulares mínimos únicamente para puntos de estado (`h-2 w-2 rounded-full`).
 
 ---
 

@@ -269,7 +269,7 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
               <button
                 type="button"
                 onClick={() => setCategoriaSeleccionada('todas')}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-150 cursor-pointer ${
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all duration-150 cursor-pointer ${
                   categoriaSeleccionada === 'todas'
                     ? 'bg-[#2A7A78] text-white shadow-sm'
                     : 'bg-[#F8F7F2] text-[#657373] hover:text-[#1C2424] hover:bg-[#E8E6DF]'
@@ -277,7 +277,7 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
               >
                 <span>Todas las Categorías</span>
                 <span
-                  className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold font-mono tabular-nums ${
                     categoriaSeleccionada === 'todas'
                       ? 'bg-white/20 text-white'
                       : 'bg-[#E8E6DF] text-[#1C2424]'
@@ -297,7 +297,7 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
                     key={cat.id}
                     type="button"
                     onClick={() => setCategoriaSeleccionada(cat.id)}
-                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-150 cursor-pointer ${
+                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all duration-150 cursor-pointer ${
                       esActiva
                         ? 'bg-[#2A7A78] text-white shadow-sm'
                         : 'bg-[#F8F7F2] text-[#657373] hover:text-[#1C2424] hover:bg-[#E8E6DF]'
@@ -305,7 +305,7 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
                   >
                     <span>{cat.nombre}</span>
                     <span
-                      className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold font-mono tabular-nums ${
                         esActiva
                           ? 'bg-white/20 text-white'
                           : 'bg-[#E8E6DF] text-[#1C2424]'

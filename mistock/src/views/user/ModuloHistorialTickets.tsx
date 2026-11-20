@@ -287,7 +287,7 @@ export function ModuloHistorialTickets({
                   key={op.id}
                   type="button"
                   onClick={() => setMetodoPagoFiltroVentas(op.id)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-all shrink-0 cursor-pointer ${
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-medium whitespace-nowrap transition-all shrink-0 cursor-pointer ${
                     esActivo
                       ? 'bg-[#2A7A78] text-white shadow-xs font-semibold'
                       : 'bg-[#F8F7F2] text-[#657373] hover:text-[#1C2424] hover:bg-[#E8E6DF] border border-[#E8E6DF]'
@@ -296,7 +296,7 @@ export function ModuloHistorialTickets({
                   <IconComponent className="h-3.5 w-3.5" weight={esActivo ? 'bold' : 'regular'} />
                   <span>{op.label}</span>
                   <span
-                    className={`px-1.5 py-0.2 rounded-full text-[9px] ${
+                    className={`px-1.5 py-0.5 rounded text-[9px] font-mono tabular-nums ${
                       esActivo ? 'bg-white/20 text-white font-bold' : 'bg-[#E8E6DF] text-[#657373]'
                     }`}
                   >
