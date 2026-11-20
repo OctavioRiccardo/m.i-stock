@@ -128,9 +128,9 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
         {/* Jerarquía KPI Asimétrica: Valuación Hero + Tira de Stock */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
           {/* Métrica Rectora: Valuación Comercial */}
-          <Card className="lg:col-span-5 overflow-hidden relative flex flex-col justify-between">
+          <Card className="lg:col-span-5 overflow-hidden relative">
             <div className="absolute inset-y-0 left-0 w-1 bg-primary" aria-hidden="true" />
-            <div className="p-5 sm:p-6 pl-6 sm:pl-7 flex flex-col justify-between h-full gap-4">
+            <div className="p-5 pl-6 flex flex-col justify-center h-full gap-3">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground block">
@@ -149,7 +149,7 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
                 <p className="text-3xl font-bold font-mono tabular-nums text-foreground tracking-[-0.03em] leading-none">
                   ${metricasGlobales.valuacionVenta.toLocaleString('es-AR')}
                 </p>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-3 font-mono tabular-nums">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2.5 font-mono tabular-nums">
                   <span>Costo: ${metricasGlobales.valuacionCosto.toLocaleString('es-AR')}</span>
                   <Badge variant="success" className="font-mono tabular-nums font-semibold text-[11px] px-1.5 py-0.5">
                     +{metricasGlobales.margenEstimadoPorcentaje}%
@@ -163,7 +163,7 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
           <Card className="lg:col-span-7">
             <div className="grid grid-cols-1 sm:grid-cols-3 h-full divide-y sm:divide-y-0 sm:divide-x divide-border/80">
               {/* Catálogo Activo */}
-              <div className="p-5 flex flex-col justify-between gap-3">
+              <div className="p-4 sm:p-5 flex flex-col justify-center gap-2">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
                     Catálogo Activo
@@ -171,17 +171,17 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
                   <Package className="h-4 w-4 text-primary/80 shrink-0" weight="duotone" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold font-mono tabular-nums text-foreground tracking-[-0.02em]">
+                  <p className="text-2xl font-bold font-mono tabular-nums text-foreground tracking-[-0.02em] leading-tight">
                     {metricasGlobales.totalProductos}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    En {metricasGlobales.totalCategorias} categorías
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    En {metricasGlobales.totalCategorias} {metricasGlobales.totalCategorias === 1 ? 'categoría' : 'categorías'}
                   </p>
                 </div>
               </div>
 
               {/* Existencias Físicas */}
-              <div className="p-5 flex flex-col justify-between gap-3">
+              <div className="p-4 sm:p-5 flex flex-col justify-center gap-2">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
                     Unidades en Stock
@@ -189,17 +189,17 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
                   <CheckCircle className="h-4 w-4 text-primary/80 shrink-0" weight="duotone" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold font-mono tabular-nums text-foreground tracking-[-0.02em]">
+                  <p className="text-2xl font-bold font-mono tabular-nums text-foreground tracking-[-0.02em] leading-tight">
                     {metricasGlobales.unidadesTotales.toLocaleString('es-AR')}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     Unidades disponibles
                   </p>
                 </div>
               </div>
 
               {/* Salud de Stock */}
-              <div className="p-5 flex flex-col justify-between gap-3">
+              <div className="p-4 sm:p-5 flex flex-col justify-center gap-2">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
                     Salud de Stock
@@ -207,23 +207,25 @@ export function AdminInventarioGlobalView({ controller }: AdminInventarioGlobalV
                   <Warning className="h-4 w-4 text-amber-700 shrink-0" weight="duotone" />
                 </div>
                 <div>
-                  <div className="flex flex-wrap items-baseline gap-1.5 font-mono tabular-nums">
+                  <div className="flex flex-wrap items-baseline gap-1 font-mono tabular-nums leading-tight">
                     <p className="text-2xl font-bold text-foreground tracking-[-0.02em]">
                       {metricasGlobales.articulosCriticos}
                     </p>
-                    <span className="font-sans text-xs text-rose-700 font-semibold">críticos</span>
+                    <span className="font-sans text-xs text-rose-700 font-semibold">
+                      {metricasGlobales.articulosCriticos === 1 ? 'crítico' : 'críticos'}
+                    </span>
                     {metricasGlobales.articulosBajos > 0 && (
                       <span className="font-sans text-xs text-amber-700 font-semibold">
-                        · {metricasGlobales.articulosBajos} bajos
+                        · {metricasGlobales.articulosBajos} {metricasGlobales.articulosBajos === 1 ? 'bajo' : 'bajos'}
                       </span>
                     )}
                     {metricasGlobales.articulosSinStock > 0 && (
                       <span className="font-sans text-xs text-red-700 font-semibold">
-                        · {metricasGlobales.articulosSinStock} agotados
+                        · {metricasGlobales.articulosSinStock} {metricasGlobales.articulosSinStock === 1 ? 'agotado' : 'agotados'}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     Según umbrales mínimos
                   </p>
                 </div>
