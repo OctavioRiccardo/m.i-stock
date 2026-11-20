@@ -894,7 +894,7 @@ export function AdminGestionInventarioView({ controller }: AdminGestionInventari
                                     className="text-xs flex items-center gap-1 w-fit border-rose-200 bg-rose-50 text-rose-700"
                                   >
                                     <AlertTriangle className="h-3 w-3 text-rose-600" />
-                                    Crítico / Reponer
+                                    Crítico
                                   </Badge>
                                 ) : esBajo ? (
                                   <Badge variant="warning" className="text-xs flex items-center gap-1 w-fit">
