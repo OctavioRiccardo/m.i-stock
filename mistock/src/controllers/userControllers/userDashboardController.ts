@@ -1182,7 +1182,7 @@ export function useUserDashboardController() {
       void inventarioService.sincronizarConSupabase();
       setSaleSuccessMessage(null);
       setSaleErrorMessage(
-        'No se pudo anular el ticket en Supabase. Aplique patch_integridad_y_anulacion.sql en el SQL Editor.'
+        'No se pudo anular el ticket en Supabase. Aplique mistock/supabase/migrations/schema.sql en el SQL Editor.'
       );
     };
 

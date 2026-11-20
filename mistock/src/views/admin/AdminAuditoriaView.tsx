@@ -220,9 +220,9 @@ export function AdminAuditoriaView({ controller }: AdminAuditoriaViewProps) {
             <WarningCircle className="h-4 w-4" weight="fill" />
             <AlertTitle className="font-semibold">Migración pendiente en Supabase</AlertTitle>
             <AlertDescription className="text-xs leading-relaxed">
-              Ejecutar el archivo{' '}
+              Ejecutar el esquema unificado{' '}
               <code className="font-mono font-semibold">
-                mistock/supabase/migrations/patch_auditoria_y_sesiones_caja.sql
+                mistock/supabase/migrations/schema.sql
               </code>{' '}
               en el SQL Editor de Supabase para habilitar las tablas{' '}
               <code className="font-mono">public.auditoria_eventos</code> y{' '}

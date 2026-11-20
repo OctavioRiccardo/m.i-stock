@@ -589,7 +589,7 @@ export const supabaseService = {
           ok: false,
           error:
             signUpError?.message ||
-            'No se pudo registrar el colaborador en Supabase Auth (ejecuta patch_integridad_y_anulacion.sql para habilitar dominios personalizados).',
+            'No se pudo registrar el colaborador en Supabase Auth (ejecuta mistock/supabase/migrations/schema.sql para habilitar dominios personalizados).',
         };
       }
 
@@ -697,7 +697,7 @@ export const supabaseService = {
         ok: false,
         error:
           rpcError?.message ||
-          'No se pudo actualizar la contraseña en Supabase Auth (ejecuta patch_integridad_y_anulacion.sql).',
+          'No se pudo actualizar la contraseña en Supabase Auth (ejecuta mistock/supabase/migrations/schema.sql).',
       };
     } catch (err) {
       return {
