@@ -34,6 +34,13 @@
       "skillPath": "skills/supabase-postgres-best-practices/SKILL.md",
       "computedHash": "3eb972c2d7c818e544e35cc33ea8d7147d4d78ae08142ef40037b0fbac7a2505"
     },
+    "ub-mode": {
+      "source": "unclebob/ub-mode",
+      "commit": "3da62bf3fcfd2034de41f30d920d2739e566171f",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "e0ab965e4367a86ece58520732a16d1a9bd4d5dcca3f49aabd440c7a01d300f0"
+    },
     "ux-writing": {
       "source": "content-designer/ux-writing-skill",
       "commit": "98cacde4ba2dd10ed28df43a8d53eef1e321c539",

@@ -50,6 +50,7 @@ Consultar el `SKILL.md` correspondiente antes de intervenir en su dominio:
 | **`vitest`** | `.agents/skills/vitest/SKILL.md` | Creación, refactorización y depuración de pruebas unitarias y de integración con Vitest (`mistock/src/__tests__/`). |
 | **`playwright-best-practices`** | `.agents/skills/playwright-best-practices/SKILL.md` | Pruebas End-to-End (E2E) en navegador con Playwright (flujos POS, caja, autenticación, accesibilidad y regresiones). |
 | **`security-audit`** | `.agents/skills/security-audit/SKILL.md` | Auditoría de seguridad multifase sobre Route Handlers de Mercado Pago Point, webhooks, RBAC, `src/proxy.ts`, RLS y manejo de secretos. |
+| **`ub-mode`** | `.agents/skills/ub-mode/SKILL.md` | Disciplina de ingeniería (*First Make it Work → Then Make it Right → Follow Practice*: TDD, cambios mínimos, modelado de dominio, límites limpios y refactorización de complejidad/duplicación). |
 | **`supabase`** | `.agents/skills/supabase/SKILL.md` | Autenticación, SSR (`@supabase/ssr`), RLS, Supabase CLI, Realtime o troubleshooting de Postgres/HTTP. |
 | **`supabase-postgres-best-practices`** | `.agents/skills/supabase-postgres-best-practices/SKILL.md` | Creación/alteración de tablas, migraciones SQL, triggers, índices, funciones y políticas RLS. |
 
