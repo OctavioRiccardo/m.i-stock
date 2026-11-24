@@ -1111,17 +1111,40 @@ export const supabaseService = {
       const { data, error } = await supabase
         .from('sesiones_caja')
         .select(
-          'id_sesion, codigo_turno, id_usuario, id_usuario_cierre, numero_caja, fondo_inicial, efectivo_esperado, efectivo_real, diferencia, total_recaudado, cantidad_tickets, estado, observaciones_apertura, observaciones_cierre, abierta_el, cerrada_el, usuario_apertura:usuario!id_usuario(nombre, email), usuario_cierre:usuario!id_usuario_cierre(nombre, email)'
+          'id_sesion, codigo_turno, id_usuario, id_usuario_cierre, numero_caja, fondo_inicial, efectivo_esperado, efectivo_real, diferencia, total_recaudado, cantidad_tickets, estado, observaciones_apertura, observaciones_cierre, abierta_el, cerrada_el, usuario_apertura:usuario!sesiones_caja_id_usuario_fkey(nombre, email), usuario_cierre:usuario!sesiones_caja_id_usuario_cierre_fkey(nombre, email)'
         )
         .order('abierta_el', { ascending: false })
         .limit(limite);
 
       if (error) {
+        if (esErrorTablaFaltante(error)) {
+          return {
+            ok: false,
+            items: [],
+            migracionPendiente: true,
+            error: error.message,
+          };
+        }
+
+        // Fallback sin embed si el nombre de la FK difiere en un entorno personalizado
+        const { data: rawData, error: rawError } = await supabase
+          .from('sesiones_caja')
+          .select('*')
+          .order('abierta_el', { ascending: false })
+          .limit(limite);
+
+        if (rawError) {
+          return {
+            ok: false,
+            items: [],
+            error: rawError.message,
+          };
+        }
+
+        const rawRows = (rawData || []) as unknown as SesionCajaRow[];
         return {
-          ok: false,
-          items: [],
-          migracionPendiente: esErrorTablaFaltante(error),
-          error: error.message,
+          ok: true,
+          items: rawRows.map((row) => toSesionCaja(row)),
         };
       }
 

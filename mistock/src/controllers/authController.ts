@@ -19,7 +19,7 @@
  * - Limpia la totalidad de cachés operativas al cerrar sesión.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { LoginFormValues } from '@/models/modelos_vista/authModel';
@@ -210,8 +210,11 @@ export function useLogoutController(autoExecute: boolean = true) {
   const router = useRouter();
   const [loading, setLoading] = useState<boolean>(autoExecute);
   const [loggedOut, setLoggedOut] = useState<boolean>(false);
+  const logoutRegistradoRef = useRef<boolean>(false);
 
-  const registrarCierreAuditoria = async () => {
+  const registrarCierreAuditoria = useCallback(async () => {
+    if (logoutRegistradoRef.current) return;
+    logoutRegistradoRef.current = true;
     let rolLocal: RolUsuario | undefined;
     let nombreLocal: string | undefined;
     let emailLocal: string | undefined;
@@ -231,7 +234,7 @@ export function useLogoutController(autoExecute: boolean = true) {
       nombre: nombreLocal,
       email: emailLocal,
     });
-  };
+  }, []);
 
   const handleLogout = useCallback(async () => {
     setLoading(true);

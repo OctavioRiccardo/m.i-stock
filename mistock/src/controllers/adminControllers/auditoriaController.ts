@@ -80,6 +80,8 @@ export function useAdminAuditoriaController() {
 
         if (resSesiones.ok) {
           setSesionesCaja(resSesiones.items);
+        } else if (resSesiones.error && !resEventos.error) {
+          setErrorCarga(resSesiones.error);
         }
       }
 
