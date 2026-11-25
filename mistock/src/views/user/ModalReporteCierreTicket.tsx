@@ -131,52 +131,52 @@ export function ModalReporteCierreTicket({
           className="bg-white border border-[#E8E6DF] rounded-lg p-5 font-mono text-xs text-[#1C2424] space-y-3 shadow-inner my-2"
         >
           {/* Encabezado del Comercio */}
-          <div className="text-center space-y-0.5 pb-2 border-b border-dashed border-gray-300">
-            <p className="font-bold text-sm tracking-wider uppercase text-black">
+          <div className="text-center space-y-0.5 pb-2 border-b border-dashed border-[#D5D2C9]">
+            <p className="font-bold text-sm tracking-wider uppercase text-[#1C2424]">
               {configNegocio.nombreComercial || 'M.I STOCK'}
             </p>
-            <p className="text-[10px] text-gray-600">{configNegocio.razonSocial}</p>
-            <p className="text-[10px] text-gray-600">CUIT: {configNegocio.cuit}</p>
-            <p className="text-[10px] text-gray-600">{configNegocio.direccion}</p>
-            <p className="text-[10px] text-gray-600">Tel: {configNegocio.telefono}</p>
-            <p className="text-[9px] uppercase tracking-wide text-gray-500 pt-0.5">
+            <p className="text-[10px] text-[#657373]">{configNegocio.razonSocial}</p>
+            <p className="text-[10px] text-[#657373]">CUIT: {configNegocio.cuit}</p>
+            <p className="text-[10px] text-[#657373]">{configNegocio.direccion}</p>
+            <p className="text-[10px] text-[#657373]">Tel: {configNegocio.telefono}</p>
+            <p className="text-[9px] uppercase tracking-wide text-[#657373] pt-0.5">
               IVA: {configNegocio.condicionIva.replace('_', ' ')}
             </p>
           </div>
 
           {/* Título Oficial del Documento */}
-          <div className="text-center py-1 border-b border-dashed border-gray-300 space-y-0.5">
-            <p className="font-bold text-xs uppercase tracking-widest text-black">
+          <div className="text-center py-1 border-b border-dashed border-[#D5D2C9] space-y-0.5">
+            <p className="font-bold text-xs uppercase tracking-widest text-[#1C2424]">
               *** CIERRE DE CAJA (REPORTE Z) ***
             </p>
-            <p className="text-[10px] font-semibold text-gray-600">
+            <p className="text-[10px] font-semibold text-[#657373]">
               AUDITORÍA Y ARQUEO DIARIO
             </p>
           </div>
 
           {/* Metadatos de la Sesión */}
-          <div className="text-[11px] space-y-1 pb-2 border-b border-dashed border-gray-300">
+          <div className="text-[11px] space-y-1 pb-2 border-b border-dashed border-[#D5D2C9]">
             <div className="flex justify-between">
-              <span className="text-gray-600">N° Comprobante:</span>
+              <span className="text-[#657373]">N° Comprobante:</span>
               <span className="font-bold">{cierre.idCierre}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Fecha Cierre:</span>
+              <span className="text-[#657373]">Fecha Cierre:</span>
               <span>{cierre.fechaCierre}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Cajero / Operador:</span>
+              <span className="text-[#657373]">Cajero / Operador:</span>
               <span className="font-bold">{cierre.cajero}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Tickets Emitidos:</span>
+              <span className="text-[#657373]">Tickets Emitidos:</span>
               <span className="font-bold">{cierre.cantidadTickets} comprobantes</span>
             </div>
           </div>
 
           {/* Desglose por Medio de Cobro */}
-          <div className="space-y-1 pb-2 border-b border-dashed border-gray-300">
-            <p className="font-bold text-[10px] uppercase text-gray-500 tracking-wider">
+          <div className="space-y-1 pb-2 border-b border-dashed border-[#D5D2C9]">
+            <p className="font-bold text-[10px] uppercase text-[#657373] tracking-wider">
               1. RECAUDACIÓN POR CANAL DE PAGO
             </p>
             <div className="flex justify-between text-[11px]">
@@ -209,7 +209,7 @@ export function ModalReporteCierreTicket({
                 {monedaSimbolo} {cierre.desgloseMedios.transferencia.toLocaleString('es-AR')}
               </span>
             </div>
-            <div className="flex justify-between text-xs pt-1 border-t border-gray-200 font-bold">
+            <div className="flex justify-between text-xs pt-1 border-t border-[#E8E6DF] font-bold">
               <span>TOTAL VENTAS FACTURADAS:</span>
               <span>
                 {monedaSimbolo} {cierre.granTotalRecaudado.toLocaleString('es-AR')}
@@ -218,8 +218,8 @@ export function ModalReporteCierreTicket({
           </div>
 
           {/* Conciliación y Arqueo de Efectivo Físico */}
-          <div className="space-y-1 pb-2 border-b border-dashed border-gray-300">
-            <p className="font-bold text-[10px] uppercase text-gray-500 tracking-wider">
+          <div className="space-y-1 pb-2 border-b border-dashed border-[#D5D2C9]">
+            <p className="font-bold text-[10px] uppercase text-[#657373] tracking-wider">
               2. ARQUEO DE EFECTIVO EN GAVETA
             </p>
             <div className="flex justify-between text-[11px]">
@@ -234,7 +234,7 @@ export function ModalReporteCierreTicket({
                 {monedaSimbolo} {cierre.totalVentasEfectivo.toLocaleString('es-AR')}
               </span>
             </div>
-            <div className="flex justify-between text-[11px] font-semibold border-t border-gray-200 pt-0.5">
+            <div className="flex justify-between text-[11px] font-semibold border-t border-[#E8E6DF] pt-0.5">
               <span>(=) Efectivo Esperado:</span>
               <span>
                 {monedaSimbolo} {cierre.efectivoEsperado.toLocaleString('es-AR')}
@@ -267,26 +267,26 @@ export function ModalReporteCierreTicket({
 
           {/* Observaciones (si las hubo) */}
           {cierre.observaciones && (
-            <div className="text-[10px] text-gray-700 pb-2 border-b border-dashed border-gray-300 space-y-0.5">
-              <span className="font-bold uppercase text-gray-500 block">Observaciones:</span>
+            <div className="text-[10px] text-[#455151] pb-2 border-b border-dashed border-[#D5D2C9] space-y-0.5">
+              <span className="font-bold uppercase text-[#657373] block">Observaciones:</span>
               <p className="italic">{cierre.observaciones}</p>
             </div>
           )}
 
           {/* Espacio para Firmas */}
-          <div className="pt-4 pb-2 space-y-6 text-center text-[10px] text-gray-600">
+          <div className="pt-4 pb-2 space-y-6 text-center text-[10px] text-[#657373]">
             <div>
-              <div className="w-3/4 mx-auto border-t border-gray-400 mb-1" />
+              <div className="w-3/4 mx-auto border-t border-[#94A1A1] mb-1" />
               <span>Firma y Aclaración del Cajero</span>
             </div>
             <div>
-              <div className="w-3/4 mx-auto border-t border-gray-400 mb-1" />
+              <div className="w-3/4 mx-auto border-t border-[#94A1A1] mb-1" />
               <span>Firma y Conforme del Administrador</span>
             </div>
           </div>
 
           {/* Pie de Documento */}
-          <div className="text-center text-[9px] text-gray-500 pt-1 border-t border-dashed border-gray-300">
+          <div className="text-center text-[9px] text-[#657373] pt-1 border-t border-dashed border-[#D5D2C9]">
             <p>COMPROBANTE INTERNO DE CONTROL DE CAJA</p>
             <p>M.I Stock Sistema de Gestión Comercial</p>
           </div>

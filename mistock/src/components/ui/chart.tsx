@@ -114,18 +114,33 @@ ${colorConfig
 
 const ChartTooltip = RechartsPrimitive.Tooltip;
 
+export interface ChartPayloadItem {
+  name?: string | number;
+  value?: string | number | ReadonlyArray<string | number>;
+  dataKey?: string | number;
+  color?: string;
+  payload?: Record<string, unknown> & { fill?: string };
+}
+
+export interface ChartLegendItem {
+  value?: string | number;
+  dataKey?: string | number;
+  color?: string;
+  payload?: Record<string, unknown>;
+}
+
 export interface ChartTooltipContentProps extends React.ComponentProps<'div'> {
   active?: boolean;
-  payload?: any[];
-  label?: any;
-  labelFormatter?: (label: any, payload: any[]) => React.ReactNode;
+  payload?: ChartPayloadItem[];
+  label?: string | number;
+  labelFormatter?: (label: React.ReactNode, payload: ChartPayloadItem[]) => React.ReactNode;
   labelClassName?: string;
   formatter?: (
-    value: any,
-    name: any,
-    item: any,
+    value: ChartPayloadItem['value'],
+    name: ChartPayloadItem['name'],
+    item: ChartPayloadItem,
     index: number,
-    payload: any
+    payload: ChartPayloadItem['payload']
   ) => React.ReactNode;
   color?: string;
   hideLabel?: boolean;
@@ -285,7 +300,7 @@ const ChartTooltipContent = React.forwardRef<
 ChartTooltipContent.displayName = 'ChartTooltip';
 
 export interface ChartLegendContentProps extends React.ComponentProps<'div'> {
-  payload?: any[];
+  payload?: ChartLegendItem[];
   verticalAlign?: 'top' | 'bottom' | 'middle';
   hideIcon?: boolean;
   nameKey?: string;

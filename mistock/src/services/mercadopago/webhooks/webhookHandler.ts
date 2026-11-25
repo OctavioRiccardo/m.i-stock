@@ -9,6 +9,7 @@
  * ('payment_intent.finished', 'payment_intent.abandoned', etc.).
  */
 
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { PointWebhookPayload } from '../types/pointTypes';
 import { obtenerEstadoIntencionPoint } from '../services/pointService';
 
@@ -21,20 +22,66 @@ export interface WebhookProcessingResult {
   error?: string;
 }
 
+function parsearFirmaHeader(xSignature: string): { ts: string; v1: string } | null {
+  let ts = '';
+  let v1 = '';
+
+  for (const parte of xSignature.split(',')) {
+    const idx = parte.indexOf('=');
+    if (idx <= 0) continue;
+    const clave = parte.slice(0, idx).trim();
+    const valor = parte.slice(idx + 1).trim();
+    if (clave === 'ts') ts = valor;
+    if (clave === 'v1') v1 = valor;
+  }
+
+  if (!ts || !v1 || !/^[0-9a-f]+$/i.test(v1)) {
+    return null;
+  }
+
+  return { ts, v1: v1.toLowerCase() };
+}
+
 /**
- * Valida la firma del webhook si MERCADOPAGO_WEBHOOK_SECRET está configurado.
+ * Valida la firma HMAC-SHA256 del webhook de Mercado Pago (`x-signature`: `ts=...,v1=...`).
+ * En producción falla cerrado si `MERCADOPAGO_WEBHOOK_SECRET` no está configurado.
  */
 export function validarFirmaWebhook(
   xSignature?: string | null,
-  xRequestId?: string | null
+  xRequestId?: string | null,
+  dataId?: string | null
 ): boolean {
-  // Si no se definió secreto de webhook en desarrollo, permitir para pruebas locales
-  if (!process.env.MERCADOPAGO_WEBHOOK_SECRET) {
-    return true;
+  const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET?.trim();
+
+  if (!secret) {
+    return process.env.NODE_ENV !== 'production';
   }
 
-  // Validación de presencia básica
-  return Boolean(xSignature && xRequestId);
+  if (!xSignature || !xRequestId?.trim()) {
+    return false;
+  }
+
+  const parsed = parsearFirmaHeader(xSignature);
+  if (!parsed) {
+    return false;
+  }
+
+  let manifest = '';
+  if (dataId?.trim()) {
+    manifest += `id:${dataId.trim().toLowerCase()};`;
+  }
+  manifest += `request-id:${xRequestId.trim()};`;
+  manifest += `ts:${parsed.ts};`;
+
+  const expectedHex = createHmac('sha256', secret).update(manifest).digest('hex');
+  const receivedBuf = Buffer.from(parsed.v1, 'utf8');
+  const expectedBuf = Buffer.from(expectedHex, 'utf8');
+
+  if (receivedBuf.length !== expectedBuf.length) {
+    return false;
+  }
+
+  return timingSafeEqual(receivedBuf, expectedBuf);
 }
 
 /**

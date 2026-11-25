@@ -62,23 +62,32 @@ flowchart TB
 
 ## 📂 2. Estructura Completa del Directorio `src/services/`
 
-La carpeta `src/services/` está compuesta por **8 archivos** organizados en dos bloques funcionales: los servicios troncales del sistema (raíz) y el submódulo especializado de **Mercado Pago Point** (`mercadopago/`):
+La carpeta `src/services/` está organizada en tres bloques cohesivos: los almacenes reactivos globales, la fachada modular de **Supabase** (`supabase/`) y la suite de **Mercado Pago Point** (`mercadopago/`):
 
 ```text
 src/services/
-├── inventarioService.ts                  # (1) Almacén reactivo global de Productos y Categorías (useSyncExternalStore)
-├── configuracionService.ts               # (2) Almacén reactivo global de Configuración Comercial y Fiscal
-├── supabaseService.ts                    # (3) Conector PostgreSQL (CRUD, Movimientos Ledger, Ventas, Usuarios RPC, Caja)
+├── inventarioService.ts                  # Almacén reactivo global de Productos y Categorías (useSyncExternalStore)
+├── configuracionService.ts               # Almacén reactivo global de Configuración Comercial y Fiscal
+├── supabaseService.ts                    # Fachada unificada que compone los repositorios de dominio en supabase/
+├── supabase/                             # Repositorios cohesivos por dominio PostgreSQL
+│   ├── shared.ts                         # FetchResult<T>, isUUID, esErrorTablaFaltante y diagnóstico estructurado
+│   ├── inventarioRepo.ts                 # CRUD de categorías y productos (JOIN categorias)
+│   ├── ventasRepo.ts                     # Historial (mapearFilaVentaAReciente), registro y anulación de ventas
+│   ├── usuariosRepo.ts                   # Nómina de colaboradores, RPC de alta/contraseña y bajas
+│   ├── configuracionRepo.ts              # Configuración comercial, sesión de caja y último respaldo CSV (JSONB)
+│   └── auditoriaRepo.ts                  # Eventos auth, aperturas/cierres de caja y consultas de auditoría
 └── mercadopago/                          # Suite de integración con terminales físicas Mercado Pago Point
-    ├── index.ts                          # (4) Archivo barril (Barrel export) de toda la suite Mercado Pago
+    ├── index.ts                          # Archivo barril (Barrel export) de toda la suite Mercado Pago
     ├── config/
-    │   └── mpConfig.ts                   # (5) Credenciales, endpoints REST y generador de headers con X-Idempotency-Key
+    │   └── mpConfig.ts                   # Credenciales, endpoints REST y generador de headers con X-Idempotency-Key
     ├── types/
-    │   └── pointTypes.ts                 # (6) Contratos TypeScript para dispositivos, intenciones de pago y Webhooks
+    │   └── pointTypes.ts                 # Contratos TypeScript para dispositivos, intenciones de pago y Webhooks
     ├── services/
-    │   └── pointService.ts               # (7) Cliente HTTP para listar posnets, enviar cobros, consultar y cancelar
+    │   └── pointService.ts               # Cliente HTTP para listar posnets, enviar cobros, consultar y cancelar
+    ├── security/
+    │   └── pointApiGuard.ts              # Verificación de sesión/rol activo Supabase y validación idempotente Point
     └── webhooks/
-        └── webhookHandler.ts             # (8) Validador de firma y procesador de notificaciones asíncronas Point
+        └── webhookHandler.ts             # Verificación HMAC-SHA256 (timingSafeEqual) y procesador de notificaciones Point
 ```
 
 | # | Archivo | Patrón / Rol | Consumido por |
@@ -368,11 +377,11 @@ export interface WebhookProcessingResult {
 
 #### B. Funciones de `webhookHandler.ts`
 
-1. **`validarFirmaWebhook(xSignature: string | null, xRequestId: string | null): boolean`**
-   - **Propósito:** Verificar que la petición entrante provenga legítimamente de Mercado Pago antes de procesarla.
+1. **`validarFirmaWebhook(xSignature?: string | null, xRequestId?: string | null, dataId?: string | null): boolean`**
+   - **Propósito:** Verificar criptográficamente que la notificación provenga legítimamente de Mercado Pago antes de procesarla.
    - **Comportamiento:**
-     - Si `MP_CONFIG.webhookSecret` no está definido en las variables de entorno (modo desarrollo local sin túnel firmado), emite una advertencia en consola y permite continuar para facilitar pruebas en Sandbox.
-     - En producción (con `MP_WEBHOOK_SECRET` configurado), exige que las cabeceras `x-signature` y `x-request-id` estén presentes en el request HTTP; si faltan, rechaza la solicitud devolviendo `false` (lo que genera un `401 Unauthorized` en el Route Handler).
+     - Parsea la cabecera `x-signature` (`ts=<timestamp>,v1=<hex_hmac_sha256>`), construye el manifiesto oficial (`id:<dataId>;request-id:<xRequestId>;ts:<ts>;`), calcula `HMAC-SHA256` con `MERCADOPAGO_WEBHOOK_SECRET` y compara contra `v1` en tiempo constante mediante `crypto.timingSafeEqual`.
+     - **Fail-closed en producción:** Si `MERCADOPAGO_WEBHOOK_SECRET` no está definido y `NODE_ENV === 'production'`, rechaza la petición (`false` → `401 Unauthorized`). Fuera de producción permite pruebas locales sin túnel firmado.
 
 2. **`procesarWebhookPoint(payload: PointWebhookPayload): Promise<WebhookProcessingResult>`**
    - **Propósito:** Procesar eventos de terminales Point aplicando el principio de **Verificación Cruzada (Zero-Trust Webhook)**.

@@ -14,7 +14,7 @@
  * 3. Habilitar la impresión física o digital limpia mediante @media print.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Receipt,
   User,
@@ -70,8 +70,21 @@ export function ModalDetalleVenta({
   esNuevaVenta = false,
   onVolverAVentaCompletada,
 }: ModalDetalleVentaProps) {
-  const [vistaActiva, setVistaActiva] = useState<'detalles' | 'ticket'>('detalles');
+  const [vistaActiva, setVistaActiva] = useState<'detalles' | 'ticket'>(
+    autoPrint || esNuevaVenta ? 'ticket' : 'detalles'
+  );
   const [confirmandoAnulacion, setConfirmandoAnulacion] = useState<boolean>(false);
+  const modalKey = `${isOpen}:${venta?.id ?? ''}:${autoPrint}:${esNuevaVenta}`;
+  const [prevModalKey, setPrevModalKey] = useState<string>(modalKey);
+
+  if (modalKey !== prevModalKey) {
+    setPrevModalKey(modalKey);
+    setConfirmandoAnulacion(false);
+    if (isOpen) {
+      setVistaActiva(autoPrint || esNuevaVenta ? 'ticket' : 'detalles');
+    }
+  }
+
   const configGlobal = useConfiguracionData();
   const configNegocio = configGlobal.negocio;
 
@@ -79,7 +92,7 @@ export function ModalDetalleVenta({
    * Ejecuta la impresión del ticket térmico y, si corresponde a una venta recién cobrada,
    * cierra el modal al finalizar para volver limpiamente al punto de venta.
    */
-  const ejecutarImpresionConFeedback = () => {
+  const ejecutarImpresionConFeedback = useCallback(() => {
     if (typeof window === 'undefined') return;
 
     let finalizado = false;
@@ -106,26 +119,15 @@ export function ModalDetalleVenta({
     setTimeout(() => {
       finalizar();
     }, 400);
-  };
+  }, [esNuevaVenta, onClose]);
 
-  // Abrir directamente en vista ticket tras cobrar una nueva venta o al auto-imprimir;
-  // en consultas del historial se abre en vista 'detalles'
   useEffect(() => {
-    setConfirmandoAnulacion(false);
-    if (isOpen) {
-      if (autoPrint) {
-        setVistaActiva('ticket');
-        const timer = setTimeout(() => {
-          ejecutarImpresionConFeedback();
-        }, 250);
-        return () => clearTimeout(timer);
-      } else if (esNuevaVenta) {
-        setVistaActiva('ticket');
-      } else {
-        setVistaActiva('detalles');
-      }
-    }
-  }, [isOpen, venta?.id, autoPrint, esNuevaVenta]);
+    if (!isOpen || !autoPrint) return;
+    const timer = setTimeout(() => {
+      ejecutarImpresionConFeedback();
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [isOpen, autoPrint, venta?.id, ejecutarImpresionConFeedback]);
 
   if (!venta) return null;
 

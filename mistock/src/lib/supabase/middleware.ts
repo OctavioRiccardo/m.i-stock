@@ -17,14 +17,7 @@
 
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
-
-function normalizarSupabaseUrl(rawUrl?: string): string {
-  if (!rawUrl) return '';
-  let url = rawUrl.trim();
-  url = url.replace(/\/rest\/v1\/?$/i, '');
-  url = url.replace(/\/+$/, '');
-  return url;
-}
+import { obtenerCredencialesSupabasePublicas } from './url';
 
 /**
  * Actualiza la sesión de Supabase si el token de acceso expiró o requiere refresco.
@@ -37,11 +30,7 @@ export async function updateSession(request: NextRequest) {
     request,
   });
 
-  const supabaseUrl = normalizarSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
-  const supabaseKey = (
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-  )?.trim();
+  const { url: supabaseUrl, key: supabaseKey } = obtenerCredencialesSupabasePublicas();
 
   // Si las variables de entorno de Supabase no están presentes (ej. falta configuración en Vercel),
   // se permite continuar la petición evitando que el proxy/middleware arroje HTTP 500

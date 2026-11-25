@@ -11,7 +11,7 @@
  * del Comprobante de Cierre (Reporte Z).
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Vault,
   Receipt,
@@ -63,15 +63,17 @@ export function ModalArqueoCaja({
   const [editandoFondo, setEditandoFondo] = useState<boolean>(false);
   const [fondoInput, setFondoInput] = useState<string>(fondoInicial.toString());
   const [observaciones, setObservaciones] = useState<string>('');
+  const [prevOpen, setPrevOpen] = useState<boolean>(isOpen);
 
-  useEffect(() => {
+  if (isOpen !== prevOpen) {
+    setPrevOpen(isOpen);
     if (isOpen) {
       setEfectivoContado('');
       setFondoInput(fondoInicial.toString());
       setEditandoFondo(false);
       setObservaciones('');
     }
-  }, [isOpen, fondoInicial]);
+  }
 
   const parsedContado = parsearDecimalSeguro(efectivoContado);
   const tieneTextoConteo = efectivoContado.trim().length > 0;

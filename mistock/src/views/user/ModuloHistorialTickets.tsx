@@ -31,7 +31,7 @@ import {
 } from '@phosphor-icons/react';
 import { motion } from 'motion/react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { BadgeMetodoPago } from '@/components/ui/badge-metodo-pago';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -85,71 +85,6 @@ export function ModuloHistorialTickets({
     { id: 'tarjeta_credito', label: 'Crédito', icon: CreditCard },
     { id: 'transferencia', label: 'Transferencia', icon: ArrowsLeftRight },
   ];
-
-  /**
-   * Renderiza el badge visual representativo del método de pago
-   */
-  const renderBadgeMetodo = (metodo?: string) => {
-    const m = metodo || 'efectivo';
-    switch (m) {
-      case 'efectivo':
-        return (
-          <Badge
-            variant="outline"
-            className="text-[9px] uppercase px-1.5 py-0 font-semibold border-emerald-300 text-emerald-700 bg-emerald-50 gap-1 inline-flex items-center"
-          >
-            <Money className="h-3 w-3" weight="bold" />
-            <span>Efectivo</span>
-          </Badge>
-        );
-      case 'mercado_pago':
-        return (
-          <Badge
-            variant="outline"
-            className="text-[9px] uppercase px-1.5 py-0 font-semibold border-[#009EE3]/40 text-[#009EE3] bg-[#009EE3]/10 gap-1 inline-flex items-center"
-          >
-            <QrCode className="h-3 w-3" weight="bold" />
-            <span>Mercado Pago</span>
-          </Badge>
-        );
-      case 'tarjeta_debito':
-        return (
-          <Badge
-            variant="outline"
-            className="text-[9px] uppercase px-1.5 py-0 font-semibold border-[#2A7A78]/40 text-[#2A7A78] bg-[#E2F1F0]/60 gap-1 inline-flex items-center"
-          >
-            <CreditCard className="h-3 w-3" weight="bold" />
-            <span>Débito</span>
-          </Badge>
-        );
-      case 'tarjeta_credito':
-        return (
-          <Badge
-            variant="outline"
-            className="text-[9px] uppercase px-1.5 py-0 font-semibold border-[#2A7A78]/40 text-[#2A7A78] bg-[#E2F1F0]/60 gap-1 inline-flex items-center"
-          >
-            <CreditCard className="h-3 w-3" weight="bold" />
-            <span>Crédito</span>
-          </Badge>
-        );
-      case 'transferencia':
-        return (
-          <Badge
-            variant="outline"
-            className="text-[9px] uppercase px-1.5 py-0 font-semibold border-gray-300 text-gray-700 bg-gray-50 gap-1 inline-flex items-center"
-          >
-            <ArrowsLeftRight className="h-3 w-3" weight="bold" />
-            <span>Transferencia</span>
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="outline" className="text-[9px] uppercase px-1.5 py-0 font-semibold border-[#E8E6DF] text-[#657373]">
-            {m.replace('_', ' ')}
-          </Badge>
-        );
-    }
-  };
 
   return (
     <div className="space-y-4 max-w-6xl mx-auto">
@@ -353,7 +288,7 @@ export function ModuloHistorialTickets({
                           </span>
                         ) : null}
                       </span>
-                      {renderBadgeMetodo(sale.metodoPago)}
+                      <BadgeMetodoPago metodo={sale.metodoPago} size="xs" />
                     </div>
                     <p className="text-[11px] text-[#657373] mt-1 flex items-center gap-1 font-mono">
                       <Clock className="h-3 w-3 text-[#2A7A78]" weight="duotone" />
@@ -408,7 +343,7 @@ export function ModuloHistorialTickets({
                         {sale.hora} {sale.fecha ? `• ${sale.fecha}` : ''}
                       </TableCell>
                       <TableCell className="py-2.5">
-                        {renderBadgeMetodo(sale.metodoPago)}
+                        <BadgeMetodoPago metodo={sale.metodoPago} size="xs" />
                       </TableCell>
                       <TableCell className="py-2.5 text-xs text-[#1C2424]">
                         {sale.vendedor || 'Cajero en Turno'}

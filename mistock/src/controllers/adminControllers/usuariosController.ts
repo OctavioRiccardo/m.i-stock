@@ -66,7 +66,9 @@ export function useAdminUsuariosController() {
       if (typeof window !== 'undefined') {
         try {
           window.localStorage.setItem(USUARIOS_STORAGE_KEY, JSON.stringify(actualizados));
-        } catch {}
+        } catch (err) {
+          console.warn('[usuariosController] Error al guardar caché local de usuarios:', err);
+        }
       }
       return actualizados;
     });
@@ -75,7 +77,8 @@ export function useAdminUsuariosController() {
   // Hidratar caché local tras montar y sincronizar nómina autoritativa desde Supabase public.usuario
   useEffect(() => {
     let mounted = true;
-    if (typeof window !== 'undefined') {
+    queueMicrotask(() => {
+      if (!mounted || typeof window === 'undefined') return;
       try {
         const stored = window.localStorage.getItem(USUARIOS_STORAGE_KEY);
         if (stored) {
@@ -83,20 +86,26 @@ export function useAdminUsuariosController() {
           if (Array.isArray(parsed)) {
             setUsuarios(
               sanitizarParaCache(
-                parsed.filter((u: Usuario) => !LEGACY_MOCK_EMAILS.has((u.email || '').toLowerCase()))
+                parsed.filter(
+                  (u: Usuario) => !LEGACY_MOCK_EMAILS.has((u.email || '').toLowerCase())
+                )
               )
             );
           }
         }
-      } catch {}
-    }
+      } catch (err) {
+        console.warn('[usuariosController] Error al leer caché local de usuarios:', err);
+      }
+    });
     supabaseService
       .fetchUsuariosWithStatus()
       .then((res) => {
         if (!mounted || !res.ok) return;
         guardarUsuarios(() => res.items);
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.warn('[usuariosController] Error al sincronizar usuarios remotos:', err);
+      });
     return () => {
       mounted = false;
     };

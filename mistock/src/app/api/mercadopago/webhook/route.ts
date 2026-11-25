@@ -13,14 +13,13 @@ export async function POST(req: NextRequest) {
   try {
     const signature = req.headers.get('x-signature');
     const requestId = req.headers.get('x-request-id');
+    const payload: PointWebhookPayload = await req.json();
+    const dataId = req.nextUrl.searchParams.get('data.id') ?? payload?.data?.id ?? null;
 
-    // Validación de seguridad opcional si está configurada la firma
-    const esValido = validarFirmaWebhook(signature, requestId);
+    const esValido = validarFirmaWebhook(signature, requestId, dataId);
     if (!esValido) {
       return NextResponse.json({ error: 'Firma de webhook inválida' }, { status: 401 });
     }
-
-    const payload: PointWebhookPayload = await req.json();
 
     // Procesar evento en background/asíncrono
     const resultado = await procesarWebhookPoint(payload);

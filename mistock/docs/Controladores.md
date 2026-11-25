@@ -74,20 +74,31 @@ mistock/src/
 │   │   ├── inventarioController.ts               # 4. Hub de Inventario: Altas, Bajas, Modificación y Stock
 │   │   ├── inventarioGlobalController.ts         # 5. Inventario Consolidado por Categorías y Valuación
 │   │   ├── usuariosController.ts                 # 6. Nómina de Colaboradores, Roles y Credenciales
-│   │   └── configuracionController.ts            # 7. Parámetros del Negocio, Ticket, POS y Exportación CSV
+│   │   ├── configuracionController.ts            # 7. Parámetros del Negocio, Ticket, POS y Exportación CSV
+│   │   └── auditoriaController.ts                # 8. Auditoría Centralizada y Turnos de Caja
 │   └── userControllers/
-│       └── userDashboardController.ts            # 8. Terminal POS: Caja, Carrito, Consultor, Historial y Arqueo Z
+│       ├── userDashboardController.ts            # 9. Orquestador Terminal POS: Cobro, Anulación, Catálogo e Historial
+│       ├── useCajaTurno.ts                       #    Sub-hook cohesivo de apertura, cierre, arqueo Z y turnos remotos
+│       └── useCarritoPos.ts                      #    Sub-hook cohesivo de carrito activo y validación de stock POS
+│
+├── lib/                                          # UTILIDADES COMPARTIDAS Y FRONTERAS VALIDADAS
+│   ├── supabase/url.ts                           # Normalización única de URL y credenciales públicas Supabase
+│   ├── ventasStorage.ts                          # Caché local validada y sincronización cross-controller de ventas
+│   ├── usuarioActivoStorage.ts                   # Caché local validada de perfil activo (nombre, email, rol)
+│   ├── calculoMetricasAdmin.ts                   # Funciones puras de ventanas temporales, deltas KPI y etiquetas
+│   └── validaciones.ts                           # Sanitizadores y límites compatibles con PostgreSQL
 │
 └── services/                                     # CAPA DE SERVICIOS Y ALMACENES REACTIVOS
     ├── inventarioService.ts                      # Single Source of Truth de Productos y Categorías
     ├── configuracionService.ts                   # Single Source of Truth de Configuración Global
-    ├── supabaseService.ts                        # Conector asíncrono resiliente con Supabase PostgreSQL
+    ├── supabaseService.ts                        # Fachada compuesta por repositorios en src/services/supabase/
+    ├── supabase/                                 # shared, inventarioRepo, ventasRepo, usuariosRepo, configuracionRepo, auditoriaRepo
     └── mercadopago/                              # Suite de integración Mercado Pago Point Smart
         ├── index.ts                              # Barrel file de exportación unificada
         ├── config/mpConfig.ts                    # Credenciales, endpoints REST y headers con X-Idempotency-Key
         ├── types/pointTypes.ts                   # Contratos TypeScript de terminales, intenciones y Webhooks
         ├── services/pointService.ts              # Cliente Cloud para dispositivos e intenciones de cobro Point
-        └── webhooks/webhookHandler.ts            # Validador de firma y procesador de notificaciones Point
+        └── webhooks/webhookHandler.ts            # Verificación HMAC-SHA256 (timingSafeEqual) y procesador de webhooks Point
 ```
 
 ---

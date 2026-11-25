@@ -70,29 +70,29 @@ flowchart TD
 
 ## 🔌 3. Endpoints de Servidor (Route Handlers) para Mercado Pago Point Smart
 
-Para proteger el `MP_ACCESS_TOKEN` privado del comercio y evitar errores de CORS, las vistas del navegador (`ModalCobroTicket.tsx`) se comunican con los Route Handlers internos de Next.js, los cuales delegan la lógica a la suite `src/services/mercadopago/` (`services/pointService.ts`, `config/mpConfig.ts`, `types/pointTypes.ts` y `webhooks/webhookHandler.ts`):
+Para proteger el `MERCADOPAGO_ACCESS_TOKEN` privado del comercio y evitar accesos anónimos a las terminales físicas, los 3 endpoints de `/api/mercadopago/point/*` ejecutan `verificarSesionApiPoint()` (`src/services/mercadopago/security/pointApiGuard.ts`), exigiendo sesión válida en Supabase Auth (`401`) y perfil activo con rol `admin` o `vendedor` (`403`):
 
 ### 3.1. `GET /api/mercadopago/point/devices`
 - **Archivo:** `src/app/api/mercadopago/point/devices/route.ts`
-- **Función en `services/pointService.ts`:** `listarDispositivosPoint()` + `MP_CONFIG.defaultDeviceId` (`config/mpConfig.ts`)
-- **Propósito:** Consulta las terminales físicas Point Smart vinculadas a la cuenta de Mercado Pago del comercio y devuelve también el `defaultDeviceId` configurado en `.env.local`.
+- **Seguridad y Servicio:** `verificarSesionApiPoint()` → `listarDispositivosPoint()` (`services/pointService.ts`)
+- **Propósito:** Consulta las terminales físicas Point Smart vinculadas a la cuenta de Mercado Pago del comercio.
 
 ### 3.2. `POST /api/mercadopago/point/intent`
 - **Archivo:** `src/app/api/mercadopago/point/intent/route.ts`
-- **Función en `services/pointService.ts`:** `crearIntencionPagoPoint(deviceId, payload, idempotencyKey?)`
-- **Propósito:** Crea una intención de cobro con cabecera `X-Idempotency-Key` (UUID v4) hacia el posnet físico seleccionado, enviando el monto del carrito y el identificador externo del ticket.
+- **Seguridad y Servicio:** `verificarSesionApiPoint()` + `validarSolicitudIntentPoint()` → `crearIntencionPagoPoint()`
+- **Propósito:** Valida en frontera `deviceId` y `amount` finito en `(0, MAX_PRECIO_DB]`, deriva una `X-Idempotency-Key` determinista por ticket/referencia (evitando cobros duplicados ante reintentos) y transmite la intención de cobro al posnet físico.
 
 ### 3.3. `GET /api/mercadopago/point/intent/[id]` y `DELETE /api/mercadopago/point/intent/[id]`
 - **Archivo:** `src/app/api/mercadopago/point/intent/[id]/route.ts`
-- **Funciones en `services/pointService.ts`:** `obtenerEstadoIntencionPoint(intentId)` y `cancelarIntencionPagoPoint(deviceId, intentId)`
+- **Seguridad y Servicio:** `verificarSesionApiPoint()` → `obtenerEstadoIntencionPoint(intentId)` / `cancelarIntencionPagoPoint(deviceId, intentId)`
 - **Propósito:**
-  - `GET`: Permite hacer *polling* cada 3 segundos desde `ModalCobroTicket.tsx` para conocer el estado del cobro en la terminal (`OPEN`, `ON_TERMINAL`, `PROCESSING`, `PROCESSED`, `ABANDONED`, `CANCELED`, `ERROR`).
+  - `GET`: Permite hacer *polling* desde `ModalCobroTicket.tsx` para conocer el estado del cobro en la terminal (`OPEN`, `ON_TERMINAL`, `PROCESSING`, `PROCESSED`, `ABANDONED`, `CANCELED`, `ERROR`).
   - `DELETE`: Cancela en caliente una orden de cobro enviada al posnet si el cliente desiste o cambia de medio de pago.
 
-### 3.4. `POST /api/mercadopago/webhooks` (y `GET` de verificación)
-- **Archivo:** `src/app/api/mercadopago/webhooks/route.ts`
-- **Funciones en `webhooks/webhookHandler.ts`:** `validarFirmaWebhook(xSignature, xRequestId)` y `procesarWebhookPoint(payload)`
-- **Propósito:** Recibe notificaciones asíncronas de Mercado Pago (`point_integration_wh`), valida las cabeceras de seguridad (`x-signature`, `x-request-id` contra `MP_WEBHOOK_SECRET`) y realiza una doble verificación de estado consultando `obtenerEstadoIntencionPoint(intentId)` antes de confirmar el pago.
+### 3.4. `POST /api/mercadopago/webhook`
+- **Archivo:** `src/app/api/mercadopago/webhook/route.ts`
+- **Funciones en `webhooks/webhookHandler.ts`:** `validarFirmaWebhook(xSignature, xRequestId, dataId)` y `procesarWebhookPoint(payload)`
+- **Propósito:** Recibe notificaciones asíncronas de Mercado Pago (`point_integration_wh`), verifica criptográficamente la firma `HMAC-SHA256` (`ts=...,v1=...`) con `crypto.timingSafeEqual` (fallando cerrado en producción si falta `MERCADOPAGO_WEBHOOK_SECRET`) y realiza una doble verificación consultando `obtenerEstadoIntencionPoint(intentId)`.
 
 ---
 

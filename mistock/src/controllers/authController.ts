@@ -27,16 +27,21 @@ import { RolUsuario } from '@/models/modelos_dominio/userModel';
 import { LIMITES_TEXTO, esEmailValido } from '@/lib/validaciones';
 import { inventarioService, INVENTARIO_STORAGE_KEY } from '@/services/inventarioService';
 import { supabaseService } from '@/services/supabaseService';
+import {
+  guardarUsuarioActivoLocal,
+  leerUsuarioActivoLocal,
+  limpiarUsuarioActivoLocal,
+} from '@/lib/usuarioActivoStorage';
 
 /**
  * Limpia todas las claves de sesión y cachés de datos en el navegador al cerrar sesión.
  */
 export function limpiarSesionLocal() {
   inventarioService.limpiarCacheLocal();
+  limpiarUsuarioActivoLocal();
   if (typeof window !== 'undefined') {
     try {
       window.localStorage.removeItem('mistock_rol_activo');
-      window.localStorage.removeItem('mistock_usuario_activo');
       window.localStorage.removeItem(INVENTARIO_STORAGE_KEY);
       window.localStorage.removeItem('mistock_usuarios_data_test_v1');
       window.localStorage.removeItem('mistock_ventas_historial_test_v1');
@@ -44,7 +49,9 @@ export function limpiarSesionLocal() {
       window.localStorage.removeItem('mistock_configuracion_v1');
       window.localStorage.removeItem('mistock_configuracion_global_v1');
       window.localStorage.removeItem('mistock_ultimo_respaldo_csv');
-    } catch {}
+    } catch (err) {
+      console.warn('[authController] Error al limpiar caché local:', err);
+    }
   }
 }
 
@@ -150,14 +157,14 @@ export function useLoginController() {
 
         if (typeof window !== 'undefined') {
           window.localStorage.setItem('mistock_rol_activo', rolAsignado);
-          window.localStorage.setItem(
-            'mistock_usuario_activo',
-            JSON.stringify({
+          guardarUsuarioActivoLocal(
+            {
               id: data.session.user.id,
-              email: data.session.user.email,
+              email: data.session.user.email || undefined,
               nombre: nombreColaborador,
               rol: rolAsignado,
-            })
+            },
+            { notificar: false }
           );
         }
 
@@ -215,24 +222,11 @@ export function useLogoutController(autoExecute: boolean = true) {
   const registrarCierreAuditoria = useCallback(async () => {
     if (logoutRegistradoRef.current) return;
     logoutRegistradoRef.current = true;
-    let rolLocal: RolUsuario | undefined;
-    let nombreLocal: string | undefined;
-    let emailLocal: string | undefined;
-    if (typeof window !== 'undefined') {
-      try {
-        const raw = window.localStorage.getItem('mistock_usuario_activo');
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          rolLocal = parsed?.rol;
-          nombreLocal = parsed?.nombre;
-          emailLocal = parsed?.email;
-        }
-      } catch {}
-    }
+    const usuarioLocal = leerUsuarioActivoLocal();
     await supabaseService.registrarEventoAuth('logout', {
-      rol: rolLocal,
-      nombre: nombreLocal,
-      email: emailLocal,
+      rol: usuarioLocal?.rol,
+      nombre: usuarioLocal?.nombre,
+      email: usuarioLocal?.email,
     });
   }, []);
 
@@ -252,7 +246,7 @@ export function useLogoutController(autoExecute: boolean = true) {
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [registrarCierreAuditoria, router]);
 
   useEffect(() => {
     if (!autoExecute) return;
@@ -286,7 +280,7 @@ export function useLogoutController(autoExecute: boolean = true) {
     return () => {
       isMounted = false;
     };
-  }, [autoExecute, router]);
+  }, [autoExecute, registrarCierreAuditoria, router]);
 
   return {
     loading,

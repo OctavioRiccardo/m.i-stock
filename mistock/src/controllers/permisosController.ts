@@ -21,9 +21,12 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { RolUsuario } from '@/models/modelos_dominio/userModel';
 import { limpiarSesionLocal } from '@/controllers/authController';
+import {
+  guardarUsuarioActivoLocal,
+  leerUsuarioActivoLocal,
+} from '@/lib/usuarioActivoStorage';
 
 const ROL_STORAGE_KEY = 'mistock_rol_activo';
-const USUARIO_STORAGE_KEY = 'mistock_usuario_activo';
 
 export function usePermisosController() {
   const router = useRouter();
@@ -35,20 +38,16 @@ export function usePermisosController() {
 
   useEffect(() => {
     let isMounted = true;
-    if (typeof window !== 'undefined') {
+    queueMicrotask(() => {
+      if (!isMounted || typeof window === 'undefined') return;
       const rolGuardado = window.localStorage.getItem(ROL_STORAGE_KEY) as RolUsuario | null;
       if (rolGuardado && ['admin', 'vendedor', 'no_rol'].includes(rolGuardado)) {
         setRol(rolGuardado);
       }
-      try {
-        const raw = window.localStorage.getItem(USUARIO_STORAGE_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed?.nombre) setNombreUsuario(parsed.nombre);
-          if (parsed?.email) setEmailUsuario(parsed.email);
-        }
-      } catch {}
-    }
+      const cacheUsuario = leerUsuarioActivoLocal();
+      if (cacheUsuario?.nombre) setNombreUsuario(cacheUsuario.nombre);
+      if (cacheUsuario?.email) setEmailUsuario(cacheUsuario.email);
+    });
     const supabase = createClient();
 
     supabase.auth
@@ -92,16 +91,12 @@ export function usePermisosController() {
 
           if (typeof window !== 'undefined') {
             window.localStorage.setItem(ROL_STORAGE_KEY, rolReal);
-            setTimeout(() => window.dispatchEvent(new Event('mistock_usuario_updated')), 0);
-            window.localStorage.setItem(
-              USUARIO_STORAGE_KEY,
-              JSON.stringify({
-                id: user.id,
-                email,
-                nombre: nombreReal,
-                rol: rolReal,
-              })
-            );
+            guardarUsuarioActivoLocal({
+              id: user.id,
+              email,
+              nombre: nombreReal,
+              rol: rolReal,
+            });
           }
         } else {
           // Sin sesión activa en Supabase Auth: limpiar cualquier residuo local y redirigir

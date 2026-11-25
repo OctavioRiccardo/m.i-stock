@@ -101,27 +101,37 @@ export function ModalCobroTicket({
   const [buscoDispositivos, setBuscoDispositivos] = useState<boolean>(false);
 
   const intentActivoRef = useRef(intentActivo);
-  intentActivoRef.current = intentActivo;
   const selectedDeviceIdRef = useRef(selectedDeviceId);
-  selectedDeviceIdRef.current = selectedDeviceId;
 
-  // Reiniciar estado al abrir modal o cambiar total
   useEffect(() => {
+    intentActivoRef.current = intentActivo;
+    selectedDeviceIdRef.current = selectedDeviceId;
+  }, [intentActivo, selectedDeviceId]);
+
+  const modalKey = `${isOpen}:${total}`;
+  const [prevModalKey, setPrevModalKey] = useState<string>(modalKey);
+  if (modalKey !== prevModalKey) {
+    setPrevModalKey(modalKey);
     if (isOpen) {
       setMetodoSeleccionado('efectivo');
       setMontoRecibido('');
       setEstadoPoint('idle');
       setIntentActivo(null);
       setMensajePoint('');
-    } else {
-      // Si se cierra el modal mientras hay intención activa en Point, cancelarla para liberar el lector
-      if (intentActivoRef.current) {
-        fetch(`/api/mercadopago/point/intent/${intentActivoRef.current.id}?deviceId=${intentActivoRef.current.deviceId || selectedDeviceIdRef.current}`, {
-          method: 'DELETE',
-        }).catch(() => {});
-      }
     }
-  }, [isOpen, total]);
+  }
+
+  // Si se cierra el modal mientras hay intención activa en Point, cancelarla para liberar el lector
+  useEffect(() => {
+    if (!isOpen && intentActivoRef.current) {
+      fetch(
+        `/api/mercadopago/point/intent/${intentActivoRef.current.id}?deviceId=${intentActivoRef.current.deviceId || selectedDeviceIdRef.current}`,
+        { method: 'DELETE' }
+      ).catch((err) => {
+        console.warn('[ModalCobroTicket] Error al liberar intención Point al cerrar:', err);
+      });
+    }
+  }, [isOpen]);
 
   // Consultar terminales cuando el cajero selecciona Mercado Pago
   const consultarTerminalesPoint = async () => {
@@ -145,9 +155,14 @@ export function ModalCobroTicket({
   };
 
   useEffect(() => {
-    if (isOpen && metodoSeleccionado === 'mercado_pago' && !buscoDispositivos) {
-      consultarTerminalesPoint();
-    }
+    if (!isOpen || metodoSeleccionado !== 'mercado_pago' || buscoDispositivos) return;
+    let active = true;
+    queueMicrotask(() => {
+      if (active) void consultarTerminalesPoint();
+    });
+    return () => {
+      active = false;
+    };
   }, [isOpen, metodoSeleccionado, buscoDispositivos]);
 
   // Transmitir orden de cobro al lector físico Point Smart

@@ -11,15 +11,11 @@
  * permitiendo finalizar la operación, imprimir el ticket manualmente o anular la venta.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   CheckCircle,
   Receipt,
   Printer,
-  Money,
-  QrCode,
-  CreditCard,
-  ArrowsLeftRight,
   User,
   Clock,
   Sparkle,
@@ -35,7 +31,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { BadgeMetodoPago } from '@/components/ui/badge-metodo-pago';
 import { VentaRecientePOS } from '@/models/modelos_vista/dashboardModel';
 import { formatearCodigoComprobante } from '@/lib/validaciones';
 
@@ -57,79 +53,17 @@ export function ModalVentaCompletada({
   onCancelarVenta,
 }: ModalVentaCompletadaProps) {
   const [confirmandoAnulacion, setConfirmandoAnulacion] = useState(false);
+  const modalKey = `${isOpen}:${venta?.id ?? ''}`;
+  const [prevModalKey, setPrevModalKey] = useState(modalKey);
 
-  useEffect(() => {
+  if (modalKey !== prevModalKey) {
+    setPrevModalKey(modalKey);
     setConfirmandoAnulacion(false);
-  }, [isOpen, venta?.id]);
+  }
 
   if (!venta) return null;
 
   const codigoComprobante = formatearCodigoComprobante(venta.id);
-
-  const renderBadgeMetodo = (metodo?: string) => {
-    const m = (metodo || 'efectivo').toLowerCase();
-    switch (m) {
-      case 'efectivo':
-        return (
-          <Badge
-            variant="outline"
-            className="text-[10px] uppercase px-2 py-0.5 font-bold border-emerald-300 text-emerald-800 bg-emerald-50 gap-1 inline-flex items-center"
-          >
-            <Money className="h-3 w-3" weight="bold" />
-            <span>Efectivo</span>
-          </Badge>
-        );
-      case 'mercado_pago':
-        return (
-          <Badge
-            variant="outline"
-            className="text-[10px] uppercase px-2 py-0.5 font-bold border-[#009EE3]/40 text-[#009EE3] bg-[#009EE3]/10 gap-1 inline-flex items-center"
-          >
-            <QrCode className="h-3 w-3" weight="bold" />
-            <span>Mercado Pago</span>
-          </Badge>
-        );
-      case 'tarjeta_debito':
-        return (
-          <Badge
-            variant="outline"
-            className="text-[10px] uppercase px-2 py-0.5 font-bold border-[#2A7A78]/40 text-[#2A7A78] bg-[#E2F1F0]/60 gap-1 inline-flex items-center"
-          >
-            <CreditCard className="h-3 w-3" weight="bold" />
-            <span>Débito</span>
-          </Badge>
-        );
-      case 'tarjeta_credito':
-        return (
-          <Badge
-            variant="outline"
-            className="text-[10px] uppercase px-2 py-0.5 font-bold border-[#2A7A78]/40 text-[#2A7A78] bg-[#E2F1F0]/60 gap-1 inline-flex items-center"
-          >
-            <CreditCard className="h-3 w-3" weight="bold" />
-            <span>Crédito</span>
-          </Badge>
-        );
-      case 'transferencia':
-        return (
-          <Badge
-            variant="outline"
-            className="text-[10px] uppercase px-2 py-0.5 font-bold border-gray-300 text-gray-700 bg-gray-50 gap-1 inline-flex items-center"
-          >
-            <ArrowsLeftRight className="h-3 w-3" weight="bold" />
-            <span>Transferencia</span>
-          </Badge>
-        );
-      default:
-        return (
-          <Badge
-            variant="outline"
-            className="text-[10px] uppercase px-2 py-0.5 font-bold border-[#E8E6DF] text-[#657373]"
-          >
-            {m.replace('_', ' ')}
-          </Badge>
-        );
-    }
-  };
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
@@ -185,7 +119,7 @@ export function ModalVentaCompletada({
 
           <div className="flex items-center justify-between pt-1 text-[11px] text-[#657373]">
             <span>Medio de pago:</span>
-            <div>{renderBadgeMetodo(venta.metodoPago)}</div>
+            <div><BadgeMetodoPago metodo={venta.metodoPago} size="sm" /></div>
           </div>
 
           <div className="flex items-center justify-between text-[11px] text-[#657373] pt-1 border-t border-[#E8E6DF]/50">

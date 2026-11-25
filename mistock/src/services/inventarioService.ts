@@ -757,7 +757,9 @@ export const inventarioService = {
     if (typeof window !== 'undefined') {
       try {
         window.localStorage.removeItem(INVENTARIO_STORAGE_KEY);
-      } catch {}
+      } catch (err) {
+        console.warn('[inventarioService] Error al limpiar caché local:', err);
+      }
     }
     listeners.forEach((listener) => listener());
   },

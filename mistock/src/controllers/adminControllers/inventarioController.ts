@@ -54,15 +54,19 @@ export function useAdminInventarioController() {
 
   // Sincronizar con Supabase PostgreSQL al montar y soportar navegación directa (?q=SKU)
   useEffect(() => {
+    let active = true;
     void inventarioService.sincronizarConSupabase();
 
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     const query = params.get('q');
     if (query && query.trim()) {
-      setBusquedaHub(query.trim());
-      setFiltroEstadoHub('todos');
-      setPaginaInventario(1);
+      queueMicrotask(() => {
+        if (!active) return;
+        setBusquedaHub(query.trim());
+        setFiltroEstadoHub('todos');
+        setPaginaInventario(1);
+      });
     }
 
     const onSyncError = (e: Event) => {
@@ -73,7 +77,10 @@ export function useAdminInventarioController() {
       );
     };
     window.addEventListener('mistock_inventario_sync_error', onSyncError);
-    return () => window.removeEventListener('mistock_inventario_sync_error', onSyncError);
+    return () => {
+      active = false;
+      window.removeEventListener('mistock_inventario_sync_error', onSyncError);
+    };
   }, []);
 
   const handleSetCategoriaFiltroHub = (catId: string) => {

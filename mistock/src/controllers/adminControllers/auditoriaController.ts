@@ -96,13 +96,39 @@ export function useAdminAuditoriaController() {
   }, []);
 
   useEffect(() => {
-    void recargarAuditoria();
+    let active = true;
+    queueMicrotask(() => {
+      if (active) void recargarAuditoria();
+    });
+    return () => {
+      active = false;
+    };
   }, [recargarAuditoria]);
 
-  // Reiniciar paginación al cambiar cualquier filtro
-  useEffect(() => {
+  const handleSetVistaActiva = (v: VistaAuditoriaTab) => {
+    setVistaActiva(v);
     setPagina(1);
-  }, [moduloFiltro, usuarioFiltro, busqueda, fechaDesde, fechaHasta, vistaActiva]);
+  };
+  const handleSetModuloFiltro = (m: ModuloAuditoria | 'todos') => {
+    setModuloFiltro(m);
+    setPagina(1);
+  };
+  const handleSetUsuarioFiltro = (u: string) => {
+    setUsuarioFiltro(u);
+    setPagina(1);
+  };
+  const handleSetBusqueda = (b: string) => {
+    setBusqueda(b);
+    setPagina(1);
+  };
+  const handleSetFechaDesde = (f: string) => {
+    setFechaDesde(f);
+    setPagina(1);
+  };
+  const handleSetFechaHasta = (f: string) => {
+    setFechaHasta(f);
+    setPagina(1);
+  };
 
   const filtros: FiltrosAuditoria = useMemo(
     () => ({
@@ -208,12 +234,13 @@ export function useAdminAuditoriaController() {
     setBusqueda('');
     setFechaDesde('');
     setFechaHasta('');
+    setPagina(1);
   };
 
   return {
     monedaSimbolo,
     vistaActiva,
-    setVistaActiva,
+    setVistaActiva: handleSetVistaActiva,
     cargando,
     errorCarga,
     migracionPendiente,
@@ -225,15 +252,15 @@ export function useAdminAuditoriaController() {
     resumenFiltrado,
     opcionesUsuarios,
     moduloFiltro,
-    setModuloFiltro,
+    setModuloFiltro: handleSetModuloFiltro,
     usuarioFiltro,
-    setUsuarioFiltro,
+    setUsuarioFiltro: handleSetUsuarioFiltro,
     busqueda,
-    setBusqueda,
+    setBusqueda: handleSetBusqueda,
     fechaDesde,
-    setFechaDesde,
+    setFechaDesde: handleSetFechaDesde,
     fechaHasta,
-    setFechaHasta,
+    setFechaHasta: handleSetFechaHasta,
     hayFiltrosActivos,
     limpiarFiltros,
     pagina,

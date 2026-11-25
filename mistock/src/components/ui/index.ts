@@ -1,5 +1,6 @@
 export * from './button';
 export * from './badge';
+export * from './badge-metodo-pago';
 export * from './card';
 export * from './input';
 export * from './textarea';

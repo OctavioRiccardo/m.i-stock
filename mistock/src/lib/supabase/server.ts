@@ -16,14 +16,7 @@
 
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-
-function normalizarSupabaseUrl(rawUrl?: string): string {
-  if (!rawUrl) return '';
-  let url = rawUrl.trim();
-  url = url.replace(/\/rest\/v1\/?$/i, '');
-  url = url.replace(/\/+$/, '');
-  return url;
-}
+import { obtenerCredencialesSupabasePublicas } from './url';
 
 /**
  * Crea una instancia del cliente Supabase conectada al almacén de cookies de la petición actual.
@@ -32,11 +25,7 @@ function normalizarSupabaseUrl(rawUrl?: string): string {
  */
 export async function createClient() {
   const cookieStore = await cookies();
-  const url = normalizarSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
-  const key = (
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-  )?.trim();
+  const { url, key } = obtenerCredencialesSupabasePublicas();
 
   if (!url || !key) {
     console.warn(

@@ -4,6 +4,7 @@ import {
   cancelarIntencionPagoPoint,
   MP_CONFIG,
 } from '@/services/mercadopago';
+import { verificarSesionApiPoint } from '@/services/mercadopago/security/pointApiGuard';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -15,13 +16,19 @@ interface RouteContext {
  */
 export async function GET(_req: NextRequest, context: RouteContext) {
   try {
-    const { id } = await context.params;
+    const auth = await verificarSesionApiPoint();
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
 
-    if (!id) {
+    const { id } = await context.params;
+    const intentId = id?.trim();
+
+    if (!intentId) {
       return NextResponse.json({ error: 'Falta el id de la intención.' }, { status: 400 });
     }
 
-    const resultado = await obtenerEstadoIntencionPoint(id);
+    const resultado = await obtenerEstadoIntencionPoint(intentId);
 
     if (!resultado.success || !resultado.intent) {
       return NextResponse.json(
@@ -45,18 +52,27 @@ export async function GET(_req: NextRequest, context: RouteContext) {
  */
 export async function DELETE(req: NextRequest, context: RouteContext) {
   try {
-    const { id } = await context.params;
-    const { searchParams } = new URL(req.url);
-    const deviceId = searchParams.get('deviceId') || MP_CONFIG.defaultDeviceId;
+    const auth = await verificarSesionApiPoint();
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
 
-    if (!id || !deviceId) {
+    const { id } = await context.params;
+    const intentId = id?.trim();
+    const { searchParams } = new URL(req.url);
+    const deviceId = (searchParams.get('deviceId') || MP_CONFIG.defaultDeviceId).trim();
+
+    if (!intentId || !deviceId) {
       return NextResponse.json(
-        { error: 'Se requiere tanto el intentId como el deviceId (o configurar MERCADOPAGO_POINT_DEVICE_ID en el entorno).' },
+        {
+          error:
+            'Se requiere tanto el intentId como el deviceId (o configurar MERCADOPAGO_POINT_DEVICE_ID en el entorno).',
+        },
         { status: 400 }
       );
     }
 
-    const resultado = await cancelarIntencionPagoPoint(deviceId, id);
+    const resultado = await cancelarIntencionPagoPoint(deviceId, intentId);
 
     if (!resultado.success) {
       return NextResponse.json(

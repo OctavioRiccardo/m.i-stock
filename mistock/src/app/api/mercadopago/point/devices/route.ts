@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { listarDispositivosPoint } from '@/services/mercadopago';
+import { verificarSesionApiPoint } from '@/services/mercadopago/security/pointApiGuard';
 
 /**
  * GET /api/mercadopago/point/devices
@@ -7,6 +8,11 @@ import { listarDispositivosPoint } from '@/services/mercadopago';
  */
 export async function GET() {
   try {
+    const auth = await verificarSesionApiPoint();
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
     const resultado = await listarDispositivosPoint();
 
     if (!resultado.success) {

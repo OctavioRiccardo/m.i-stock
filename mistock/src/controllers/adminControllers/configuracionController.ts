@@ -24,10 +24,11 @@ import { inventarioService, useInventarioData } from '@/services/inventarioServi
 import { supabaseService } from '@/services/supabaseService';
 import { VentaRecientePOS } from '@/models/modelos_vista/dashboardModel';
 import {
-  VENTAS_STORAGE_KEY,
+  guardarVentasCliente,
   inicializarVentasCliente,
   recalcularVentasStore,
-} from '@/controllers/userControllers/userDashboardController';
+  suscribirVentasStorage,
+} from '@/lib/ventasStorage';
 
 export type PestañaConfiguracion = 'negocio' | 'pos' | 'inventario' | 'metricas' | 'respaldos';
 
@@ -49,15 +50,20 @@ export function useAdminConfiguracionController() {
 
   useEffect(() => {
     let mounted = true;
-    const ventasIniciales = inicializarVentasCliente().ventasRecientes || [];
-    setVentasRemotas(ventasIniciales);
-    setTotalVentas(ventasIniciales.length);
-    if (typeof window !== 'undefined') {
-      try {
-        const respaldoLocal = window.localStorage.getItem(ULTIMO_RESPALDO_STORAGE_KEY);
-        if (respaldoLocal) setUltimoRespaldoCSV(respaldoLocal);
-      } catch {}
-    }
+    queueMicrotask(() => {
+      if (!mounted) return;
+      const ventasIniciales = inicializarVentasCliente().ventasRecientes || [];
+      setVentasRemotas(ventasIniciales);
+      setTotalVentas(ventasIniciales.length);
+      if (typeof window !== 'undefined') {
+        try {
+          const respaldoLocal = window.localStorage.getItem(ULTIMO_RESPALDO_STORAGE_KEY);
+          if (respaldoLocal) setUltimoRespaldoCSV(respaldoLocal);
+        } catch (err) {
+          console.warn('[configuracionController] Error al leer último respaldo CSV:', err);
+        }
+      }
+    });
     void inventarioService.sincronizarConSupabase();
     void configuracionService.sincronizarConSupabase();
     void supabaseService.fetchUltimoRespaldoCSV().then((marcaRemota) => {
@@ -66,7 +72,9 @@ export function useAdminConfiguracionController() {
       if (typeof window !== 'undefined') {
         try {
           window.localStorage.setItem(ULTIMO_RESPALDO_STORAGE_KEY, marcaRemota);
-        } catch {}
+        } catch (err) {
+          console.warn('[configuracionController] Error al guardar último respaldo CSV:', err);
+        }
       }
     });
 
@@ -74,10 +82,7 @@ export function useAdminConfiguracionController() {
       setTotalVentas((inicializarVentasCliente().ventasRecientes || []).length);
     };
 
-    if (typeof window !== 'undefined') {
-      window.addEventListener('storage', sincronizarConteoVentas);
-      window.addEventListener('mistock_ventas_updated', sincronizarConteoVentas);
-    }
+    const desuscribirVentas = suscribirVentasStorage(sincronizarConteoVentas);
 
     supabaseService
       .fetchVentasWithStatus()
@@ -86,20 +91,15 @@ export function useAdminConfiguracionController() {
         const actualizado = recalcularVentasStore(res.items);
         setVentasRemotas(res.items);
         setTotalVentas(res.items.length);
-        if (typeof window !== 'undefined') {
-          try {
-            window.localStorage.setItem(VENTAS_STORAGE_KEY, JSON.stringify(actualizado));
-          } catch {}
-        }
+        guardarVentasCliente(actualizado, { notificar: false });
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.warn('[configuracionController] Error al sincronizar ventas remotas:', err);
+      });
 
     return () => {
       mounted = false;
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('storage', sincronizarConteoVentas);
-        window.removeEventListener('mistock_ventas_updated', sincronizarConteoVentas);
-      }
+      desuscribirVentas();
     };
   }, []);
 
@@ -114,7 +114,9 @@ export function useAdminConfiguracionController() {
     if (typeof window !== 'undefined') {
       try {
         window.localStorage.setItem(ULTIMO_RESPALDO_STORAGE_KEY, marca);
-      } catch {}
+      } catch (err) {
+        console.warn('[configuracionController] Error al persistir marca de respaldo CSV:', err);
+      }
     }
   };
 

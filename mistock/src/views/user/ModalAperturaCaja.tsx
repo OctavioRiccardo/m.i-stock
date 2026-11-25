@@ -11,7 +11,7 @@
  * de importes y longitud de observaciones.
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   Key,
   Coins,
@@ -60,32 +60,19 @@ export function ModalAperturaCaja({
   const [montoInput, setMontoInput] = useState<string>(fondoInicial ? fondoInicial.toString() : '10000');
   const [observacionesInput, setObservacionesInput] = useState<string>('');
   const [errorInput, setErrorInput] = useState<string | null>(null);
+  const [prevOpen, setPrevOpen] = useState<boolean>(isOpen);
 
-  const nombreCajero = useMemo(() => {
-    if (cajeroApertura && cajeroApertura !== 'Lucas Benítez' && cajeroApertura !== 'Lucas Gutiérrez') {
-      return cajeroApertura;
-    }
-    if (typeof window !== 'undefined') {
-      try {
-        const u = window.localStorage.getItem('mistock_usuario_activo');
-        if (u) {
-          const parsed = JSON.parse(u);
-          if (parsed.nombre) return parsed.nombre;
-        }
-      } catch {}
-    }
-    return cajeroApertura || 'Administrador';
-  }, [cajeroApertura]);
-
-  const sugerenciasFondo = [0, 5000, 10000, 20000, 50000];
-
-  useEffect(() => {
+  if (isOpen !== prevOpen) {
+    setPrevOpen(isOpen);
     if (isOpen) {
       setMontoInput(fondoInicial ? fondoInicial.toString() : '10000');
       setObservacionesInput('');
       setErrorInput(null);
     }
-  }, [isOpen, fondoInicial]);
+  }
+
+  const nombreCajero = cajeroApertura || 'Administrador';
+  const sugerenciasFondo = [0, 5000, 10000, 20000, 50000];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

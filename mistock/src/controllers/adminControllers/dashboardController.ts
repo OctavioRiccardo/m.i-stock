@@ -30,86 +30,23 @@ import { PeriodoMetricas } from '@/models/modelos_vista/configuracionModel';
 import { useInventarioData, inventarioService } from '@/services/inventarioService';
 import { supabaseService } from '@/services/supabaseService';
 import {
-  VENTAS_STORAGE_KEY,
   VENTAS_SERVER_SNAPSHOT,
   VentasHistorialStore,
+  guardarVentasCliente,
   inicializarVentasCliente,
   recalcularVentasStore,
-} from '@/controllers/userControllers/userDashboardController';
+  suscribirVentasStorage,
+} from '@/lib/ventasStorage';
+import {
+  MS_POR_DIA,
+  calcularLimitesTiempo,
+  calcularVariacionKPI,
+  filtrarVentasPorVentana,
+  obtenerEtiquetaPeriodo,
+  obtenerTimestampVenta,
+} from '@/lib/calculoMetricasAdmin';
 
 export type RotacionTab = 'mas_vendidos' | 'menos_vendidos';
-
-const MS_POR_DIA = 86400000;
-
-/**
- * Obtiene el timestamp numérico de una venta reciente a partir de su campo timestamp, fechaISO o fecha.
- */
-function obtenerTimestampVenta(v: VentaRecientePOS): number {
-  if (typeof v.timestamp === 'number' && !Number.isNaN(v.timestamp)) {
-    return v.timestamp;
-  }
-  if (v.fechaISO) {
-    const parsed = Date.parse(v.fechaISO);
-    if (!Number.isNaN(parsed)) return parsed;
-  }
-  if (v.fecha) {
-    const partes = v.fecha.split('/');
-    if (partes.length === 3) {
-      const [dia, mes, anio] = partes.map(Number);
-      const fechaObj = new Date(anio, mes - 1, dia);
-      if (!Number.isNaN(fechaObj.getTime())) return fechaObj.getTime();
-    }
-  }
-  return Date.now();
-}
-
-/**
- * Devuelve la etiqueta legible para el período analítico activo.
- */
-function obtenerEtiquetaPeriodo(periodo: PeriodoMetricas): string {
-  switch (periodo) {
-    case 'diario':
-      return 'Hoy';
-    case 'semanal':
-      return 'Esta Semana';
-    case 'ultimos_30_dias':
-      return 'Últimos 30 Días';
-    case 'mensual':
-    default:
-      return 'Este Mes';
-  }
-}
-
-/**
- * Calcula la variación porcentual real frente al período anterior inmediato.
- */
-function calcularVariacionKPI(
-  actual: number,
-  anterior: number,
-  mostrarComparativa: boolean
-): { changePercentage?: string; status: 'positive' | 'negative' | 'neutral' } {
-  if (!mostrarComparativa) {
-    return {
-      changePercentage: undefined,
-      status: actual > 0 ? 'positive' : 'neutral',
-    };
-  }
-  if (anterior === 0 && actual === 0) {
-    return { changePercentage: undefined, status: 'neutral' };
-  }
-  if (anterior === 0 && actual > 0) {
-    return { changePercentage: '+100%', status: 'positive' };
-  }
-  const variacion = Math.round(((actual - anterior) / anterior) * 100);
-  const signo = variacion > 0 ? '+' : '';
-  const status: 'positive' | 'negative' | 'neutral' =
-    variacion > 0 ? 'positive' : variacion < 0 ? 'negative' : 'neutral';
-
-  return {
-    changePercentage: `${signo}${variacion}%`,
-    status,
-  };
-}
 
 export function useAdminDashboardController() {
   const config = useConfiguracionData();
@@ -124,15 +61,13 @@ export function useAdminDashboardController() {
     void inventarioService.sincronizarConSupabase();
 
     const sincronizarVentas = () => {
+      if (!mounted) return;
       setVentasState(inicializarVentasCliente());
     };
 
-    sincronizarVentas();
+    queueMicrotask(sincronizarVentas);
 
-    if (typeof window !== 'undefined') {
-      window.addEventListener('storage', sincronizarVentas);
-      window.addEventListener('mistock_ventas_updated', sincronizarVentas);
-    }
+    const desuscribirVentas = suscribirVentasStorage(sincronizarVentas);
 
     // Hidratar ventas autoritativas desde Supabase (reemplazando cualquier residuo local)
     supabaseService
@@ -149,35 +84,28 @@ export function useAdminDashboardController() {
             .sort((a, b) => obtenerTimestampVenta(b) - obtenerTimestampVenta(a));
 
           const actualizado = recalcularVentasStore(autoritativas);
-          if (typeof window !== 'undefined') {
-            try {
-              window.localStorage.setItem(VENTAS_STORAGE_KEY, JSON.stringify(actualizado));
-            } catch {}
-          }
+          guardarVentasCliente(actualizado, { notificar: false });
           return actualizado;
         });
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.warn('[dashboardController] Error al sincronizar ventas remotas:', err);
+      });
 
     return () => {
       mounted = false;
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('storage', sincronizarVentas);
-        window.removeEventListener('mistock_ventas_updated', sincronizarVentas);
-      }
+      desuscribirVentas();
     };
   }, []);
 
-  // Único selector global de período para todo el dashboard
-  const [periodoMetricasActivo, setPeriodoMetricasActivo] = useState<PeriodoMetricas>(
-    config.metricas?.periodoPorDefecto || 'mensual'
-  );
-
-  useEffect(() => {
-    if (config.metricas?.periodoPorDefecto) {
-      setPeriodoMetricasActivo(config.metricas.periodoPorDefecto);
-    }
-  }, [config.metricas?.periodoPorDefecto]);
+  // Único selector global de período para todo el dashboard (derivado del valor por defecto salvo selección manual)
+  const [periodoSeleccionadoManual, setPeriodoSeleccionadoManual] =
+    useState<PeriodoMetricas | null>(null);
+  const periodoMetricasActivo: PeriodoMetricas =
+    periodoSeleccionadoManual ?? config.metricas?.periodoPorDefecto ?? 'mensual';
+  const setPeriodoMetricasActivo = (nuevoPeriodo: PeriodoMetricas) => {
+    setPeriodoSeleccionadoManual(nuevoPeriodo);
+  };
 
   const etiquetaPeriodoActivo = useMemo(
     () => obtenerEtiquetaPeriodo(periodoMetricasActivo),
@@ -185,86 +113,25 @@ export function useAdminDashboardController() {
   );
 
   // Límites temporales actuales y del período inmediatamente anterior según configuración
-  const limitesTiempo = useMemo(() => {
-    const ahora = new Date();
-    const inicioHoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate()).getTime();
-    const inicioAyer = inicioHoy - MS_POR_DIA;
-
-    const diaSemana = ahora.getDay();
-    const iniciaDomingo = config.metricas?.inicioSemana === 'domingo';
-    const diasDesdeInicioSemana = iniciaDomingo ? diaSemana : (diaSemana + 6) % 7;
-    const inicioSemanaTs = inicioHoy - diasDesdeInicioSemana * MS_POR_DIA;
-    const inicioSemanaAnteriorTs = inicioSemanaTs - 7 * MS_POR_DIA;
-
-    const diaCorte = Math.max(1, Math.min(28, config.metricas?.diaCorteMensual || 1));
-    let inicioMesDate = new Date(ahora.getFullYear(), ahora.getMonth(), diaCorte);
-    if (ahora.getDate() < diaCorte) {
-      inicioMesDate = new Date(ahora.getFullYear(), ahora.getMonth() - 1, diaCorte);
-    }
-    const inicioMesTs = inicioMesDate.getTime();
-    const inicioMesAnteriorDate = new Date(
-      inicioMesDate.getFullYear(),
-      inicioMesDate.getMonth() - 1,
-      diaCorte
-    );
-    const inicioMesAnteriorTs = inicioMesAnteriorDate.getTime();
-
-    const inicio30DiasTs = inicioHoy - 29 * MS_POR_DIA;
-    const inicio30DiasAnteriorTs = inicio30DiasTs - 30 * MS_POR_DIA;
-
-    return {
-      inicioHoy,
-      inicioAyer,
-      inicioSemanaTs,
-      inicioSemanaAnteriorTs,
-      inicioMesTs,
-      inicioMesAnteriorTs,
-      inicio30DiasTs,
-      inicio30DiasAnteriorTs,
-      iniciaDomingo,
-    };
-  }, [config.metricas?.inicioSemana, config.metricas?.diaCorteMensual]);
+  const limitesTiempo = useMemo(
+    () =>
+      calcularLimitesTiempo(new Date(), {
+        inicioSemana: config.metricas?.inicioSemana,
+        diaCorteMensual: config.metricas?.diaCorteMensual,
+      }),
+    [config.metricas?.inicioSemana, config.metricas?.diaCorteMensual]
+  );
 
   // Subconjunto de ventas del período activo y de su ventana anterior comparable
-  const { ventasVentanaActiva, ventasVentanaAnterior } = useMemo(() => {
-    const todas = ventasState.ventasRecientes || [];
-
-    switch (periodoMetricasActivo) {
-      case 'diario':
-        return {
-          ventasVentanaActiva: todas.filter((v) => obtenerTimestampVenta(v) >= limitesTiempo.inicioHoy),
-          ventasVentanaAnterior: todas.filter((v) => {
-            const ts = obtenerTimestampVenta(v);
-            return ts >= limitesTiempo.inicioAyer && ts < limitesTiempo.inicioHoy;
-          }),
-        };
-      case 'semanal':
-        return {
-          ventasVentanaActiva: todas.filter((v) => obtenerTimestampVenta(v) >= limitesTiempo.inicioSemanaTs),
-          ventasVentanaAnterior: todas.filter((v) => {
-            const ts = obtenerTimestampVenta(v);
-            return ts >= limitesTiempo.inicioSemanaAnteriorTs && ts < limitesTiempo.inicioSemanaTs;
-          }),
-        };
-      case 'ultimos_30_dias':
-        return {
-          ventasVentanaActiva: todas.filter((v) => obtenerTimestampVenta(v) >= limitesTiempo.inicio30DiasTs),
-          ventasVentanaAnterior: todas.filter((v) => {
-            const ts = obtenerTimestampVenta(v);
-            return ts >= limitesTiempo.inicio30DiasAnteriorTs && ts < limitesTiempo.inicio30DiasTs;
-          }),
-        };
-      case 'mensual':
-      default:
-        return {
-          ventasVentanaActiva: todas.filter((v) => obtenerTimestampVenta(v) >= limitesTiempo.inicioMesTs),
-          ventasVentanaAnterior: todas.filter((v) => {
-            const ts = obtenerTimestampVenta(v);
-            return ts >= limitesTiempo.inicioMesAnteriorTs && ts < limitesTiempo.inicioMesTs;
-          }),
-        };
-    }
-  }, [ventasState.ventasRecientes, periodoMetricasActivo, limitesTiempo]);
+  const { ventasVentanaActiva, ventasVentanaAnterior } = useMemo(
+    () =>
+      filtrarVentasPorVentana(
+        ventasState.ventasRecientes || [],
+        periodoMetricasActivo,
+        limitesTiempo
+      ),
+    [ventasState.ventasRecientes, periodoMetricasActivo, limitesTiempo]
+  );
 
   const mapearDetalleVentas = (lista: VentaRecientePOS[]): DetalleVentaItem[] =>
     lista.map((v) => ({

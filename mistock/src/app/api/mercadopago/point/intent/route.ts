@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { crearIntencionPagoPoint, MP_CONFIG } from '@/services/mercadopago';
+import {
+  validarSolicitudIntentPoint,
+  verificarSesionApiPoint,
+} from '@/services/mercadopago/security/pointApiGuard';
 
 /**
  * POST /api/mercadopago/point/intent
@@ -7,31 +11,30 @@ import { crearIntencionPagoPoint, MP_CONFIG } from '@/services/mercadopago';
  */
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { deviceId, amount, description, externalReference, ticketNumber } = body;
-    const targetDeviceId = deviceId || MP_CONFIG.defaultDeviceId;
-
-    if (!targetDeviceId) {
-      return NextResponse.json(
-        { error: 'Se requiere el identificador deviceId de la terminal Point (o configurar MERCADOPAGO_POINT_DEVICE_ID en .env.local).' },
-        { status: 400 }
-      );
+    const auth = await verificarSesionApiPoint();
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
-    if (!amount || Number(amount) <= 0) {
-      return NextResponse.json(
-        { error: 'El monto a cobrar debe ser mayor a cero.' },
-        { status: 400 }
-      );
+    const body: unknown = await req.json();
+    const validacion = validarSolicitudIntentPoint(
+      body,
+      MP_CONFIG.defaultDeviceId,
+      req.headers.get('x-idempotency-key')
+    );
+
+    if (!validacion.ok) {
+      return NextResponse.json({ error: validacion.error }, { status: 400 });
     }
 
-    const idempotencyKey = req.headers.get('x-idempotency-key') || `MP-${Date.now()}`;
+    const { deviceId, amount, description, externalReference, ticketNumber, idempotencyKey } =
+      validacion.data;
 
     const resultado = await crearIntencionPagoPoint(
-      targetDeviceId,
+      deviceId,
       {
-        amount: Number(amount),
-        description: description || 'Venta presencial en mostrador M.I Stock',
+        amount,
+        description,
         payment_mode: 'card',
         additional_info: {
           external_reference: externalReference,
